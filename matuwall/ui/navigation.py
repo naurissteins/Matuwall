@@ -32,13 +32,13 @@ class NavigationMixin:
             self._activate_selected_item()
             return True
 
-        if keyval == Gdk.KEY_Up:
+        if keyval in (Gdk.KEY_Up, Gdk.KEY_k):
             return self._move_selection(0, -1)
-        if keyval == Gdk.KEY_Down:
+        if keyval in (Gdk.KEY_Down, Gdk.KEY_j):
             return self._move_selection(0, 1)
-        if keyval == Gdk.KEY_Left:
+        if keyval in (Gdk.KEY_Left, Gdk.KEY_h):
             return self._move_selection(-1, 0)
-        if keyval == Gdk.KEY_Right:
+        if keyval in (Gdk.KEY_Right, Gdk.KEY_l):
             return self._move_selection(1, 0)
 
         return False
