@@ -89,7 +89,7 @@ class PanelMixin:
         except Exception:
             pass
         LayerShell.set_layer(window, LayerShell.Layer.TOP)
-        LayerShell.set_keyboard_mode(window, LayerShell.KeyboardMode.ON_DEMAND)
+        LayerShell.set_keyboard_mode(window, LayerShell.KeyboardMode.EXCLUSIVE)
         LayerShell.set_exclusive_zone(
             window, int(self.config.panel_exclusive_zone)
         )
