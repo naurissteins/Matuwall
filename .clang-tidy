@@ -1,0 +1,28 @@
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-braces-around-statements,
+  readability-redundant-control-flow,
+  readability-simplify-boolean-expr,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-macro-parentheses,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -cert-dcl37-c,
+  -cert-err33-c,
+  -cert-err34-c,
+  -cert-msc24-c,
+  -cert-msc30-c,
+  -cert-msc32-c,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-unused-parameters
+WarningsAsErrors: ''
+HeaderFilterRegex: '^src/'
+FormatStyle: file
+CheckOptions:
+  readability-braces-around-statements.ShortStatementLines: '1'

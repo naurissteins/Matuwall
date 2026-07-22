@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  # Rolling archlinux:latest
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The project's declared stack; slices link these in as they land
+  PACMAN_DEPS: >-
+    base-devel git meson ninja pkgconf clang ccache
+    wayland wayland-protocols libxkbcommon pixman
+    libpng libjpeg-turbo libwebp scdoc
+  PACMAN_LINT_DEPS: >-
+    git actionlint shellcheck
+
+jobs:
+  workflow-lint:
+    name: Workflow Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_LINT_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - run: actionlint
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_LINT_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check shell scripts
+        run: |
+          shellcheck \
+            scripts/all \
+            scripts/check \
+            scripts/format \
+            scripts/sanitize \
+            scripts/tidy \
+            scripts/valgrind
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - run: ./scripts/format check
+
+  check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Build under both compilers
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang, gcc]
+    container:
+      image: archlinux:latest
+    env:
+      CC: ${{ matrix.compiler }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: "500M"
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Meson auto-detects ccache
+      - name: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-check-${{ matrix.compiler }}-${{ github.sha }}
+          restore-keys: |
+            ccache-check-${{ matrix.compiler }}-
+
+      - run: ./scripts/check
+
+  tidy:
+    name: Clang-Tidy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: "500M"
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-tidy-${{ github.sha }}
+          restore-keys: |
+            ccache-tidy-
+
+      - run: ./scripts/tidy
+
+  sanitizers:
+    name: Sanitizer Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: "500M"
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-sanitizers-${{ github.sha }}
+          restore-keys: |
+            ccache-sanitizers-
+
+      - run: ./scripts/sanitize
+
+  valgrind:
+    name: Valgrind Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    env:
+      DEBUGINFOD_URLS: https://debuginfod.archlinux.org
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS valgrind
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Fetch glibc debug symbols
+        run: debuginfod-find debuginfo /usr/lib/ld-linux-x86-64.so.2 >/dev/null
+
+      - run: ./scripts/valgrind
+
+  release-check:
+    name: Release Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: archlinux:latest
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: "500M"
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed \
+            $PACMAN_DEPS
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-release-${{ github.sha }}
+          restore-keys: |
+            ccache-release-
+
+      - run: meson setup build-release --werror -Dbuildtype=release
+      - run: ninja -C build-release
