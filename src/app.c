@@ -37,6 +37,18 @@ static bool install_signal_handlers(void) {
 	return true;
 }
 
+static void handle_key(void *user_data, xkb_keysym_t sym) {
+	struct sweetwall_app *app = user_data;
+
+	switch (sym) {
+	case XKB_KEY_Escape:
+		app->running = false;
+		break;
+	default:
+		break;
+	}
+}
+
 bool sweetwall_app_init(struct sweetwall_app *app) {
 	*app = (struct sweetwall_app){
 		.background = default_background,
@@ -57,6 +69,11 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 	}
 
 	if (!sweetwall_registry_init(&app->registry, app->display)) {
+		return false;
+	}
+
+	if (!sweetwall_seat_init(
+		    &app->seat, app->registry.seat, handle_key, app)) {
 		return false;
 	}
 
@@ -151,6 +168,9 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 
 void sweetwall_app_finish(struct sweetwall_app *app) {
 	sweetwall_layer_destroy(&app->layer);
+	// The seat holds a wl_keyboard from the registry's wl_seat; it has to
+	// go first
+	sweetwall_seat_finish(&app->seat);
 	sweetwall_registry_finish(&app->registry);
 	if (app->display != NULL) {
 		wl_display_disconnect(app->display);

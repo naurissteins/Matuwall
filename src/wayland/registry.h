@@ -12,6 +12,7 @@ struct sweetwall_registry {
 	struct wl_registry *registry;
 	struct wl_compositor *compositor;
 	struct wl_shm *shm;
+	struct wl_seat *seat;
 	struct zwlr_layer_shell_v1 *layer_shell;
 	// Optional; together they give crisp output on fractional scales
 	struct wp_viewporter *viewporter;

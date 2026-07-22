@@ -198,7 +198,9 @@ bool sweetwall_layer_create(struct sweetwall_layer *layer,
 		layer->layer_surface, anchor_for(position));
 	// A picker overlays the desktop; it must not reserve space
 	zwlr_layer_surface_v1_set_exclusive_zone(layer->layer_surface, 0);
-	// TODO: request exclusive keyboard focus once input lands
+	// Every key belongs to the picker while it is open
+	zwlr_layer_surface_v1_set_keyboard_interactivity(layer->layer_surface,
+		ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
 	wl_surface_commit(layer->wl_surface);
 	return true;

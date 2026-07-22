@@ -11,6 +11,8 @@
 #define COMPOSITOR_MAX_VERSION 6
 #define LAYER_SHELL_MAX_VERSION 4
 #define SHM_VERSION 1
+// v5 gives wl_seat.release and wl_keyboard.release
+#define SEAT_MAX_VERSION 5
 #define VIEWPORTER_VERSION 1
 #define FRACTIONAL_SCALE_VERSION 1
 
@@ -29,6 +31,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, wl_shm_interface.name) == 0) {
 		reg->shm = wl_registry_bind(
 			registry, name, &wl_shm_interface, SHM_VERSION);
+	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
+		reg->seat = wl_registry_bind(registry, name, &wl_seat_interface,
+			min_u32(version, SEAT_MAX_VERSION));
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		reg->layer_shell = wl_registry_bind(registry, name,
 			&zwlr_layer_shell_v1_interface,
@@ -91,6 +96,13 @@ bool sweetwall_registry_init(
 				"(zwlr_layer_shell_v1)\n");
 		ok = false;
 	}
+	// The picker takes exclusive keyboard focus; without a seat there
+	// would be no way to dismiss it
+	if (reg->seat == NULL) {
+		fprintf(stderr,
+			"sweetwall: compositor does not expose wl_seat\n");
+		ok = false;
+	}
 
 	return ok;
 }
@@ -108,6 +120,15 @@ void sweetwall_registry_finish(struct sweetwall_registry *reg) {
 	if (reg->layer_shell != NULL) {
 		zwlr_layer_shell_v1_destroy(reg->layer_shell);
 		reg->layer_shell = NULL;
+	}
+	if (reg->seat != NULL) {
+		if (wl_seat_get_version(reg->seat) >=
+			WL_SEAT_RELEASE_SINCE_VERSION) {
+			wl_seat_release(reg->seat);
+		} else {
+			wl_seat_destroy(reg->seat);
+		}
+		reg->seat = NULL;
 	}
 	if (reg->shm != NULL) {
 		wl_shm_destroy(reg->shm);

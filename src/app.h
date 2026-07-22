@@ -6,11 +6,13 @@
 #include "render/color.h"
 #include "wayland/layer.h"
 #include "wayland/registry.h"
+#include "wayland/seat.h"
 
 struct sweetwall_app {
 	struct wl_display *display;
 	struct sweetwall_registry registry;
 	struct sweetwall_layer layer;
+	struct sweetwall_seat seat;
 
 	struct sweetwall_color background;
 	bool running;

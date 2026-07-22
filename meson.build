@@ -20,6 +20,7 @@ fs = import('fs')
 
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols')
+xkbcommon = dependency('xkbcommon')
 
 wayland_scanner_dep = dependency('wayland-scanner', native: true)
 wayland_scanner = find_program(
@@ -37,9 +38,10 @@ executable(
 	'src/app.c',
 	'src/wayland/registry.c',
 	'src/wayland/layer.c',
+	'src/wayland/seat.c',
 	'src/wayland/shm.c',
 	include_directories: sweetwall_inc,
-	dependencies: [wayland_client, sweetwall_protocols_dep],
+	dependencies: [wayland_client, xkbcommon, sweetwall_protocols_dep],
 	install: true,
 )
 
