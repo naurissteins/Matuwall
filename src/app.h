@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "grid/layout.h"
+#include "grid/navigate.h"
 #include "render/color.h"
 #include "scan/dirscan.h"
 #include "wayland/layer.h"
@@ -18,9 +19,11 @@ struct sweetwall_app {
 
 	struct sweetwall_dirscan scan;
 	struct sweetwall_layout layout;
+	struct sweetwall_grid grid;
 
 	struct sweetwall_color background;
 	struct sweetwall_color tile;
+	struct sweetwall_color ring;
 	bool running;
 };
 

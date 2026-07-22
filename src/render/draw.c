@@ -109,6 +109,86 @@ static void blend_corner_row(struct sweetwall_buffer *buffer,
 	}
 }
 
+static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
+	double width, double height, double radius) {
+	double half_w = width / 2.0;
+	double half_h = height / 2.0;
+	double dx = fabs(((double)px + 0.5) - (x + half_w)) - (half_w - radius);
+	double dy = fabs(((double)py + 0.5) - (y + half_h)) - (half_h - radius);
+
+	if (dx < 0.0) {
+		dx = 0.0;
+	}
+	if (dy < 0.0) {
+		dy = 0.0;
+	}
+
+	double distance = sqrt(dx * dx + dy * dy) - radius;
+	double coverage = 0.5 - distance;
+	if (coverage <= 0.0) {
+		return 0;
+	}
+	if (coverage >= 1.0) {
+		return COVERAGE_MAX;
+	}
+	return (uint32_t)(coverage * COVERAGE_MAX + 0.5);
+}
+
+void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t thickness, uint32_t color) {
+	if (width <= 0 || height <= 0 || thickness <= 0) {
+		return;
+	}
+	if (thickness * 2 > width || thickness * 2 > height) {
+		return;
+	}
+
+	double inner_x = x + thickness;
+	double inner_y = y + thickness;
+	double inner_w = width - thickness * 2;
+	double inner_h = height - thickness * 2;
+	double inner_r = radius - thickness;
+	if (inner_r < 0.0) {
+		inner_r = 0.0;
+	}
+
+	int32_t skip_x0 = (int32_t)inner_x + 2;
+	int32_t skip_x1 = (int32_t)(inner_x + inner_w) - 2;
+	int32_t skip_y0 = (int32_t)inner_y + 2;
+	int32_t skip_y1 = (int32_t)(inner_y + inner_h) - 2;
+
+	int32_t top = y < clip->y0 ? clip->y0 : y;
+	int32_t bottom = y + height > clip->y1 ? clip->y1 : y + height;
+	int32_t left = x < clip->x0 ? clip->x0 : x;
+	int32_t right = x + width > clip->x1 ? clip->x1 : x + width;
+
+	for (int32_t py = top; py < bottom; py++) {
+		bool banded = py >= skip_y0 && py < skip_y1;
+		uint32_t *row = buffer->data + (size_t)py * buffer->width;
+
+		for (int32_t px = left; px < right; px++) {
+			if (banded && px >= skip_x0 && px < skip_x1) {
+				// Jump the interior in one step
+				px = skip_x1 - 1;
+				continue;
+			}
+
+			uint32_t outer = rect_coverage(
+				px, py, x, y, width, height, radius);
+			if (outer == 0) {
+				continue;
+			}
+			uint32_t inner = rect_coverage(px, py, inner_x, inner_y,
+				inner_w, inner_h, inner_r);
+			if (inner >= outer) {
+				continue;
+			}
+			row[px] = blend(row[px], color, outer - inner);
+		}
+	}
+}
+
 void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, uint32_t color) {

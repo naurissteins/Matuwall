@@ -21,4 +21,8 @@ void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, uint32_t color);
 
+void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t thickness, uint32_t color);
+
 #endif

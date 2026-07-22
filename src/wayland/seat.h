@@ -2,15 +2,18 @@
 #define SWEETWALL_WAYLAND_SEAT_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
 
 struct wl_seat;
 struct wl_keyboard;
 
-typedef void (*sweetwall_key_fn)(void *user_data, xkb_keysym_t sym);
+struct sweetwall_seat_handler {
+	void (*key)(void *user_data, xkb_keysym_t sym);
+	void (*focus_lost)(void *user_data);
+};
 
 struct sweetwall_seat {
-	// Borrowed from the registry; released there
 	struct wl_seat *wl_seat;
 	struct wl_keyboard *keyboard;
 
@@ -18,12 +21,22 @@ struct sweetwall_seat {
 	struct xkb_keymap *keymap;
 	struct xkb_state *state;
 
-	sweetwall_key_fn on_key;
+	int32_t repeat_rate;
+	int32_t repeat_delay;
+	uint32_t repeat_key;
+	xkb_keysym_t repeat_sym;
+	int64_t repeat_at_ms;
+
+	struct sweetwall_seat_handler handler;
 	void *user_data;
 };
 
 bool sweetwall_seat_init(struct sweetwall_seat *seat, struct wl_seat *wl_seat,
-	sweetwall_key_fn on_key, void *user_data);
+	const struct sweetwall_seat_handler *handler, void *user_data);
+
+int sweetwall_seat_repeat_timeout(const struct sweetwall_seat *seat);
+
+void sweetwall_seat_dispatch_repeat(struct sweetwall_seat *seat);
 
 void sweetwall_seat_finish(struct sweetwall_seat *seat);
 

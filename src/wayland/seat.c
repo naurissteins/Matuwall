@@ -2,12 +2,26 @@
 
 #include <stdio.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
 // evdev keycodes are offset by 8 in the xkb keymap
 #define XKB_KEYCODE_OFFSET 8
+#define MS_PER_SECOND 1000
+
+static int64_t now_ms(void) {
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * MS_PER_SECOND + ts.tv_nsec / 1000000;
+}
+
+static void stop_repeat(struct sweetwall_seat *seat) {
+	seat->repeat_key = 0;
+	seat->repeat_sym = XKB_KEY_NoSymbol;
+	seat->repeat_at_ms = 0;
+}
 
 static void clear_keymap(struct sweetwall_seat *seat) {
 	if (seat->state != NULL) {
@@ -67,14 +81,35 @@ static void handle_key(void *data, struct wl_keyboard *keyboard,
 	(void)serial;
 	(void)time;
 
-	if (state != WL_KEYBOARD_KEY_STATE_PRESSED || seat->state == NULL) {
+	if (seat->state == NULL) {
+		return;
+	}
+
+	if (state == WL_KEYBOARD_KEY_STATE_RELEASED) {
+		if (seat->repeat_key == key) {
+			stop_repeat(seat);
+		}
 		return;
 	}
 
 	xkb_keycode_t code = key + XKB_KEYCODE_OFFSET;
 	xkb_keysym_t sym = xkb_state_key_get_one_sym(seat->state, code);
-	if (sym != XKB_KEY_NoSymbol && seat->on_key != NULL) {
-		seat->on_key(seat->user_data, sym);
+	if (sym == XKB_KEY_NoSymbol) {
+		return;
+	}
+
+	// A newly pressed key takes over the repeat slot
+	if (seat->repeat_rate > 0 && seat->keymap != NULL &&
+		xkb_keymap_key_repeats(seat->keymap, code)) {
+		seat->repeat_key = key;
+		seat->repeat_sym = sym;
+		seat->repeat_at_ms = now_ms() + seat->repeat_delay;
+	} else {
+		stop_repeat(seat);
+	}
+
+	if (seat->handler.key != NULL) {
+		seat->handler.key(seat->user_data, sym);
 	}
 }
 
@@ -102,19 +137,28 @@ static void handle_enter(void *data, struct wl_keyboard *keyboard,
 
 static void handle_leave(void *data, struct wl_keyboard *keyboard,
 	uint32_t serial, struct wl_surface *surface) {
-	(void)data;
+	struct sweetwall_seat *seat = data;
 	(void)keyboard;
 	(void)serial;
 	(void)surface;
+
+	// Nothing is held once focus is gone
+	stop_repeat(seat);
+	if (seat->handler.focus_lost != NULL) {
+		seat->handler.focus_lost(seat->user_data);
+	}
 }
 
-// TODO: honour repeat rate once navigation needs held arrow keys
 static void handle_repeat_info(
 	void *data, struct wl_keyboard *keyboard, int32_t rate, int32_t delay) {
-	(void)data;
+	struct sweetwall_seat *seat = data;
 	(void)keyboard;
-	(void)rate;
-	(void)delay;
+
+	seat->repeat_rate = rate < 0 ? 0 : rate;
+	seat->repeat_delay = delay < 0 ? 0 : delay;
+	if (seat->repeat_rate == 0) {
+		stop_repeat(seat);
+	}
 }
 
 static const struct wl_keyboard_listener keyboard_listener = {
@@ -154,6 +198,7 @@ static void handle_capabilities(
 	} else if (!has_keyboard && seat->keyboard != NULL) {
 		release_keyboard(seat);
 		clear_keymap(seat);
+		stop_repeat(seat);
 	}
 }
 
@@ -169,10 +214,10 @@ static const struct wl_seat_listener seat_listener = {
 };
 
 bool sweetwall_seat_init(struct sweetwall_seat *seat, struct wl_seat *wl_seat,
-	sweetwall_key_fn on_key, void *user_data) {
+	const struct sweetwall_seat_handler *handler, void *user_data) {
 	*seat = (struct sweetwall_seat){
 		.wl_seat = wl_seat,
-		.on_key = on_key,
+		.handler = *handler,
 		.user_data = user_data,
 	};
 
@@ -186,7 +231,30 @@ bool sweetwall_seat_init(struct sweetwall_seat *seat, struct wl_seat *wl_seat,
 	return true;
 }
 
+int sweetwall_seat_repeat_timeout(const struct sweetwall_seat *seat) {
+	if (seat->repeat_key == 0 || seat->repeat_rate <= 0) {
+		return -1;
+	}
+	int64_t remaining = seat->repeat_at_ms - now_ms();
+	return remaining < 0 ? 0 : (int)remaining;
+}
+
+void sweetwall_seat_dispatch_repeat(struct sweetwall_seat *seat) {
+	if (seat->repeat_key == 0 || seat->repeat_rate <= 0) {
+		return;
+	}
+	if (now_ms() < seat->repeat_at_ms) {
+		return;
+	}
+
+	seat->repeat_at_ms += MS_PER_SECOND / seat->repeat_rate;
+	if (seat->handler.key != NULL) {
+		seat->handler.key(seat->user_data, seat->repeat_sym);
+	}
+}
+
 void sweetwall_seat_finish(struct sweetwall_seat *seat) {
+	stop_repeat(seat);
 	release_keyboard(seat);
 	clear_keymap(seat);
 	if (seat->context != NULL) {

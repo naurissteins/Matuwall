@@ -28,6 +28,8 @@ static const struct sweetwall_color default_background = {
 	.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc};
 static const struct sweetwall_color default_tile = {
 	.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff};
+static const struct sweetwall_color default_ring = {
+	.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff};
 
 // Set from a signal handler; only ever read as a flag by the event loop
 static volatile sig_atomic_t interrupted = 0;
@@ -53,17 +55,58 @@ static bool install_signal_handlers(void) {
 	return true;
 }
 
+// Key policy
 static void handle_key(void *user_data, xkb_keysym_t sym) {
 	struct sweetwall_app *app = user_data;
+	enum sweetwall_move move;
 
 	switch (sym) {
 	case XKB_KEY_Escape:
 		app->running = false;
+		return;
+	case XKB_KEY_Left:
+	case XKB_KEY_h:
+		move = SWEETWALL_MOVE_LEFT;
+		break;
+	case XKB_KEY_Right:
+	case XKB_KEY_l:
+		move = SWEETWALL_MOVE_RIGHT;
+		break;
+	case XKB_KEY_Up:
+	case XKB_KEY_k:
+		move = SWEETWALL_MOVE_UP;
+		break;
+	case XKB_KEY_Down:
+	case XKB_KEY_j:
+		move = SWEETWALL_MOVE_DOWN;
+		break;
+	case XKB_KEY_Home:
+	case XKB_KEY_g:
+		move = SWEETWALL_MOVE_FIRST;
+		break;
+	case XKB_KEY_End:
+	case XKB_KEY_G:
+		move = SWEETWALL_MOVE_LAST;
 		break;
 	default:
-		break;
+		return;
+	}
+
+	if (sweetwall_grid_move(
+		    &app->grid, &app->layout, app->layer.height, move)) {
+		app->layer.needs_repaint = true;
 	}
 }
+
+static void handle_focus_lost(void *user_data) {
+	struct sweetwall_app *app = user_data;
+	app->running = false;
+}
+
+static const struct sweetwall_seat_handler seat_handler = {
+	.key = handle_key,
+	.focus_lost = handle_focus_lost,
+};
 
 // TODO: replace with the configured directory
 static char *default_directory(void) {
@@ -86,6 +129,7 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 		.layout = default_layout,
 		.background = default_background,
 		.tile = default_tile,
+		.ring = default_ring,
 		.running = true,
 	};
 
@@ -104,6 +148,7 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 	if (!scanned) {
 		return false;
 	}
+	sweetwall_grid_init(&app->grid, app->scan.count);
 
 	app->display = wl_display_connect(NULL);
 	if (app->display == NULL) {
@@ -117,7 +162,7 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 	}
 
 	if (!sweetwall_seat_init(
-		    &app->seat, app->registry.seat, handle_key, app)) {
+		    &app->seat, app->registry.seat, &seat_handler, app)) {
 		return false;
 	}
 
@@ -165,14 +210,21 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
 
+	sweetwall_grid_reveal(&app->grid, &app->layout, app->layer.height);
+
+	int32_t step = (int32_t)(app->layout.tile_height + app->layout.spacing);
+
 	struct sweetwall_frame frame = {
 		.layout = &app->layout,
 		.item_count = app->scan.count,
+		.selected = app->grid.selected,
+		.scroll = (int32_t)app->grid.first_row * step,
 		.surface_width = app->layer.width,
 		.surface_height = app->layer.height,
 		.scale = scale,
 		.background = sweetwall_color_argb(app->background),
 		.tile = sweetwall_color_argb(app->tile),
+		.ring = sweetwall_color_argb(app->ring),
 	};
 	sweetwall_frame_draw(buffer, &frame);
 	sweetwall_layer_commit_frame(&app->layer);
@@ -196,10 +248,19 @@ static bool pump_events(struct sweetwall_app *app) {
 		.events = POLLIN,
 	};
 
-	if (poll(&pfd, 1, -1) < 0) {
+	int timeout = sweetwall_seat_repeat_timeout(&app->seat);
+	int ready = poll(&pfd, 1, timeout);
+
+	if (ready < 0) {
 		wl_display_cancel_read(app->display);
 		// A caught signal is a normal wakeup, not a failure
 		return errno == EINTR;
+	}
+
+	if (ready == 0) {
+		wl_display_cancel_read(app->display);
+		sweetwall_seat_dispatch_repeat(&app->seat);
+		return true;
 	}
 
 	if ((pfd.revents & (POLLERR | POLLHUP)) != 0) {
@@ -211,7 +272,12 @@ static bool pump_events(struct sweetwall_app *app) {
 	if (wl_display_read_events(app->display) < 0) {
 		return false;
 	}
-	return wl_display_dispatch_pending(app->display) >= 0;
+	if (wl_display_dispatch_pending(app->display) < 0) {
+		return false;
+	}
+
+	sweetwall_seat_dispatch_repeat(&app->seat);
+	return true;
 }
 
 bool sweetwall_app_run(struct sweetwall_app *app) {
