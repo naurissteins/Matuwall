@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app.h"
+
 static void usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
@@ -29,6 +31,10 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
-	// TODO: load config, map the layer surface, run the event loop
-	return 0;
+	// TODO: load config before starting the app
+	struct sweetwall_app app;
+	bool ok = sweetwall_app_init(&app) && sweetwall_app_run(&app);
+	sweetwall_app_finish(&app);
+
+	return ok ? 0 : 1;
 }

@@ -11,17 +11,35 @@ project(
 
 add_project_arguments(
 	'-DSWEETWALL_VERSION="' + meson.project_version() + '"',
+	# memfd_create, sigaction, and the wider POSIX surface
+	'-D_GNU_SOURCE',
 	language: 'c',
 )
 
 fs = import('fs')
+
+wayland_client = dependency('wayland-client')
+wayland_protos = dependency('wayland-protocols')
+
+wayland_scanner_dep = dependency('wayland-scanner', native: true)
+wayland_scanner = find_program(
+	wayland_scanner_dep.get_variable('wayland_scanner'),
+	native: true,
+)
+
+subdir('protocol')
 
 sweetwall_inc = include_directories('src')
 
 executable(
 	'sweetwall',
 	'src/main.c',
+	'src/app.c',
+	'src/wayland/registry.c',
+	'src/wayland/layer.c',
+	'src/wayland/shm.c',
 	include_directories: sweetwall_inc,
+	dependencies: [wayland_client, sweetwall_protocols_dep],
 	install: true,
 )
 
