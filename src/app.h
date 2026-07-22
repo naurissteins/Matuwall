@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
+#include "grid/layout.h"
 #include "render/color.h"
+#include "scan/dirscan.h"
 #include "wayland/layer.h"
 #include "wayland/registry.h"
 #include "wayland/seat.h"
@@ -14,7 +16,11 @@ struct sweetwall_app {
 	struct sweetwall_layer layer;
 	struct sweetwall_seat seat;
 
+	struct sweetwall_dirscan scan;
+	struct sweetwall_layout layout;
+
 	struct sweetwall_color background;
+	struct sweetwall_color tile;
 	bool running;
 };
 

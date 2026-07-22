@@ -247,10 +247,10 @@ static void present(struct sweetwall_layer *layer) {
 	layer->needs_repaint = false;
 }
 
-bool sweetwall_layer_paint_color(
-	struct sweetwall_layer *layer, struct wl_shm *shm, uint32_t color) {
+struct sweetwall_buffer *sweetwall_layer_begin_frame(
+	struct sweetwall_layer *layer, struct wl_shm *shm) {
 	if (!layer->configured || layer->wl_surface == NULL) {
-		return false;
+		return NULL;
 	}
 
 	uint32_t pixel_width;
@@ -261,24 +261,27 @@ bool sweetwall_layer_paint_color(
 	bool reusable = layer->buffer != NULL && layer->buffer->released &&
 			layer->buffer->width == pixel_width &&
 			layer->buffer->height == pixel_height;
-
-	if (!reusable) {
-		struct sweetwall_buffer *buffer = calloc(1, sizeof(*buffer));
-		if (buffer == NULL) {
-			return false;
-		}
-		if (!sweetwall_buffer_create(
-			    buffer, shm, pixel_width, pixel_height)) {
-			free(buffer);
-			return false;
-		}
-		retire_current(layer);
-		layer->buffer = buffer;
+	if (reusable) {
+		return layer->buffer;
 	}
 
-	sweetwall_buffer_fill(layer->buffer, color);
-	present(layer);
-	return true;
+	struct sweetwall_buffer *buffer = calloc(1, sizeof(*buffer));
+	if (buffer == NULL) {
+		return NULL;
+	}
+	if (!sweetwall_buffer_create(buffer, shm, pixel_width, pixel_height)) {
+		free(buffer);
+		return NULL;
+	}
+	retire_current(layer);
+	layer->buffer = buffer;
+	return layer->buffer;
+}
+
+void sweetwall_layer_commit_frame(struct sweetwall_layer *layer) {
+	if (layer->buffer != NULL) {
+		present(layer);
+	}
 }
 
 void sweetwall_layer_destroy(struct sweetwall_layer *layer) {
