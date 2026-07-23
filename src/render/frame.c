@@ -1,12 +1,15 @@
 #include "render/frame.h"
 
 #include <math.h>
+#include <stdbool.h>
 
 #include "render/draw.h"
+#include "render/spinner.h"
 
 #define RING_GAP 3
 #define RING_WIDTH 2
 #define RING_INSET (RING_GAP + RING_WIDTH)
+#define SPINNER_DIVISOR 14
 
 static int32_t to_pixels(int32_t logical, double scale) {
 	return (int32_t)lround((double)logical * scale);
@@ -73,9 +76,32 @@ void sweetwall_frame_draw(
 
 		int32_t left = to_pixels(rect.x, frame->scale);
 		int32_t right = to_pixels(rect.x + rect.width, frame->scale);
+		int32_t tw = right - left;
+		int32_t th = bottom - top;
 
-		sweetwall_draw_rounded_rect(buffer, &clip, left, top,
-			right - left, bottom - top, radius, frame->tile);
+		const struct sweetwall_thumb *thumb =
+			frame->thumbs != NULL ? &frame->thumbs[i] : NULL;
+
+		if (thumb != NULL && thumb->state == SWEETWALL_THUMB_READY &&
+			thumb->pixels != NULL) {
+			sweetwall_draw_image_rounded(buffer, &clip, left, top,
+				tw, th, radius, thumb->pixels, thumb->width,
+				thumb->height);
+		} else {
+			sweetwall_draw_rounded_rect(buffer, &clip, left, top,
+				tw, th, radius, frame->tile);
+
+			// A dot only while the decode is still in flight
+			bool pending = thumb == NULL ||
+				       thumb->state == SWEETWALL_THUMB_PENDING;
+			if (pending) {
+				int32_t dot =
+					(tw < th ? tw : th) / SPINNER_DIVISOR;
+				sweetwall_spinner_draw(buffer, &clip,
+					left + tw / 2, top + th / 2, dot,
+					frame->spinner, frame->spinner_alpha);
+			}
+		}
 
 		if (i == frame->selected) {
 			int32_t inset = ring_gap + ring_width;

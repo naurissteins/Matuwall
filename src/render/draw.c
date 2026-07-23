@@ -241,3 +241,48 @@ void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 			right_c, bottom_c, r, color);
 	}
 }
+
+void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, const uint32_t *src, uint32_t src_w,
+	uint32_t src_h) {
+	if (width <= 0 || height <= 0 || src_w == 0 || src_h == 0) {
+		return;
+	}
+
+	int32_t limit = (width < height ? width : height) / 2;
+	if (radius > limit) {
+		radius = limit;
+	}
+	if (radius < 0) {
+		radius = 0;
+	}
+
+	int32_t top = y < clip->y0 ? clip->y0 : y;
+	int32_t bottom = y + height > clip->y1 ? clip->y1 : y + height;
+	int32_t left = x < clip->x0 ? clip->x0 : x;
+	int32_t right = x + width > clip->x1 ? clip->x1 : x + width;
+
+	for (int32_t py = top; py < bottom; py++) {
+		uint32_t sy = (uint32_t)((int64_t)(py - y) * src_h / height);
+		if (sy >= src_h) {
+			sy = src_h - 1;
+		}
+		const uint32_t *src_row = src + (size_t)sy * src_w;
+		uint32_t *dst_row = buffer->data + (size_t)py * buffer->width;
+
+		for (int32_t px = left; px < right; px++) {
+			uint32_t cov = rect_coverage(
+				px, py, x, y, width, height, radius);
+			if (cov == 0) {
+				continue;
+			}
+			uint32_t sx =
+				(uint32_t)((int64_t)(px - x) * src_w / width);
+			if (sx >= src_w) {
+				sx = src_w - 1;
+			}
+			dst_row[px] = blend(dst_row[px], src_row[sx], cov);
+		}
+	}
+}

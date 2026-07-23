@@ -6,14 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <wayland-client.h>
 
 #include "render/frame.h"
+#include "render/spinner.h"
 
 // TODO: replace these with config values once the config slice lands
 #define DEFAULT_POSITION SWEETWALL_POSITION_CENTER
 #define DEFAULT_DIRECTORY "Pictures/Wallpapers"
-// Caps the surface height; the compositor shrinks it further if it must
 #define MAX_VISIBLE_ROWS 2
 
 static const struct sweetwall_layout default_layout = {
@@ -30,6 +31,8 @@ static const struct sweetwall_color default_tile = {
 	.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff};
 static const struct sweetwall_color default_ring = {
 	.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff};
+static const struct sweetwall_color default_spinner = {
+	.r = 0xcd, .g = 0xd0, .b = 0xe6, .a = 0xff};
 
 // Set from a signal handler; only ever read as a flag by the event loop
 static volatile sig_atomic_t interrupted = 0;
@@ -45,7 +48,6 @@ static bool install_signal_handlers(void) {
 	};
 	sigemptyset(&action.sa_mask);
 
-	// No SA_RESTART: poll() must return EINTR so the loop can notice
 	if (sigaction(SIGINT, &action, NULL) != 0) {
 		return false;
 	}
@@ -108,6 +110,82 @@ static const struct sweetwall_seat_handler seat_handler = {
 	.focus_lost = handle_focus_lost,
 };
 
+static int64_t now_ms(void) {
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+static void on_thumbnail(
+	void *user_data, const struct sweetwall_thumb_result *result) {
+	struct sweetwall_app *app = user_data;
+	if (result->index >= app->thumb_count) {
+		free(result->pixels);
+		return;
+	}
+
+	struct sweetwall_thumb *thumb = &app->thumbs[result->index];
+	if (thumb->state != SWEETWALL_THUMB_PENDING) {
+		free(result->pixels);
+		return;
+	}
+
+	if (result->ok) {
+		thumb->state = SWEETWALL_THUMB_READY;
+		thumb->pixels = result->pixels;
+		thumb->width = result->width;
+		thumb->height = result->height;
+	} else {
+		thumb->state = SWEETWALL_THUMB_FAILED;
+	}
+	if (app->pending > 0) {
+		app->pending--;
+	}
+	app->layer.needs_repaint = true;
+}
+
+static void thumbnail_target(
+	const struct sweetwall_app *app, uint32_t *tw, uint32_t *th) {
+	uint32_t pw;
+	uint32_t ph;
+	sweetwall_layer_buffer_size(&app->layer, &pw, &ph);
+	double scale =
+		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
+	*tw = (uint32_t)(app->layout.tile_width * scale + 0.5);
+	*th = (uint32_t)(app->layout.tile_height * scale + 0.5);
+}
+
+static void start_thumbnails(struct sweetwall_app *app) {
+	if (app->scan.count == 0) {
+		return;
+	}
+
+	app->thumbs = calloc(app->scan.count, sizeof(*app->thumbs));
+	if (app->thumbs == NULL) {
+		return;
+	}
+	app->thumb_count = app->scan.count;
+
+	uint32_t tw;
+	uint32_t th;
+	thumbnail_target(app, &tw, &th);
+	app->workers = sweetwall_worker_pool_start(tw, th);
+	if (app->workers == NULL) {
+		fprintf(stderr, "sweetwall: failed to start thumbnail "
+				"workers\n");
+		return;
+	}
+
+	for (size_t i = 0; i < app->scan.count; i++) {
+		if (sweetwall_worker_submit(
+			    app->workers, i, app->scan.paths[i])) {
+			app->pending++;
+		} else {
+			app->thumbs[i].state = SWEETWALL_THUMB_FAILED;
+		}
+	}
+}
+
 // TODO: replace with the configured directory
 static char *default_directory(void) {
 	const char *home = getenv("HOME");
@@ -130,6 +208,7 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 		.background = default_background,
 		.tile = default_tile,
 		.ring = default_ring,
+		.spinner = default_spinner,
 		.running = true,
 	};
 
@@ -216,6 +295,7 @@ static bool render_if_needed(struct sweetwall_app *app) {
 
 	struct sweetwall_frame frame = {
 		.layout = &app->layout,
+		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
 		.selected = app->grid.selected,
 		.scroll = (int32_t)app->grid.first_row * step,
@@ -225,6 +305,8 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.background = sweetwall_color_argb(app->background),
 		.tile = sweetwall_color_argb(app->tile),
 		.ring = sweetwall_color_argb(app->ring),
+		.spinner = app->spinner,
+		.spinner_alpha = sweetwall_spinner_alpha(now_ms()),
 	};
 	sweetwall_frame_draw(buffer, &frame);
 	sweetwall_layer_commit_frame(&app->layer);
@@ -243,48 +325,67 @@ static bool pump_events(struct sweetwall_app *app) {
 		return false;
 	}
 
-	struct pollfd pfd = {
-		.fd = wl_display_get_fd(app->display),
-		.events = POLLIN,
+	struct pollfd pfd[2] = {
+		{.fd = wl_display_get_fd(app->display), .events = POLLIN},
 	};
+	nfds_t nfds = 1;
+	if (app->workers != NULL) {
+		pfd[1].fd = sweetwall_worker_pool_fd(app->workers);
+		pfd[1].events = POLLIN;
+		nfds = 2;
+	}
 
 	int timeout = sweetwall_seat_repeat_timeout(&app->seat);
-	int ready = poll(&pfd, 1, timeout);
+	// Pulse the loading dot while any thumbnail is still pending
+	if (app->pending > 0) {
+		int tick = SWEETWALL_SPINNER_INTERVAL_MS;
+		timeout = timeout < 0 || tick < timeout ? tick : timeout;
+	}
 
-	if (ready < 0) {
+	if (poll(pfd, nfds, timeout) < 0) {
 		wl_display_cancel_read(app->display);
 		// A caught signal is a normal wakeup, not a failure
 		return errno == EINTR;
 	}
 
-	if (ready == 0) {
-		wl_display_cancel_read(app->display);
-		sweetwall_seat_dispatch_repeat(&app->seat);
-		return true;
-	}
-
-	if ((pfd.revents & (POLLERR | POLLHUP)) != 0) {
+	if ((pfd[0].revents & (POLLERR | POLLHUP)) != 0) {
 		wl_display_cancel_read(app->display);
 		fprintf(stderr, "sweetwall: compositor disconnected\n");
 		return false;
 	}
 
-	if (wl_display_read_events(app->display) < 0) {
-		return false;
+	// The prepare_read must be matched by exactly one read or cancel
+	if ((pfd[0].revents & POLLIN) != 0) {
+		if (wl_display_read_events(app->display) < 0) {
+			return false;
+		}
+	} else {
+		wl_display_cancel_read(app->display);
 	}
 	if (wl_display_dispatch_pending(app->display) < 0) {
 		return false;
 	}
 
+	if (nfds == 2 && (pfd[1].revents & POLLIN) != 0) {
+		sweetwall_worker_drain(app->workers, on_thumbnail, app);
+	}
+
 	sweetwall_seat_dispatch_repeat(&app->seat);
+	// Keep the pulse advancing while tiles are still loading
+	if (app->pending > 0) {
+		app->layer.needs_repaint = true;
+	}
 	return true;
 }
 
 bool sweetwall_app_run(struct sweetwall_app *app) {
+	// First frame before any decoding: placeholders only
 	app->layer.needs_repaint = true;
 	if (!render_if_needed(app)) {
 		return false;
 	}
+
+	start_thumbnails(app);
 
 	while (app->running && !app->layer.closed && interrupted == 0) {
 		if (!pump_events(app)) {
@@ -299,6 +400,19 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 }
 
 void sweetwall_app_finish(struct sweetwall_app *app) {
+	if (app->workers != NULL) {
+		sweetwall_worker_pool_stop(app->workers);
+		app->workers = NULL;
+	}
+	if (app->thumbs != NULL) {
+		for (size_t i = 0; i < app->thumb_count; i++) {
+			free(app->thumbs[i].pixels);
+		}
+		free(app->thumbs);
+		app->thumbs = NULL;
+		app->thumb_count = 0;
+	}
+
 	sweetwall_layer_destroy(&app->layer);
 	sweetwall_seat_finish(&app->seat);
 	sweetwall_registry_finish(&app->registry);
