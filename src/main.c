@@ -31,9 +31,15 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
-	// TODO: load config before starting the app
+	struct sweetwall_config config;
+	char err[256];
+	if (!sweetwall_config_load(&config, err, sizeof(err))) {
+		// A bad config is a warning, not a crash: run with defaults
+		fprintf(stderr, "sweetwall: %s\n", err);
+	}
+
 	struct sweetwall_app app;
-	bool ok = sweetwall_app_init(&app) && sweetwall_app_run(&app);
+	bool ok = sweetwall_app_init(&app, &config) && sweetwall_app_run(&app);
 	sweetwall_app_finish(&app);
 
 	return ok ? 0 : 1;

@@ -1,0 +1,270 @@
+#include "config/config.h"
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "config/toml.h"
+
+#define DEFAULT_DIRECTORY "Pictures/Wallpapers"
+
+const char *sweetwall_position_name(enum sweetwall_position position) {
+	switch (position) {
+	case SWEETWALL_POSITION_LEFT:
+		return "left";
+	case SWEETWALL_POSITION_RIGHT:
+		return "right";
+	case SWEETWALL_POSITION_TOP:
+		return "top";
+	case SWEETWALL_POSITION_BOTTOM:
+		return "bottom";
+	case SWEETWALL_POSITION_CENTER:
+		break;
+	}
+	return "center";
+}
+
+bool sweetwall_position_from_name(
+	const char *name, enum sweetwall_position *out) {
+	if (strcmp(name, "center") == 0) {
+		*out = SWEETWALL_POSITION_CENTER;
+	} else if (strcmp(name, "left") == 0) {
+		*out = SWEETWALL_POSITION_LEFT;
+	} else if (strcmp(name, "right") == 0) {
+		*out = SWEETWALL_POSITION_RIGHT;
+	} else if (strcmp(name, "top") == 0) {
+		*out = SWEETWALL_POSITION_TOP;
+	} else if (strcmp(name, "bottom") == 0) {
+		*out = SWEETWALL_POSITION_BOTTOM;
+	} else {
+		return false;
+	}
+	return true;
+}
+
+void sweetwall_config_defaults(struct sweetwall_config *cfg) {
+	*cfg = (struct sweetwall_config){
+		.position = SWEETWALL_POSITION_CENTER,
+		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
+		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
+		.ring = {.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff},
+		.spinner = {.r = 0xcd, .g = 0xd0, .b = 0xe6, .a = 0xff},
+		.layout = {.columns = 5,
+			.spacing = 16,
+			.margin = 24,
+			.tile_width = 240,
+			.tile_height = 400,
+			.radius = 8},
+		.visible_rows = 2,
+	};
+
+	const char *home = getenv("HOME");
+	if (home != NULL) {
+		snprintf(cfg->directory, sizeof(cfg->directory), "%s/%s", home,
+			DEFAULT_DIRECTORY);
+	}
+}
+
+// Expand a leading ~ to $HOME; other paths are copied verbatim
+static bool expand_path(const char *in, char *out, size_t out_size) {
+	int n;
+	if (in[0] == '~' && (in[1] == '/' || in[1] == '\0')) {
+		const char *home = getenv("HOME");
+		if (home == NULL) {
+			return false;
+		}
+		n = snprintf(out, out_size, "%s%s", home, in + 1);
+	} else {
+		n = snprintf(out, out_size, "%s", in);
+	}
+	return n > 0 && (size_t)n < out_size;
+}
+
+// --- schema application ---
+
+static void warn(int line, const char *detail) {
+	fprintf(stderr, "sweetwall: config: line %d: %s; using default\n", line,
+		detail);
+}
+
+static void apply_string(char *dst, size_t size,
+	const struct sweetwall_toml_value *v, int line, const char *what) {
+	if (v->type != SWEETWALL_TOML_STRING) {
+		warn(line, what);
+		return;
+	}
+	char tmp[PATH_MAX];
+	if (!expand_path(v->string, tmp, sizeof(tmp)) || strlen(tmp) >= size) {
+		warn(line, what);
+		return;
+	}
+	memcpy(dst, tmp, strlen(tmp) + 1);
+}
+
+static void apply_color(struct sweetwall_color *dst,
+	const struct sweetwall_toml_value *v, int line, const char *what) {
+	if (v->type != SWEETWALL_TOML_STRING ||
+		!sweetwall_color_parse(v->string, dst)) {
+		warn(line, what);
+	}
+}
+
+static void apply_uint(uint32_t *dst, const struct sweetwall_toml_value *v,
+	int line, const char *what, int64_t lo, int64_t hi) {
+	if (v->type != SWEETWALL_TOML_INTEGER || v->integer < lo ||
+		v->integer > hi) {
+		warn(line, what);
+		return;
+	}
+	*dst = (uint32_t)v->integer;
+}
+
+static void apply_position(enum sweetwall_position *dst,
+	const struct sweetwall_toml_value *v, int line) {
+	if (v->type != SWEETWALL_TOML_STRING ||
+		!sweetwall_position_from_name(v->string, dst)) {
+		warn(line, "position must be \"center\", \"left\", \"right\", "
+			   "\"top\", or \"bottom\"");
+	}
+}
+
+static bool unknown(const char *section, const char *key, int line, char *err,
+	size_t err_size) {
+	if (section[0] == '\0') {
+		snprintf(err, err_size,
+			"line %d: '%s' must be inside a [section]", line, key);
+	} else {
+		snprintf(err, err_size, "line %d: unknown key '%s' in [%s]",
+			line, key, section);
+	}
+	return false;
+}
+
+static bool apply(void *user_data, const char *section, const char *key,
+	const struct sweetwall_toml_value *v, int line, char *err,
+	size_t err_size) {
+	struct sweetwall_config *cfg = user_data;
+
+	if (strcmp(section, "general") == 0) {
+		if (strcmp(key, "directory") == 0) {
+			apply_string(cfg->directory, sizeof(cfg->directory), v,
+				line, "directory must be a string path");
+			return true;
+		}
+	} else if (strcmp(section, "window") == 0) {
+		if (strcmp(key, "position") == 0) {
+			apply_position(&cfg->position, v, line);
+			return true;
+		}
+		if (strcmp(key, "background") == 0) {
+			apply_color(&cfg->background, v, line,
+				"background must be \"#rrggbb\" or "
+				"\"#rrggbbaa\"");
+			return true;
+		}
+		if (strcmp(key, "margin") == 0) {
+			apply_uint(&cfg->layout.margin, v, line,
+				"margin must be 0..4096", 0, 4096);
+			return true;
+		}
+	} else if (strcmp(section, "grid") == 0) {
+		if (strcmp(key, "columns") == 0) {
+			apply_uint(&cfg->layout.columns, v, line,
+				"columns must be 1..1024", 1, 1024);
+			return true;
+		}
+		if (strcmp(key, "spacing") == 0) {
+			apply_uint(&cfg->layout.spacing, v, line,
+				"spacing must be 0..4096", 0, 4096);
+			return true;
+		}
+		if (strcmp(key, "radius") == 0) {
+			apply_uint(&cfg->layout.radius, v, line,
+				"radius must be 0..4096", 0, 4096);
+			return true;
+		}
+		if (strcmp(key, "visible_rows") == 0) {
+			apply_uint(&cfg->visible_rows, v, line,
+				"visible_rows must be 1..1024", 1, 1024);
+			return true;
+		}
+	} else if (strcmp(section, "thumbnail") == 0) {
+		if (strcmp(key, "width") == 0) {
+			apply_uint(&cfg->layout.tile_width, v, line,
+				"width must be 1..16384", 1, 16384);
+			return true;
+		}
+		if (strcmp(key, "height") == 0) {
+			apply_uint(&cfg->layout.tile_height, v, line,
+				"height must be 1..16384", 1, 16384);
+			return true;
+		}
+	} else if (strcmp(section, "colors") == 0) {
+		if (strcmp(key, "tile") == 0) {
+			apply_color(&cfg->tile, v, line,
+				"tile must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+		if (strcmp(key, "ring") == 0) {
+			apply_color(&cfg->ring, v, line,
+				"ring must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+		if (strcmp(key, "spinner") == 0) {
+			apply_color(&cfg->spinner, v, line,
+				"spinner must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+	} else {
+		snprintf(err, err_size, "line %d: unknown section [%s]", line,
+			section);
+		return false;
+	}
+
+	return unknown(section, key, line, err, err_size);
+}
+
+// --- loading ---
+
+bool sweetwall_config_path(char *out, size_t out_size) {
+	const char *xdg = getenv("XDG_CONFIG_HOME");
+	if (xdg != NULL && xdg[0] != '\0') {
+		int n = snprintf(
+			out, out_size, "%s/sweetwall/config.toml", xdg);
+		return n > 0 && (size_t)n < out_size;
+	}
+	const char *home = getenv("HOME");
+	if (home != NULL && home[0] != '\0') {
+		int n = snprintf(out, out_size,
+			"%s/.config/sweetwall/config.toml", home);
+		return n > 0 && (size_t)n < out_size;
+	}
+	return false;
+}
+
+bool sweetwall_config_load(
+	struct sweetwall_config *cfg, char *err, size_t err_size) {
+	sweetwall_config_defaults(cfg);
+
+	char path[PATH_MAX];
+	if (!sweetwall_config_path(path, sizeof(path))) {
+		return true;
+	}
+
+	FILE *fp = fopen(path, "r");
+	if (fp == NULL) {
+		if (errno == ENOENT) {
+			return true;
+		}
+		snprintf(err, err_size, "%s: %s", path, strerror(errno));
+		return false;
+	}
+
+	bool ok = sweetwall_toml_parse(fp, path, apply, cfg, err, err_size);
+	fclose(fp);
+	if (!ok) {
+		sweetwall_config_defaults(cfg);
+	}
+	return ok;
+}

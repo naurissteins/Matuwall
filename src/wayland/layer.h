@@ -4,21 +4,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "config/config.h"
 #include "wayland/registry.h"
 #include "wayland/shm.h"
 
 struct zwlr_layer_surface_v1;
 struct wp_viewport;
 struct wp_fractional_scale_v1;
-
-// Where the picker sits on screen
-enum sweetwall_position {
-	SWEETWALL_POSITION_CENTER,
-	SWEETWALL_POSITION_LEFT,
-	SWEETWALL_POSITION_RIGHT,
-	SWEETWALL_POSITION_TOP,
-	SWEETWALL_POSITION_BOTTOM,
-};
 
 struct sweetwall_layer {
 	struct wl_surface *wl_surface;

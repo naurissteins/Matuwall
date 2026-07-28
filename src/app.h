@@ -5,9 +5,8 @@
 
 #include <stddef.h>
 
-#include "grid/layout.h"
+#include "config/config.h"
 #include "grid/navigate.h"
-#include "render/color.h"
 #include "scan/dirscan.h"
 #include "thumb/worker.h"
 #include "wayland/layer.h"
@@ -20,23 +19,19 @@ struct sweetwall_app {
 	struct sweetwall_layer layer;
 	struct sweetwall_seat seat;
 
+	struct sweetwall_config config;
 	struct sweetwall_dirscan scan;
-	struct sweetwall_layout layout;
 	struct sweetwall_grid grid;
 
 	struct sweetwall_worker_pool *workers;
 	struct sweetwall_thumb *thumbs;
 	size_t thumb_count;
 	size_t pending;
-
-	struct sweetwall_color background;
-	struct sweetwall_color tile;
-	struct sweetwall_color ring;
-	struct sweetwall_color spinner;
 	bool running;
 };
 
-bool sweetwall_app_init(struct sweetwall_app *app);
+bool sweetwall_app_init(
+	struct sweetwall_app *app, const struct sweetwall_config *config);
 
 bool sweetwall_app_run(struct sweetwall_app *app);
 

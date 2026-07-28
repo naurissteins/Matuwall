@@ -1,0 +1,43 @@
+#ifndef SWEETWALL_CONFIG_CONFIG_H
+#define SWEETWALL_CONFIG_CONFIG_H
+
+#include <limits.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "grid/layout.h"
+#include "render/color.h"
+
+// Where the picker sits on screen
+enum sweetwall_position {
+	SWEETWALL_POSITION_CENTER,
+	SWEETWALL_POSITION_LEFT,
+	SWEETWALL_POSITION_RIGHT,
+	SWEETWALL_POSITION_TOP,
+	SWEETWALL_POSITION_BOTTOM,
+};
+
+const char *sweetwall_position_name(enum sweetwall_position position);
+bool sweetwall_position_from_name(
+	const char *name, enum sweetwall_position *out);
+
+struct sweetwall_config {
+	char directory[PATH_MAX];
+	enum sweetwall_position position;
+	struct sweetwall_color background;
+	struct sweetwall_color tile;
+	struct sweetwall_color ring;
+	struct sweetwall_color spinner;
+	struct sweetwall_layout layout;
+	uint32_t visible_rows;
+};
+
+void sweetwall_config_defaults(struct sweetwall_config *cfg);
+
+bool sweetwall_config_load(
+	struct sweetwall_config *cfg, char *err, size_t err_size);
+
+bool sweetwall_config_path(char *out, size_t out_size);
+
+#endif

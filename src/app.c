@@ -5,34 +5,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 #include <wayland-client.h>
 
 #include "render/frame.h"
 #include "render/spinner.h"
-
-// TODO: replace these with config values once the config slice lands
-#define DEFAULT_POSITION SWEETWALL_POSITION_CENTER
-#define DEFAULT_DIRECTORY "Pictures/Wallpapers"
-#define MAX_VISIBLE_ROWS 2
-
-static const struct sweetwall_layout default_layout = {
-	.columns = 5,
-	.spacing = 16,
-	.margin = 24,
-	.tile_width = 240,
-	.tile_height = 400,
-	.radius = 8,
-};
-static const struct sweetwall_color default_background = {
-	.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc};
-static const struct sweetwall_color default_tile = {
-	.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff};
-static const struct sweetwall_color default_ring = {
-	.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff};
-static const struct sweetwall_color default_spinner = {
-	.r = 0xcd, .g = 0xd0, .b = 0xe6, .a = 0xff};
 
 // Set from a signal handler; only ever read as a flag by the event loop
 static volatile sig_atomic_t interrupted = 0;
@@ -95,7 +72,7 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 	}
 
 	if (sweetwall_grid_move(
-		    &app->grid, &app->layout, app->layer.height, move)) {
+		    &app->grid, &app->config.layout, app->layer.height, move)) {
 		app->layer.needs_repaint = true;
 	}
 }
@@ -151,8 +128,8 @@ static void thumbnail_target(
 	sweetwall_layer_buffer_size(&app->layer, &pw, &ph);
 	double scale =
 		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
-	*tw = (uint32_t)(app->layout.tile_width * scale + 0.5);
-	*th = (uint32_t)(app->layout.tile_height * scale + 0.5);
+	*tw = (uint32_t)(app->config.layout.tile_width * scale + 0.5);
+	*th = (uint32_t)(app->config.layout.tile_height * scale + 0.5);
 }
 
 static void start_thumbnails(struct sweetwall_app *app) {
@@ -186,29 +163,10 @@ static void start_thumbnails(struct sweetwall_app *app) {
 	}
 }
 
-// TODO: replace with the configured directory
-static char *default_directory(void) {
-	const char *home = getenv("HOME");
-	if (home == NULL) {
-		fprintf(stderr, "sweetwall: HOME is not set\n");
-		return NULL;
-	}
-
-	size_t size = strlen(home) + 1 + strlen(DEFAULT_DIRECTORY) + 1;
-	char *path = malloc(size);
-	if (path != NULL) {
-		snprintf(path, size, "%s/%s", home, DEFAULT_DIRECTORY);
-	}
-	return path;
-}
-
-bool sweetwall_app_init(struct sweetwall_app *app) {
+bool sweetwall_app_init(
+	struct sweetwall_app *app, const struct sweetwall_config *config) {
 	*app = (struct sweetwall_app){
-		.layout = default_layout,
-		.background = default_background,
-		.tile = default_tile,
-		.ring = default_ring,
-		.spinner = default_spinner,
+		.config = *config,
 		.running = true,
 	};
 
@@ -218,13 +176,12 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 		return false;
 	}
 
-	char *directory = default_directory();
-	if (directory == NULL) {
+	if (app->config.directory[0] == '\0') {
+		fprintf(stderr, "sweetwall: no wallpaper directory set "
+				"(is HOME set?)\n");
 		return false;
 	}
-	bool scanned = sweetwall_dirscan_run(&app->scan, directory);
-	free(directory);
-	if (!scanned) {
+	if (!sweetwall_dirscan_run(&app->scan, app->config.directory)) {
 		return false;
 	}
 	sweetwall_grid_init(&app->grid, app->scan.count);
@@ -247,11 +204,11 @@ bool sweetwall_app_init(struct sweetwall_app *app) {
 
 	uint32_t width;
 	uint32_t height;
-	sweetwall_layout_surface_size(&app->layout, app->scan.count,
-		MAX_VISIBLE_ROWS, &width, &height);
+	sweetwall_layout_surface_size(&app->config.layout, app->scan.count,
+		app->config.visible_rows, &width, &height);
 
 	if (!sweetwall_layer_create(&app->layer, &app->registry, width, height,
-		    DEFAULT_POSITION)) {
+		    app->config.position)) {
 		fprintf(stderr, "sweetwall: failed to create the layer "
 				"surface\n");
 		return false;
@@ -289,12 +246,14 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
 
-	sweetwall_grid_reveal(&app->grid, &app->layout, app->layer.height);
+	sweetwall_grid_reveal(
+		&app->grid, &app->config.layout, app->layer.height);
 
-	int32_t step = (int32_t)(app->layout.tile_height + app->layout.spacing);
+	int32_t step = (int32_t)(app->config.layout.tile_height +
+				 app->config.layout.spacing);
 
 	struct sweetwall_frame frame = {
-		.layout = &app->layout,
+		.layout = &app->config.layout,
 		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
 		.selected = app->grid.selected,
@@ -302,10 +261,10 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.surface_width = app->layer.width,
 		.surface_height = app->layer.height,
 		.scale = scale,
-		.background = sweetwall_color_argb(app->background),
-		.tile = sweetwall_color_argb(app->tile),
-		.ring = sweetwall_color_argb(app->ring),
-		.spinner = app->spinner,
+		.background = sweetwall_color_argb(app->config.background),
+		.tile = sweetwall_color_argb(app->config.tile),
+		.ring = sweetwall_color_argb(app->config.ring),
+		.spinner = app->config.spinner,
 		.spinner_alpha = sweetwall_spinner_alpha(now_ms()),
 	};
 	sweetwall_frame_draw(buffer, &frame);

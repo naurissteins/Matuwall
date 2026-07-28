@@ -3,6 +3,7 @@ scdoc = find_program('scdoc', required: false)
 if scdoc.found()
 	man_pages = {
 		'sweetwall.1.scd': 'man1',
+		'sweetwall.5.scd': 'man5',
 	}
 	mandir = get_option('mandir')
 
