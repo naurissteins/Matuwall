@@ -22,6 +22,9 @@ const char *sweetwall_position_name(enum sweetwall_position position);
 bool sweetwall_position_from_name(
 	const char *name, enum sweetwall_position *out);
 
+#define SWEETWALL_MAX_HOOKS 16
+#define SWEETWALL_HOOK_MAX 512
+
 struct sweetwall_config {
 	char directory[PATH_MAX];
 	char backend[32];
@@ -32,6 +35,9 @@ struct sweetwall_config {
 	struct sweetwall_color spinner;
 	struct sweetwall_layout layout;
 	uint32_t visible_rows;
+	// on_apply command templates, run after a successful apply
+	char on_apply[SWEETWALL_MAX_HOOKS][SWEETWALL_HOOK_MAX];
+	size_t on_apply_count;
 };
 
 void sweetwall_config_defaults(struct sweetwall_config *cfg);

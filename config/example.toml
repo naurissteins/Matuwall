@@ -49,3 +49,14 @@ ring = "#f2cdcdff"
 
 # Loading dot pulsing on tiles that are still decoding.
 spinner = "#cdd0e6ff"
+
+[hooks]
+# Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme.
+# {path} expands to the absolute wallpaper path. Each command is split on
+# whitespace and run directly (no shell), so shell syntax like pipes, globs, or
+# quotes has no effect; {path} is always passed as a single argument, so spaces
+# in a filename are safe. Hooks run detached and are not waited on.
+# on_apply = [
+#   "matugen image {path}",
+#   "wal -i {path} -n",
+# ]

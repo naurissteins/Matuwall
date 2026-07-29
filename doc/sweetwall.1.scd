@@ -46,6 +46,9 @@ key selects a backend by name or _"auto"_ to probe. The path is passed as an
 argument, never through a shell. A backend that is unknown or fails is reported
 and sweetwall exits non-zero without changing the wallpaper.
 
+After a successful apply, the _hooks.on_apply_ commands run (for example a
+colorscheme generator), spawned detached. See *sweetwall*(5).
+
 # CONFIGURATION
 
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to

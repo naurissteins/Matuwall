@@ -58,6 +58,7 @@ executable(
 	'src/config/toml.c',
 	'src/grid/layout.c',
 	'src/grid/navigate.c',
+	'src/hooks/hooks.c',
 	'src/render/draw.c',
 	'src/render/frame.c',
 	'src/render/spinner.c',

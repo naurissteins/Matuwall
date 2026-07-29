@@ -10,6 +10,7 @@
 #include <wayland-client.h>
 
 #include "backend/backend.h"
+#include "hooks/hooks.h"
 #include "render/frame.h"
 #include "render/spinner.h"
 
@@ -368,6 +369,7 @@ static bool apply_selection(struct sweetwall_app *app) {
 			backend->name);
 		return false;
 	}
+	sweetwall_hooks_run(&app->config, path);
 	return true;
 }
 

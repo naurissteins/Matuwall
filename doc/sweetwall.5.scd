@@ -86,6 +86,23 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 	Loading dot pulsing on tiles that are still decoding. Defaults to
 	_"#cdd0e6ff"_.
 
+## [hooks]
+
+*on_apply*
+	An array of command strings run after the wallpaper is applied, for
+	example to regenerate a colorscheme. Empty by default.
+
+	Each command is split on whitespace into an argument vector and run
+	directly with _execvp_(3); there is *no shell*, so pipes, globs, variable
+	expansion, and quoting have no effect. The token _{path}_ is replaced with
+	the absolute wallpaper path wherever it appears, always within a single
+	argument, so a filename containing spaces or shell metacharacters is passed
+	safely and never interpreted as code.
+
+	Hooks are spawned detached and are not waited on, so a slow generator never
+	delays the picker's exit. A command that fails to start logs a warning; its
+	exit status is otherwise ignored. Up to 16 hooks are run.
+
 # EXAMPLE
 
 ```
@@ -105,6 +122,12 @@ radius  = 8
 [thumbnail]
 width  = 240
 height = 400
+
+[hooks]
+on_apply = [
+	"matugen image {path}",
+	"wal -i {path} -n",
+]
 ```
 
 # SEE ALSO

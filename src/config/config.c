@@ -141,6 +141,29 @@ static void apply_position(enum sweetwall_position *dst,
 	}
 }
 
+static void apply_hooks(struct sweetwall_config *cfg,
+	const struct sweetwall_toml_value *v, int line) {
+	if (v->type != SWEETWALL_TOML_ARRAY) {
+		warn(line, "on_apply must be an array of command strings");
+		return;
+	}
+	cfg->on_apply_count = 0;
+	for (size_t i = 0; i < v->item_count; i++) {
+		if (cfg->on_apply_count >= SWEETWALL_MAX_HOOKS) {
+			warn(line, "too many on_apply hooks; extra ignored");
+			return;
+		}
+		const char *cmd = v->items[i];
+		if (strlen(cmd) >= SWEETWALL_HOOK_MAX) {
+			warn(line, "on_apply command too long; skipped");
+			continue;
+		}
+		memcpy(cfg->on_apply[cfg->on_apply_count], cmd,
+			strlen(cmd) + 1);
+		cfg->on_apply_count++;
+	}
+}
+
 static bool unknown(const char *section, const char *key, int line, char *err,
 	size_t err_size) {
 	if (section[0] == '\0') {
@@ -232,6 +255,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "spinner") == 0) {
 			apply_color(&cfg->spinner, v, line,
 				"spinner must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+	} else if (strcmp(section, "hooks") == 0) {
+		if (strcmp(key, "on_apply") == 0) {
+			apply_hooks(cfg, v, line);
 			return true;
 		}
 	} else {
