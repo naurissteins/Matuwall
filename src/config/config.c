@@ -45,6 +45,7 @@ bool sweetwall_position_from_name(
 
 void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 	*cfg = (struct sweetwall_config){
+		.backend = "sweetbg",
 		.position = SWEETWALL_POSITION_CENTER,
 		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
 		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
@@ -102,6 +103,17 @@ static void apply_string(char *dst, size_t size,
 	memcpy(dst, tmp, strlen(tmp) + 1);
 }
 
+// A bare name (no path expansion), e.g. the backend identifier
+static void apply_name(char *dst, size_t size,
+	const struct sweetwall_toml_value *v, int line, const char *what) {
+	if (v->type != SWEETWALL_TOML_STRING || v->string[0] == '\0' ||
+		strlen(v->string) >= size) {
+		warn(line, what);
+		return;
+	}
+	memcpy(dst, v->string, strlen(v->string) + 1);
+}
+
 static void apply_color(struct sweetwall_color *dst,
 	const struct sweetwall_toml_value *v, int line, const char *what) {
 	if (v->type != SWEETWALL_TOML_STRING ||
@@ -150,6 +162,12 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "directory") == 0) {
 			apply_string(cfg->directory, sizeof(cfg->directory), v,
 				line, "directory must be a string path");
+			return true;
+		}
+		if (strcmp(key, "backend") == 0) {
+			apply_name(cfg->backend, sizeof(cfg->backend), v, line,
+				"backend must be a name like \"sweetbg\" or "
+				"\"auto\"");
 			return true;
 		}
 	} else if (strcmp(section, "window") == 0) {

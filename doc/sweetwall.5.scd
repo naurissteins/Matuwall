@@ -30,6 +30,13 @@ line. Comments are not allowed inside an array.
 	Directory scanned for wallpapers. A leading _~_ expands to _$HOME_.
 	Defaults to _"~/Pictures/Wallpapers"_.
 
+*backend*
+	Wallpaper daemon used to apply the selection. A backend name, currently
+	only _"sweetbg"_, or _"auto"_ to probe the known backends in order and use
+	the first one found. Defaults to _"sweetbg"_. An unknown name, or _"auto"_
+	with nothing installed, is reported when you press *Enter* and the picker
+	exits non-zero without changing the wallpaper.
+
 ## [window]
 
 *position*

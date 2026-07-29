@@ -21,6 +21,31 @@ opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 *-V*, *--version*
 	Show version information and exit.
 
+# KEY BINDINGS
+
+*Arrow keys*, *h* *j* *k* *l*
+	Move the selection.
+
+*Home*, *g*
+	Jump to the first tile.
+
+*End*, *G*
+	Jump to the last tile.
+
+*Enter*
+	Apply the selected wallpaper through the backend, then exit.
+
+*Escape*
+	Cancel without applying and exit.
+
+# BACKENDS
+
+On *Enter*, the selected wallpaper is handed to a wallpaper daemon. The default
+backend is *sweetbg*(1), invoked as _sweetbg img <path>_. The _backend_ config
+key selects a backend by name or _"auto"_ to probe. The path is passed as an
+argument, never through a shell. A backend that is unknown or fails is reported
+and sweetwall exits non-zero without changing the wallpaper.
+
 # CONFIGURATION
 
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
@@ -34,4 +59,4 @@ _$XDG_CONFIG_HOME/sweetwall/config.toml_, _~/.config/sweetwall/config.toml_
 
 # SEE ALSO
 
-*sweetwall*(5)
+*sweetwall*(5), *sweetbg*(1)

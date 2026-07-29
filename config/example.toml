@@ -7,6 +7,10 @@
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
 directory = "~/Pictures/Wallpapers"
 
+# Wallpaper daemon used to apply the selection. A backend name (currently only
+# "sweetbg") or "auto" to probe the known backends in order.
+backend = "sweetbg"
+
 [window]
 # Placement on screen: "center", "left", "right", "top", or "bottom".
 position = "center"

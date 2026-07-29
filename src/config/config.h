@@ -24,6 +24,7 @@ bool sweetwall_position_from_name(
 
 struct sweetwall_config {
 	char directory[PATH_MAX];
+	char backend[32];
 	enum sweetwall_position position;
 	struct sweetwall_color background;
 	struct sweetwall_color tile;

@@ -5,9 +5,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <wayland-client.h>
 
+#include "backend/backend.h"
 #include "render/frame.h"
 #include "render/spinner.h"
 
@@ -41,6 +43,15 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 
 	switch (sym) {
 	case XKB_KEY_Escape:
+		app->running = false;
+		return;
+	case XKB_KEY_Return:
+	case XKB_KEY_KP_Enter:
+		// Defer the apply off the input path; run() does it on the way
+		// out
+		if (app->scan.count > 0) {
+			app->apply_requested = true;
+		}
 		app->running = false;
 		return;
 	case XKB_KEY_Left:
@@ -337,6 +348,29 @@ static bool pump_events(struct sweetwall_app *app) {
 	return true;
 }
 
+// Hand the selected wallpaper to the backend; runs off the input path on exit
+static bool apply_selection(struct sweetwall_app *app) {
+	const char *path = app->scan.paths[app->grid.selected];
+	const struct sweetwall_backend *backend =
+		sweetwall_backend_select(app->config.backend);
+	if (backend == NULL) {
+		if (strcmp(app->config.backend, "auto") == 0) {
+			fprintf(stderr,
+				"sweetwall: no wallpaper backend found\n");
+		} else {
+			fprintf(stderr, "sweetwall: unknown backend '%s'\n",
+				app->config.backend);
+		}
+		return false;
+	}
+	if (!backend->apply(path)) {
+		fprintf(stderr, "sweetwall: %s failed to apply the wallpaper\n",
+			backend->name);
+		return false;
+	}
+	return true;
+}
+
 bool sweetwall_app_run(struct sweetwall_app *app) {
 	// First frame before any decoding: placeholders only
 	app->layer.needs_repaint = true;
@@ -355,6 +389,11 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 		}
 	}
 
+	// Enter requested an apply: do it now, off the input path, on the way
+	// out
+	if (app->apply_requested) {
+		return apply_selection(app);
+	}
 	return true;
 }
 

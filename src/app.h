@@ -28,6 +28,7 @@ struct sweetwall_app {
 	size_t thumb_count;
 	size_t pending;
 	bool running;
+	bool apply_requested;
 };
 
 bool sweetwall_app_init(
