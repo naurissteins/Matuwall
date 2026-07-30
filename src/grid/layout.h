@@ -24,12 +24,13 @@ struct sweetwall_layout {
 uint32_t sweetwall_layout_rows(
 	const struct sweetwall_layout *layout, size_t count);
 
-// Geometry of one item, ignoring scroll. Row 0 sits just below the margin
 struct sweetwall_rect sweetwall_layout_item(
 	const struct sweetwall_layout *layout, size_t index);
 
-// Surface size that fits `count` items, capped to `max_rows` of height
 void sweetwall_layout_surface_size(const struct sweetwall_layout *layout,
 	size_t count, uint32_t max_rows, uint32_t *width, uint32_t *height);
+
+size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
+	uint32_t first_row, size_t count, int32_t x, int32_t y);
 
 #endif

@@ -94,9 +94,57 @@ static void handle_focus_lost(void *user_data) {
 	app->running = false;
 }
 
+// Pointer policy: hover selects the tile under the cursor
+static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
+	struct sweetwall_app *app = user_data;
+	size_t hit = sweetwall_layout_hit(&app->config.layout,
+		app->grid.first_row, app->scan.count, x, y);
+	if (hit != SIZE_MAX &&
+		sweetwall_grid_select(&app->grid, &app->config.layout,
+			app->layer.height, hit)) {
+		app->layer.needs_repaint = true;
+	}
+}
+
+// A left click on a tile picks it, like Enter
+static void handle_pointer_button(
+	void *user_data, int32_t x, int32_t y, bool pressed) {
+	struct sweetwall_app *app = user_data;
+	if (!pressed) {
+		return;
+	}
+	size_t hit = sweetwall_layout_hit(&app->config.layout,
+		app->grid.first_row, app->scan.count, x, y);
+	if (hit == SIZE_MAX) {
+		return;
+	}
+	sweetwall_grid_select(
+		&app->grid, &app->config.layout, app->layer.height, hit);
+	app->apply_requested = true;
+	app->running = false;
+}
+
+static void handle_pointer_scroll(void *user_data, int32_t steps) {
+	struct sweetwall_app *app = user_data;
+	enum sweetwall_move move =
+		steps > 0 ? SWEETWALL_MOVE_DOWN : SWEETWALL_MOVE_UP;
+	int32_t count = steps > 0 ? steps : -steps;
+	bool changed = false;
+	for (int32_t i = 0; i < count; i++) {
+		changed |= sweetwall_grid_move(&app->grid, &app->config.layout,
+			app->layer.height, move);
+	}
+	if (changed) {
+		app->layer.needs_repaint = true;
+	}
+}
+
 static const struct sweetwall_seat_handler seat_handler = {
 	.key = handle_key,
 	.focus_lost = handle_focus_lost,
+	.pointer_motion = handle_pointer_motion,
+	.pointer_button = handle_pointer_button,
+	.pointer_scroll = handle_pointer_scroll,
 };
 
 static int64_t now_ms(void) {

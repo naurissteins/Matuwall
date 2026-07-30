@@ -99,6 +99,18 @@ bool sweetwall_grid_move(struct sweetwall_grid *grid,
 	return moved || scrolled;
 }
 
+bool sweetwall_grid_select(struct sweetwall_grid *grid,
+	const struct sweetwall_layout *layout, uint32_t surface_height,
+	size_t index) {
+	if (grid->count == 0 || index >= grid->count) {
+		return false;
+	}
+	bool moved = index != grid->selected;
+	grid->selected = index;
+	bool scrolled = scroll_into_view(grid, layout, surface_height);
+	return moved || scrolled;
+}
+
 bool sweetwall_grid_reveal(struct sweetwall_grid *grid,
 	const struct sweetwall_layout *layout, uint32_t surface_height) {
 	if (grid->count == 0) {

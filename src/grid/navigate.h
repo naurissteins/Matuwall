@@ -32,6 +32,10 @@ bool sweetwall_grid_move(struct sweetwall_grid *grid,
 	const struct sweetwall_layout *layout, uint32_t surface_height,
 	enum sweetwall_move move);
 
+bool sweetwall_grid_select(struct sweetwall_grid *grid,
+	const struct sweetwall_layout *layout, uint32_t surface_height,
+	size_t index);
+
 bool sweetwall_grid_reveal(struct sweetwall_grid *grid,
 	const struct sweetwall_layout *layout, uint32_t surface_height);
 

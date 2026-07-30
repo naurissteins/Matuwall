@@ -5,17 +5,26 @@
 #include <stdint.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "wayland/pointer.h"
+
 struct wl_seat;
 struct wl_keyboard;
 
 struct sweetwall_seat_handler {
 	void (*key)(void *user_data, xkb_keysym_t sym);
 	void (*focus_lost)(void *user_data);
+	// Pointer coordinates are surface-local logical pixels
+	void (*pointer_motion)(void *user_data, int32_t x, int32_t y);
+	void (*pointer_button)(
+		void *user_data, int32_t x, int32_t y, bool pressed);
+	// steps is signed: positive scrolls down, negative up
+	void (*pointer_scroll)(void *user_data, int32_t steps);
 };
 
 struct sweetwall_seat {
 	struct wl_seat *wl_seat;
 	struct wl_keyboard *keyboard;
+	struct sweetwall_pointer pointer;
 
 	struct xkb_context *context;
 	struct xkb_keymap *keymap;

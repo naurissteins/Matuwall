@@ -200,6 +200,17 @@ static void handle_capabilities(
 		clear_keymap(seat);
 		stop_repeat(seat);
 	}
+
+	bool has_pointer = (capabilities & WL_SEAT_CAPABILITY_POINTER) != 0;
+	if (has_pointer && seat->pointer.wl_pointer == NULL) {
+		struct wl_pointer *wl_pointer = wl_seat_get_pointer(wl_seat);
+		if (wl_pointer != NULL) {
+			sweetwall_pointer_init(&seat->pointer, wl_pointer,
+				&seat->handler, seat->user_data);
+		}
+	} else if (!has_pointer && seat->pointer.wl_pointer != NULL) {
+		sweetwall_pointer_finish(&seat->pointer);
+	}
 }
 
 static void handle_name(void *data, struct wl_seat *wl_seat, const char *name) {
@@ -255,6 +266,7 @@ void sweetwall_seat_dispatch_repeat(struct sweetwall_seat *seat) {
 
 void sweetwall_seat_finish(struct sweetwall_seat *seat) {
 	stop_repeat(seat);
+	sweetwall_pointer_finish(&seat->pointer);
 	release_keyboard(seat);
 	clear_keymap(seat);
 	if (seat->context != NULL) {

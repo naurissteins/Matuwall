@@ -69,6 +69,7 @@ executable(
 	'src/thumb/worker.c',
 	'src/wayland/registry.c',
 	'src/wayland/layer.c',
+	'src/wayland/pointer.c',
 	'src/wayland/seat.c',
 	'src/wayland/shm.c',
 	include_directories: sweetwall_inc,
