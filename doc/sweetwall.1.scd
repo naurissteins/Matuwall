@@ -38,6 +38,12 @@ opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 *Escape*
 	Cancel without applying and exit.
 
+# MOUSE
+
+The keyboard is the primary interface, but the pointer is supported. Moving the
+cursor over a tile selects it, a left click applies that tile (like *Enter*), and
+the scroll wheel moves the selection through the grid.
+
 # BACKENDS
 
 On *Enter*, the selected wallpaper is handed to a wallpaper daemon. The default
