@@ -4,11 +4,11 @@
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <wayland-client.h>
 
+#include "app_thumbs.h"
 #include "backend/backend.h"
 #include "hooks/hooks.h"
 #include "render/frame.h"
@@ -151,76 +151,6 @@ static int64_t now_ms(void) {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-
-static void on_thumbnail(
-	void *user_data, const struct sweetwall_thumb_result *result) {
-	struct sweetwall_app *app = user_data;
-	if (result->index >= app->thumb_count) {
-		free(result->pixels);
-		return;
-	}
-
-	struct sweetwall_thumb *thumb = &app->thumbs[result->index];
-	if (thumb->state != SWEETWALL_THUMB_PENDING) {
-		free(result->pixels);
-		return;
-	}
-
-	if (result->ok) {
-		thumb->state = SWEETWALL_THUMB_READY;
-		thumb->pixels = result->pixels;
-		thumb->width = result->width;
-		thumb->height = result->height;
-	} else {
-		thumb->state = SWEETWALL_THUMB_FAILED;
-	}
-	if (app->pending > 0) {
-		app->pending--;
-	}
-	app->layer.needs_repaint = true;
-}
-
-static void thumbnail_target(
-	const struct sweetwall_app *app, uint32_t *tw, uint32_t *th) {
-	uint32_t pw;
-	uint32_t ph;
-	sweetwall_layer_buffer_size(&app->layer, &pw, &ph);
-	double scale =
-		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
-	*tw = (uint32_t)(app->config.layout.tile_width * scale + 0.5);
-	*th = (uint32_t)(app->config.layout.tile_height * scale + 0.5);
-}
-
-static void start_thumbnails(struct sweetwall_app *app) {
-	if (app->scan.count == 0) {
-		return;
-	}
-
-	app->thumbs = calloc(app->scan.count, sizeof(*app->thumbs));
-	if (app->thumbs == NULL) {
-		return;
-	}
-	app->thumb_count = app->scan.count;
-
-	uint32_t tw;
-	uint32_t th;
-	thumbnail_target(app, &tw, &th);
-	app->workers = sweetwall_worker_pool_start(tw, th);
-	if (app->workers == NULL) {
-		fprintf(stderr, "sweetwall: failed to start thumbnail "
-				"workers\n");
-		return;
-	}
-
-	for (size_t i = 0; i < app->scan.count; i++) {
-		if (sweetwall_worker_submit(
-			    app->workers, i, app->scan.paths[i])) {
-			app->pending++;
-		} else {
-			app->thumbs[i].state = SWEETWALL_THUMB_FAILED;
-		}
-	}
 }
 
 bool sweetwall_app_init(
@@ -386,7 +316,7 @@ static bool pump_events(struct sweetwall_app *app) {
 	}
 
 	if (nfds == 2 && (pfd[1].revents & POLLIN) != 0) {
-		sweetwall_worker_drain(app->workers, on_thumbnail, app);
+		sweetwall_app_thumbs_drain(app);
 	}
 
 	sweetwall_seat_dispatch_repeat(&app->seat);
@@ -428,7 +358,7 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 		return false;
 	}
 
-	start_thumbnails(app);
+	sweetwall_app_thumbs_start(app);
 
 	while (app->running && !app->layer.closed && interrupted == 0) {
 		if (!pump_events(app)) {
@@ -448,18 +378,7 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 }
 
 void sweetwall_app_finish(struct sweetwall_app *app) {
-	if (app->workers != NULL) {
-		sweetwall_worker_pool_stop(app->workers);
-		app->workers = NULL;
-	}
-	if (app->thumbs != NULL) {
-		for (size_t i = 0; i < app->thumb_count; i++) {
-			free(app->thumbs[i].pixels);
-		}
-		free(app->thumbs);
-		app->thumbs = NULL;
-		app->thumb_count = 0;
-	}
+	sweetwall_app_thumbs_finish(app);
 
 	sweetwall_layer_destroy(&app->layer);
 	sweetwall_seat_finish(&app->seat);

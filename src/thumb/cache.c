@@ -111,7 +111,13 @@ bool sweetwall_cache_read(const char *key, struct sweetwall_image *img) {
 		fclose(fp);
 		return false;
 	}
+	// count is capped above, so this cannot overflow; the explicit bound on
+	// the allocation size itself also keeps static analysis happy
 	size_t bytes = count * sizeof(uint32_t);
+	if (bytes > (size_t)MAX_PIXELS * sizeof(uint32_t)) {
+		fclose(fp);
+		return false;
+	}
 	uint32_t *pixels = malloc(bytes);
 	if (pixels == NULL) {
 		fclose(fp);

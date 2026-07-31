@@ -52,6 +52,7 @@ executable(
 	'sweetwall',
 	'src/main.c',
 	'src/app.c',
+	'src/app_thumbs.c',
 	'src/backend/registry.c',
 	'src/backend/sweetbg.c',
 	'src/config/config.c',
