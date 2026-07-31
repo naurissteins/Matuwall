@@ -6,11 +6,16 @@
 #include <stdlib.h>
 
 #include "app.h"
+#include "app_preview.h"
 #include "thumb/worker.h"
 
-static void on_thumbnail(
+static void on_result(
 	void *user_data, const struct sweetwall_thumb_result *result) {
 	struct sweetwall_app *app = user_data;
+	if (result->kind == SWEETWALL_JOB_PREVIEW) {
+		sweetwall_app_preview_result(app, result);
+		return;
+	}
 	if (result->index >= app->thumb_count) {
 		free(result->pixels);
 		return;
@@ -81,7 +86,7 @@ void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
 
 void sweetwall_app_thumbs_drain(struct sweetwall_app *app) {
 	if (app->workers != NULL) {
-		sweetwall_worker_drain(app->workers, on_thumbnail, app);
+		sweetwall_worker_drain(app->workers, on_result, app);
 	}
 }
 

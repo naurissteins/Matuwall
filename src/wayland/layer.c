@@ -153,9 +153,20 @@ static uint32_t anchor_for(enum sweetwall_position position) {
 	return 0;
 }
 
+// All four edges plus a zero size makes the compositor hand us the output size
+#define ANCHOR_ALL                                                             \
+	(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |                                    \
+		ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |                          \
+		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |                            \
+		ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT)
+
 bool sweetwall_layer_create(struct sweetwall_layer *layer,
 	const struct sweetwall_registry *reg, uint32_t width, uint32_t height,
-	enum sweetwall_position position) {
+	enum sweetwall_position position, bool fullscreen) {
+	if (fullscreen) {
+		width = 0;
+		height = 0;
+	}
 	*layer = (struct sweetwall_layer){
 		.width = width,
 		.height = height,
@@ -194,8 +205,8 @@ bool sweetwall_layer_create(struct sweetwall_layer *layer,
 	zwlr_layer_surface_v1_add_listener(
 		layer->layer_surface, &layer_surface_listener, layer);
 	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
-	zwlr_layer_surface_v1_set_anchor(
-		layer->layer_surface, anchor_for(position));
+	zwlr_layer_surface_v1_set_anchor(layer->layer_surface,
+		fullscreen ? ANCHOR_ALL : anchor_for(position));
 	// A picker overlays the desktop; it must not reserve space
 	zwlr_layer_surface_v1_set_exclusive_zone(layer->layer_surface, 0);
 	// Every key belongs to the picker while it is open
@@ -244,6 +255,7 @@ static void present(struct sweetwall_layer *layer) {
 	wl_surface_commit(layer->wl_surface);
 
 	layer->buffer->released = false;
+	layer->buffer->fresh = false;
 	layer->needs_repaint = false;
 }
 

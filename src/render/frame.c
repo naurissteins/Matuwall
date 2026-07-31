@@ -10,6 +10,8 @@
 #define RING_WIDTH 2
 #define RING_INSET (RING_GAP + RING_WIDTH)
 #define SPINNER_DIVISOR 14
+// Large shapes read less round than small ones at the same radius
+#define PANEL_RADIUS_SCALE 2
 
 static int32_t to_pixels(int32_t logical, double scale) {
 	return (int32_t)lround((double)logical * scale);
@@ -22,19 +24,19 @@ static struct sweetwall_clip content_clip(
 	if (inset < 0) {
 		inset = 0;
 	}
-	int32_t margin = to_pixels(inset, frame->scale);
 
-	int32_t right =
-		to_pixels((int32_t)frame->surface_width, frame->scale) - margin;
-	int32_t bottom =
-		to_pixels((int32_t)frame->surface_height, frame->scale) -
-		margin;
+	int32_t left = to_pixels(frame->panel.x + inset, frame->scale);
+	int32_t top = to_pixels(frame->panel.y + inset, frame->scale);
+	int32_t right = to_pixels(
+		frame->panel.x + frame->panel.width - inset, frame->scale);
+	int32_t bottom = to_pixels(
+		frame->panel.y + frame->panel.height - inset, frame->scale);
 
-	if (margin > clip.x0) {
-		clip.x0 = margin;
+	if (left > clip.x0) {
+		clip.x0 = left;
 	}
-	if (margin > clip.y0) {
-		clip.y0 = margin;
+	if (top > clip.y0) {
+		clip.y0 = top;
 	}
 	if (right < clip.x1) {
 		clip.x1 = right;
@@ -45,13 +47,41 @@ static struct sweetwall_clip content_clip(
 	return clip;
 }
 
+// Fill the output behind the panel with the selected wallpaper
+static void draw_backdrop(struct sweetwall_buffer *buffer,
+	const struct sweetwall_frame *frame, int32_t radius) {
+	if (frame->preview != NULL) {
+		sweetwall_draw_image_cover(buffer, frame->preview,
+			frame->preview_width, frame->preview_height);
+	} else {
+		// Nothing decoded yet: let the real desktop show through
+		sweetwall_draw_clear(buffer, 0);
+	}
+
+	struct sweetwall_clip full = sweetwall_clip_buffer(buffer);
+	int32_t left = to_pixels(frame->panel.x, frame->scale);
+	int32_t top = to_pixels(frame->panel.y, frame->scale);
+	int32_t right =
+		to_pixels(frame->panel.x + frame->panel.width, frame->scale);
+	int32_t bottom =
+		to_pixels(frame->panel.y + frame->panel.height, frame->scale);
+
+	sweetwall_draw_rounded_rect(buffer, &full, left, top, right - left,
+		bottom - top, radius * PANEL_RADIUS_SCALE, frame->background);
+}
+
 void sweetwall_frame_draw(
 	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
-	sweetwall_draw_clear(buffer, frame->background);
-
-	struct sweetwall_clip clip = content_clip(buffer, frame);
 	int32_t radius =
 		to_pixels((int32_t)frame->layout->radius, frame->scale);
+
+	if (frame->backdrop) {
+		draw_backdrop(buffer, frame, radius);
+	} else {
+		sweetwall_draw_clear(buffer, frame->background);
+	}
+
+	struct sweetwall_clip clip = content_clip(buffer, frame);
 
 	int32_t ring_gap = to_pixels(RING_GAP, frame->scale);
 	int32_t ring_width = to_pixels(RING_WIDTH, frame->scale);
@@ -62,7 +92,8 @@ void sweetwall_frame_draw(
 	for (size_t i = 0; i < frame->item_count; i++) {
 		struct sweetwall_rect rect =
 			sweetwall_layout_item(frame->layout, i);
-		rect.y -= frame->scroll;
+		rect.x += frame->panel.x;
+		rect.y += frame->panel.y - frame->scroll;
 
 		int32_t top = to_pixels(rect.y, frame->scale);
 		if (top >= clip.y1) {

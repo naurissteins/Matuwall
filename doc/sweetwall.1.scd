@@ -13,6 +13,11 @@ sweetwall - Minimal wallpaper picker for Wayland
 *sweetwall* is a keyboard-driven grid of wallpaper thumbnails for Wayland. It
 opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 
+By default the selected wallpaper is previewed full-screen behind the grid, so
+moving the selection looks like the wallpaper changed. The preview is drawn by
+sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
+*Escape* leaves the real wallpaper untouched. See _preview_ in *sweetwall*(5).
+
 # OPTIONS
 
 *-h*, *--help*
@@ -42,7 +47,8 @@ opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 
 The keyboard is the primary interface, but the pointer is supported. Moving the
 cursor over a tile selects it, a left click applies that tile (like *Enter*), and
-the scroll wheel moves the selection through the grid.
+the scroll wheel moves the selection through the grid. When the preview backdrop
+is on, a left click outside the panel cancels (like *Escape*).
 
 # BACKENDS
 

@@ -12,13 +12,19 @@ directory = "~/Pictures/Wallpapers"
 backend = "sweetbg"
 
 [window]
-# Placement on screen: "center", "left", "right", "top", or "bottom".
+# Show the selected wallpaper full-screen behind the grid. Nothing is applied
+# until you press Enter. Costs one output-sized image in memory; set to false
+# for a panel-sized window with no backdrop.
+preview = true
+
+# Placement on screen: "center", "left", "right", "top", or "bottom". With
+# preview on, this places the panel inside the full-screen surface.
 position = "center"
 
-# Surface color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha).
+# Panel color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha).
 background = "#1e1e2ecc"
 
-# Gap in pixels between the tiles and the surface edge.
+# Gap in pixels between the tiles and the panel edge.
 margin = 24
 
 [grid]

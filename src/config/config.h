@@ -9,15 +9,6 @@
 #include "grid/layout.h"
 #include "render/color.h"
 
-// Where the picker sits on screen
-enum sweetwall_position {
-	SWEETWALL_POSITION_CENTER,
-	SWEETWALL_POSITION_LEFT,
-	SWEETWALL_POSITION_RIGHT,
-	SWEETWALL_POSITION_TOP,
-	SWEETWALL_POSITION_BOTTOM,
-};
-
 const char *sweetwall_position_name(enum sweetwall_position position);
 bool sweetwall_position_from_name(
 	const char *name, enum sweetwall_position *out);
@@ -35,6 +26,8 @@ struct sweetwall_config {
 	struct sweetwall_color spinner;
 	struct sweetwall_layout layout;
 	uint32_t visible_rows;
+	// Fill the output with the selected wallpaper behind the panel
+	bool preview;
 	// on_apply command templates, run after a successful apply
 	char on_apply[SWEETWALL_MAX_HOOKS][SWEETWALL_HOOK_MAX];
 	size_t on_apply_count;

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "config/config.h"
+#include "grid/layout.h"
 #include "wayland/registry.h"
 #include "wayland/shm.h"
 
@@ -31,9 +31,11 @@ struct sweetwall_layer {
 	struct sweetwall_buffer *retired;
 };
 
+// fullscreen spans the whole output so the picker can paint a backdrop;
+// width/height and position are ignored in that mode
 bool sweetwall_layer_create(struct sweetwall_layer *layer,
 	const struct sweetwall_registry *reg, uint32_t width, uint32_t height,
-	enum sweetwall_position position);
+	enum sweetwall_position position, bool fullscreen);
 
 void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);

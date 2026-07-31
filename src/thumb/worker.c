@@ -13,8 +13,11 @@
 #define MAX_WORKERS 4
 
 struct job {
+	enum sweetwall_job_kind kind;
 	size_t index;
 	char *path;
+	uint32_t target_w;
+	uint32_t target_h;
 	struct job *next;
 };
 
@@ -48,20 +51,23 @@ static size_t worker_count(void) {
 	return online < MAX_WORKERS ? (size_t)online : MAX_WORKERS;
 }
 
-static bool produce(const char *path, uint32_t target_w, uint32_t target_h,
-	struct sweetwall_image *out) {
+static bool produce(const struct job *job, struct sweetwall_image *out) {
+	// Output-sized previews would bloat the cache for one keypress of value
+	bool cached = job->kind == SWEETWALL_JOB_THUMB;
+
 	char key[640];
-	bool have_key =
-		sweetwall_cache_key(path, target_w, target_h, key, sizeof(key));
+	bool have_key = cached && sweetwall_cache_key(job->path, job->target_w,
+					  job->target_h, key, sizeof(key));
 	if (have_key && sweetwall_cache_read(key, out)) {
 		return true;
 	}
 
 	struct sweetwall_image full;
-	if (!sweetwall_image_decode(&full, path)) {
+	if (!sweetwall_image_decode(&full, job->path)) {
 		return false;
 	}
-	bool scaled = sweetwall_scale_cover(&full, target_w, target_h, out);
+	bool scaled =
+		sweetwall_scale_cover(&full, job->target_w, job->target_h, out);
 	sweetwall_image_free(&full);
 	if (!scaled) {
 		return false;
@@ -113,10 +119,10 @@ static void *worker_main(void *arg) {
 
 		struct result *res = calloc(1, sizeof(*res));
 		if (res != NULL) {
+			res->data.kind = job->kind;
 			res->data.index = job->index;
 			struct sweetwall_image img;
-			if (produce(job->path, pool->target_w, pool->target_h,
-				    &img)) {
+			if (produce(job, &img)) {
 				res->data.ok = true;
 				res->data.pixels = img.pixels;
 				res->data.width = img.width;
@@ -171,16 +177,50 @@ int sweetwall_worker_pool_fd(const struct sweetwall_worker_pool *pool) {
 	return pool->event_fd;
 }
 
-bool sweetwall_worker_submit(
-	struct sweetwall_worker_pool *pool, size_t index, const char *path) {
+static struct job *make_job(enum sweetwall_job_kind kind, size_t index,
+	const char *path, uint32_t target_w, uint32_t target_h) {
 	struct job *job = calloc(1, sizeof(*job));
 	if (job == NULL) {
-		return false;
+		return NULL;
 	}
+	job->kind = kind;
 	job->index = index;
+	job->target_w = target_w;
+	job->target_h = target_h;
 	job->path = strdup(path);
 	if (job->path == NULL) {
 		free(job);
+		return NULL;
+	}
+	return job;
+}
+
+// Caller holds the mutex
+static void drop_queued_previews(struct sweetwall_worker_pool *pool) {
+	struct job **cursor = &pool->jobs_head;
+	struct job *prev = NULL;
+
+	while (*cursor != NULL) {
+		struct job *job = *cursor;
+		if (job->kind != SWEETWALL_JOB_PREVIEW) {
+			prev = job;
+			cursor = &job->next;
+			continue;
+		}
+		*cursor = job->next;
+		if (pool->jobs_tail == job) {
+			pool->jobs_tail = prev;
+		}
+		free(job->path);
+		free(job);
+	}
+}
+
+bool sweetwall_worker_submit(
+	struct sweetwall_worker_pool *pool, size_t index, const char *path) {
+	struct job *job = make_job(SWEETWALL_JOB_THUMB, index, path,
+		pool->target_w, pool->target_h);
+	if (job == NULL) {
 		return false;
 	}
 
@@ -191,6 +231,27 @@ bool sweetwall_worker_submit(
 		pool->jobs_head = job;
 	}
 	pool->jobs_tail = job;
+	pthread_cond_signal(&pool->wakeup);
+	pthread_mutex_unlock(&pool->mutex);
+	return true;
+}
+
+bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
+	size_t index, const char *path, uint32_t target_w, uint32_t target_h) {
+	struct job *job = make_job(
+		SWEETWALL_JOB_PREVIEW, index, path, target_w, target_h);
+	if (job == NULL) {
+		return false;
+	}
+
+	pthread_mutex_lock(&pool->mutex);
+	// The user has moved on; only the newest preview is worth decoding
+	drop_queued_previews(pool);
+	job->next = pool->jobs_head;
+	pool->jobs_head = job;
+	if (pool->jobs_tail == NULL) {
+		pool->jobs_tail = job;
+	}
 	pthread_cond_signal(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 	return true;

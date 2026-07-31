@@ -39,16 +39,38 @@ line. Comments are not allowed inside an array.
 
 ## [window]
 
+*preview*
+	Show the selected wallpaper full-screen behind the grid, so moving the
+	selection looks like the wallpaper changed. _true_ by default. Nothing is
+	applied until you press *Enter*; *Escape* leaves the real wallpaper
+	untouched.
+
+	With preview on, the picker's surface covers the whole output and
+	*position* places the grid panel inside it. Until the first wallpaper
+	finishes decoding the surface stays transparent, so the real desktop shows
+	through.
+
+	The backdrop costs one output-sized image in memory (about 33 MB at 3840x2160,
+	15 MB at 2560x1440) plus a larger drawing surface, and adds a few
+	milliseconds to the first frame. Set it to _false_ for the older
+	panel-sized window with no backdrop.
+
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,
-	_"top"_, or _"bottom"_. Defaults to _"center"_.
+	_"top"_, or _"bottom"_. Defaults to _"center"_. With *preview* on this
+	places the panel within the full-screen surface, inset by *margin* at the
+	edges.
 
 *background*
-	Surface color, as _"#rrggbb"_ (opaque) or _"#rrggbbaa"_ (with an alpha
-	byte). Defaults to _"#1e1e2ecc"_.
+	Panel color, as _"#rrggbb"_ (opaque) or _"#rrggbbaa"_ (with an alpha
+	byte). Defaults to _"#1e1e2ecc"_. With *preview* on this is the color of
+	the panel that floats over the wallpaper, so its alpha decides how much of
+	the backdrop shows through behind the tiles.
 
 *margin*
-	Pixels between the tiles and the surface edge. Defaults to _24_.
+	Pixels between the tiles and the panel edge. Defaults to _24_. With
+	*preview* on it is also the gap between the panel and the screen edge for
+	the non-centered *position* values.
 
 ## [grid]
 
@@ -110,6 +132,7 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 directory = "~/Pictures/Wallpapers"
 
 [window]
+preview    = true
 position   = "center"
 background = "#1e1e2ecc"
 margin     = 24

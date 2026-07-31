@@ -5,14 +5,16 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <wayland-client.h>
 
+#include "app_input.h"
+#include "app_preview.h"
 #include "app_thumbs.h"
 #include "backend/backend.h"
 #include "hooks/hooks.h"
 #include "render/frame.h"
 #include "render/spinner.h"
+#include "util/clock.h"
 
 // Set from a signal handler; only ever read as a flag by the event loop
 static volatile sig_atomic_t interrupted = 0;
@@ -37,120 +39,11 @@ static bool install_signal_handlers(void) {
 	return true;
 }
 
-// Key policy
-static void handle_key(void *user_data, xkb_keysym_t sym) {
-	struct sweetwall_app *app = user_data;
-	enum sweetwall_move move;
-
-	switch (sym) {
-	case XKB_KEY_Escape:
-		app->running = false;
-		return;
-	case XKB_KEY_Return:
-	case XKB_KEY_KP_Enter:
-		// Defer the apply off the input path; run() does it on the way
-		// out
-		if (app->scan.count > 0) {
-			app->apply_requested = true;
-		}
-		app->running = false;
-		return;
-	case XKB_KEY_Left:
-	case XKB_KEY_h:
-		move = SWEETWALL_MOVE_LEFT;
-		break;
-	case XKB_KEY_Right:
-	case XKB_KEY_l:
-		move = SWEETWALL_MOVE_RIGHT;
-		break;
-	case XKB_KEY_Up:
-	case XKB_KEY_k:
-		move = SWEETWALL_MOVE_UP;
-		break;
-	case XKB_KEY_Down:
-	case XKB_KEY_j:
-		move = SWEETWALL_MOVE_DOWN;
-		break;
-	case XKB_KEY_Home:
-	case XKB_KEY_g:
-		move = SWEETWALL_MOVE_FIRST;
-		break;
-	case XKB_KEY_End:
-	case XKB_KEY_G:
-		move = SWEETWALL_MOVE_LAST;
-		break;
-	default:
-		return;
-	}
-
-	if (sweetwall_grid_move(
-		    &app->grid, &app->config.layout, app->layer.height, move)) {
-		app->layer.needs_repaint = true;
-	}
-}
-
-static void handle_focus_lost(void *user_data) {
-	struct sweetwall_app *app = user_data;
-	app->running = false;
-}
-
-// Pointer policy: hover selects the tile under the cursor
-static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
-	struct sweetwall_app *app = user_data;
-	size_t hit = sweetwall_layout_hit(&app->config.layout,
-		app->grid.first_row, app->scan.count, x, y);
-	if (hit != SIZE_MAX &&
-		sweetwall_grid_select(&app->grid, &app->config.layout,
-			app->layer.height, hit)) {
-		app->layer.needs_repaint = true;
-	}
-}
-
-// A left click on a tile picks it, like Enter
-static void handle_pointer_button(
-	void *user_data, int32_t x, int32_t y, bool pressed) {
-	struct sweetwall_app *app = user_data;
-	if (!pressed) {
-		return;
-	}
-	size_t hit = sweetwall_layout_hit(&app->config.layout,
-		app->grid.first_row, app->scan.count, x, y);
-	if (hit == SIZE_MAX) {
-		return;
-	}
-	sweetwall_grid_select(
-		&app->grid, &app->config.layout, app->layer.height, hit);
-	app->apply_requested = true;
-	app->running = false;
-}
-
-static void handle_pointer_scroll(void *user_data, int32_t steps) {
-	struct sweetwall_app *app = user_data;
-	enum sweetwall_move move =
-		steps > 0 ? SWEETWALL_MOVE_DOWN : SWEETWALL_MOVE_UP;
-	int32_t count = steps > 0 ? steps : -steps;
-	bool changed = false;
-	for (int32_t i = 0; i < count; i++) {
-		changed |= sweetwall_grid_move(&app->grid, &app->config.layout,
-			app->layer.height, move);
-	}
-	if (changed) {
-		app->layer.needs_repaint = true;
-	}
-}
-
-static const struct sweetwall_seat_handler seat_handler = {
-	.key = handle_key,
-	.focus_lost = handle_focus_lost,
-	.pointer_motion = handle_pointer_motion,
-	.pointer_button = handle_pointer_button,
-	.pointer_scroll = handle_pointer_scroll,
-};
-
-static int64_t now_ms(void) {
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+// The panel is the whole surface unless a backdrop is drawn around it
+static void refresh_panel(struct sweetwall_app *app) {
+	app->panel = sweetwall_layout_panel(&app->config.layout,
+		app->scan.count, app->config.visible_rows, app->config.position,
+		app->layer.width, app->layer.height);
 }
 
 bool sweetwall_app_init(
@@ -187,8 +80,8 @@ bool sweetwall_app_init(
 		return false;
 	}
 
-	if (!sweetwall_seat_init(
-		    &app->seat, app->registry.seat, &seat_handler, app)) {
+	if (!sweetwall_seat_init(&app->seat, app->registry.seat,
+		    &sweetwall_app_seat_handler, app)) {
 		return false;
 	}
 
@@ -198,7 +91,7 @@ bool sweetwall_app_init(
 		app->config.visible_rows, &width, &height);
 
 	if (!sweetwall_layer_create(&app->layer, &app->registry, width, height,
-		    app->config.position)) {
+		    app->config.position, app->config.preview)) {
 		fprintf(stderr, "sweetwall: failed to create the layer "
 				"surface\n");
 		return false;
@@ -214,6 +107,7 @@ bool sweetwall_app_init(
 			"sweetwall: compositor never configured the surface\n");
 		return false;
 	}
+	refresh_panel(app);
 
 	return true;
 }
@@ -237,7 +131,7 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       : 1.0;
 
 	sweetwall_grid_reveal(
-		&app->grid, &app->config.layout, app->layer.height);
+		&app->grid, &app->config.layout, (uint32_t)app->panel.height);
 
 	int32_t step = (int32_t)(app->config.layout.tile_height +
 				 app->config.layout.spacing);
@@ -248,18 +142,29 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.item_count = app->scan.count,
 		.selected = app->grid.selected,
 		.scroll = (int32_t)app->grid.first_row * step,
-		.surface_width = app->layer.width,
-		.surface_height = app->layer.height,
+		.panel = app->panel,
+		.backdrop = app->config.preview,
+		.preview = app->preview.image.pixels,
+		.preview_width = app->preview.image.width,
+		.preview_height = app->preview.image.height,
 		.scale = scale,
 		.background = sweetwall_color_argb(app->config.background),
 		.tile = sweetwall_color_argb(app->config.tile),
 		.ring = sweetwall_color_argb(app->config.ring),
 		.spinner = app->config.spinner,
-		.spinner_alpha = sweetwall_spinner_alpha(now_ms()),
+		.spinner_alpha = sweetwall_spinner_alpha(sweetwall_now_ms()),
 	};
 	sweetwall_frame_draw(buffer, &frame);
 	sweetwall_layer_commit_frame(&app->layer);
 	return true;
+}
+
+// Merge poll deadlines; -1 means "no deadline of my own"
+static int sooner(int timeout, int candidate) {
+	if (candidate < 0) {
+		return timeout;
+	}
+	return timeout < 0 || candidate < timeout ? candidate : timeout;
 }
 
 static bool pump_events(struct sweetwall_app *app) {
@@ -287,9 +192,10 @@ static bool pump_events(struct sweetwall_app *app) {
 	int timeout = sweetwall_seat_repeat_timeout(&app->seat);
 	// Pulse the loading dot while any thumbnail is still pending
 	if (app->pending > 0) {
-		int tick = SWEETWALL_SPINNER_INTERVAL_MS;
-		timeout = timeout < 0 || tick < timeout ? tick : timeout;
+		timeout = sooner(timeout, SWEETWALL_SPINNER_INTERVAL_MS);
 	}
+	timeout = sooner(timeout,
+		sweetwall_app_preview_timeout(app, sweetwall_now_ms()));
 
 	if (poll(pfd, nfds, timeout) < 0) {
 		wl_display_cancel_read(app->display);
@@ -314,12 +220,15 @@ static bool pump_events(struct sweetwall_app *app) {
 	if (wl_display_dispatch_pending(app->display) < 0) {
 		return false;
 	}
+	// A configure may have resized the surface under the panel
+	refresh_panel(app);
 
 	if (nfds == 2 && (pfd[1].revents & POLLIN) != 0) {
 		sweetwall_app_thumbs_drain(app);
 	}
 
 	sweetwall_seat_dispatch_repeat(&app->seat);
+	sweetwall_app_preview_tick(app, sweetwall_now_ms());
 	// Keep the pulse advancing while tiles are still loading
 	if (app->pending > 0) {
 		app->layer.needs_repaint = true;
@@ -359,6 +268,9 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 	}
 
 	sweetwall_app_thumbs_start(app);
+	sweetwall_app_preview_init(app);
+	sweetwall_app_preview_select(
+		app, app->grid.selected, sweetwall_now_ms());
 
 	while (app->running && !app->layer.closed && interrupted == 0) {
 		if (!pump_events(app)) {
@@ -379,6 +291,7 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 
 void sweetwall_app_finish(struct sweetwall_app *app) {
 	sweetwall_app_thumbs_finish(app);
+	sweetwall_app_preview_finish(app);
 
 	sweetwall_layer_destroy(&app->layer);
 	sweetwall_seat_finish(&app->seat);

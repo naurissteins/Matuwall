@@ -11,6 +11,12 @@ enum sweetwall_thumb_state {
 	SWEETWALL_THUMB_FAILED,
 };
 
+// Previews are output sized and short lived, so they skip the on-disk cache
+enum sweetwall_job_kind {
+	SWEETWALL_JOB_THUMB,
+	SWEETWALL_JOB_PREVIEW,
+};
+
 struct sweetwall_thumb {
 	enum sweetwall_thumb_state state;
 	uint32_t *pixels;
@@ -19,6 +25,7 @@ struct sweetwall_thumb {
 };
 
 struct sweetwall_thumb_result {
+	enum sweetwall_job_kind kind;
 	size_t index;
 	bool ok;
 	uint32_t *pixels;
@@ -38,6 +45,10 @@ int sweetwall_worker_pool_fd(const struct sweetwall_worker_pool *pool);
 
 bool sweetwall_worker_submit(
 	struct sweetwall_worker_pool *pool, size_t index, const char *path);
+
+// Jumps the queue and drops any preview that has not started; latest wins
+bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
+	size_t index, const char *path, uint32_t target_w, uint32_t target_h);
 
 void sweetwall_worker_drain(struct sweetwall_worker_pool *pool,
 	sweetwall_result_fn cb, void *user_data);

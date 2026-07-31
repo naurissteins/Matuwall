@@ -16,6 +16,8 @@ struct sweetwall_buffer {
 	uint32_t height;
 	uint32_t stride;
 	bool released;
+	// Untouched since mmap, so every pixel is still zero
+	bool fresh;
 	struct sweetwall_buffer *next;
 };
 

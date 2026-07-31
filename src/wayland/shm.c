@@ -87,6 +87,7 @@ bool sweetwall_buffer_create(struct sweetwall_buffer *buffer,
 	buffer->height = height;
 	buffer->stride = stride;
 	buffer->released = true;
+	buffer->fresh = true;
 	return true;
 }
 

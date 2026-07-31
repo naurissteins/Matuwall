@@ -52,16 +52,74 @@ void sweetwall_layout_surface_size(const struct sweetwall_layout *layout,
 		  (rows - 1) * layout->spacing;
 }
 
+// Clamp an edge offset to the space the surface actually leaves free
+static int32_t edge_gap(int32_t gap, int32_t free_space) {
+	if (free_space <= 0) {
+		return 0;
+	}
+	return gap < free_space ? gap : free_space;
+}
+
+struct sweetwall_rect sweetwall_layout_panel(
+	const struct sweetwall_layout *layout, size_t count, uint32_t max_rows,
+	enum sweetwall_position position, uint32_t surface_width,
+	uint32_t surface_height) {
+	uint32_t width;
+	uint32_t height;
+	sweetwall_layout_surface_size(layout, count, max_rows, &width, &height);
+	if (width > surface_width) {
+		width = surface_width;
+	}
+	if (height > surface_height) {
+		height = surface_height;
+	}
+
+	int32_t free_x = (int32_t)(surface_width - width);
+	int32_t free_y = (int32_t)(surface_height - height);
+	int32_t gap = (int32_t)layout->margin;
+
+	struct sweetwall_rect rect = {
+		.x = free_x / 2,
+		.y = free_y / 2,
+		.width = (int32_t)width,
+		.height = (int32_t)height,
+	};
+
+	switch (position) {
+	case SWEETWALL_POSITION_LEFT:
+		rect.x = edge_gap(gap, free_x);
+		break;
+	case SWEETWALL_POSITION_RIGHT:
+		rect.x = free_x - edge_gap(gap, free_x);
+		break;
+	case SWEETWALL_POSITION_TOP:
+		rect.y = edge_gap(gap, free_y);
+		break;
+	case SWEETWALL_POSITION_BOTTOM:
+		rect.y = free_y - edge_gap(gap, free_y);
+		break;
+	case SWEETWALL_POSITION_CENTER:
+		break;
+	}
+	return rect;
+}
+
 size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
-	uint32_t first_row, size_t count, int32_t x, int32_t y) {
+	const struct sweetwall_rect *panel, uint32_t first_row, size_t count,
+	int32_t x, int32_t y) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
 	int32_t stride_x = (int32_t)(layout->tile_width + layout->spacing);
 	int32_t stride_y = (int32_t)(layout->tile_height + layout->spacing);
 
+	if (x < panel->x || y < panel->y || x >= panel->x + panel->width ||
+		y >= panel->y + panel->height) {
+		return SIZE_MAX;
+	}
+
 	// Translate the on-screen point into unscrolled content space
-	int32_t cx = x - (int32_t)layout->margin;
-	int32_t cy =
-		y - (int32_t)layout->margin + (int32_t)first_row * stride_y;
+	int32_t cx = x - panel->x - (int32_t)layout->margin;
+	int32_t cy = y - panel->y - (int32_t)layout->margin +
+		     (int32_t)first_row * stride_y;
 	if (cx < 0 || cy < 0) {
 		return SIZE_MAX;
 	}

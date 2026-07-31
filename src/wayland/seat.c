@@ -2,20 +2,15 @@
 
 #include <stdio.h>
 #include <sys/mman.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "util/clock.h"
+
 // evdev keycodes are offset by 8 in the xkb keymap
 #define XKB_KEYCODE_OFFSET 8
 #define MS_PER_SECOND 1000
-
-static int64_t now_ms(void) {
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return (int64_t)ts.tv_sec * MS_PER_SECOND + ts.tv_nsec / 1000000;
-}
 
 static void stop_repeat(struct sweetwall_seat *seat) {
 	seat->repeat_key = 0;
@@ -103,7 +98,7 @@ static void handle_key(void *data, struct wl_keyboard *keyboard,
 		xkb_keymap_key_repeats(seat->keymap, code)) {
 		seat->repeat_key = key;
 		seat->repeat_sym = sym;
-		seat->repeat_at_ms = now_ms() + seat->repeat_delay;
+		seat->repeat_at_ms = sweetwall_now_ms() + seat->repeat_delay;
 	} else {
 		stop_repeat(seat);
 	}
@@ -246,7 +241,7 @@ int sweetwall_seat_repeat_timeout(const struct sweetwall_seat *seat) {
 	if (seat->repeat_key == 0 || seat->repeat_rate <= 0) {
 		return -1;
 	}
-	int64_t remaining = seat->repeat_at_ms - now_ms();
+	int64_t remaining = seat->repeat_at_ms - sweetwall_now_ms();
 	return remaining < 0 ? 0 : (int)remaining;
 }
 
@@ -254,7 +249,7 @@ void sweetwall_seat_dispatch_repeat(struct sweetwall_seat *seat) {
 	if (seat->repeat_key == 0 || seat->repeat_rate <= 0) {
 		return;
 	}
-	if (now_ms() < seat->repeat_at_ms) {
+	if (sweetwall_now_ms() < seat->repeat_at_ms) {
 		return;
 	}
 

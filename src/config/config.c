@@ -58,6 +58,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 			.tile_height = 400,
 			.radius = 8},
 		.visible_rows = 2,
+		.preview = true,
 	};
 
 	const char *home = getenv("HOME");
@@ -130,6 +131,15 @@ static void apply_uint(uint32_t *dst, const struct sweetwall_toml_value *v,
 		return;
 	}
 	*dst = (uint32_t)v->integer;
+}
+
+static void apply_bool(bool *dst, const struct sweetwall_toml_value *v,
+	int line, const char *what) {
+	if (v->type != SWEETWALL_TOML_BOOLEAN) {
+		warn(line, what);
+		return;
+	}
+	*dst = v->boolean;
 }
 
 static void apply_position(enum sweetwall_position *dst,
@@ -207,6 +217,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "margin") == 0) {
 			apply_uint(&cfg->layout.margin, v, line,
 				"margin must be 0..4096", 0, 4096);
+			return true;
+		}
+		if (strcmp(key, "preview") == 0) {
+			apply_bool(&cfg->preview, v, line,
+				"preview must be true or false");
 			return true;
 		}
 	} else if (strcmp(section, "grid") == 0) {

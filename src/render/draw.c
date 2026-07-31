@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define COVERAGE_MAX 255
 
@@ -45,6 +46,11 @@ struct sweetwall_clip sweetwall_clip_buffer(
 }
 
 void sweetwall_draw_clear(struct sweetwall_buffer *buffer, uint32_t color) {
+	// A fresh mapping is already zero; writing it just faults in every
+	// page, which on a full-output surface dominates the first frame
+	if (color == 0 && buffer->fresh) {
+		return;
+	}
 	size_t count = (size_t)buffer->width * buffer->height;
 	for (size_t i = 0; i < count; i++) {
 		buffer->data[i] = color;
@@ -239,6 +245,66 @@ void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 			bottom_c, r, color);
 		blend_corner_row(buffer, clip, bot, right - radius, right,
 			right_c, bottom_c, r, color);
+	}
+}
+
+// Fixed-point source stepping keeps the full-screen blit off the divider
+#define COVER_SHIFT 16
+
+void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
+	const uint32_t *src, uint32_t src_w, uint32_t src_h) {
+	if (src == NULL || src_w == 0 || src_h == 0 || buffer->width == 0 ||
+		buffer->height == 0) {
+		return;
+	}
+
+	// The scaler already covers the buffer exactly in the common case
+	if (src_w == buffer->width && src_h == buffer->height) {
+		memcpy(buffer->data, src,
+			(size_t)src_w * src_h * sizeof(uint32_t));
+		return;
+	}
+
+	uint32_t crop_w = src_w;
+	uint32_t crop_h = src_h;
+	if ((uint64_t)src_w * buffer->height >
+		(uint64_t)buffer->width * src_h) {
+		crop_w = (uint32_t)((uint64_t)buffer->width * src_h /
+				    buffer->height);
+	} else {
+		crop_h = (uint32_t)((uint64_t)buffer->height * src_w /
+				    buffer->width);
+	}
+	if (crop_w == 0) {
+		crop_w = 1;
+	}
+	if (crop_h == 0) {
+		crop_h = 1;
+	}
+
+	uint32_t off_x = (src_w - crop_w) / 2;
+	uint32_t off_y = (src_h - crop_h) / 2;
+	uint64_t step_x = ((uint64_t)crop_w << COVER_SHIFT) / buffer->width;
+
+	for (uint32_t y = 0; y < buffer->height; y++) {
+		uint32_t sy = off_y +
+			      (uint32_t)((uint64_t)y * crop_h / buffer->height);
+		if (sy >= src_h) {
+			sy = src_h - 1;
+		}
+		const uint32_t *src_row = src + (size_t)sy * src_w;
+		uint32_t *dst_row = buffer->data + (size_t)y * buffer->width;
+
+		uint64_t pos = 0;
+		for (uint32_t x = 0; x < buffer->width; x++) {
+			uint32_t sx = off_x + (uint32_t)(pos >> COVER_SHIFT);
+			pos += step_x;
+			if (sx >= src_w) {
+				sx = src_w - 1;
+			}
+			// A wallpaper backdrop is always opaque
+			dst_row[x] = 0xff000000u | (src_row[sx] & 0x00ffffffu);
+		}
 	}
 }
 

@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+#include "app_preview.h"
 #include "config/config.h"
 #include "grid/navigate.h"
 #include "scan/dirscan.h"
@@ -22,6 +23,10 @@ struct sweetwall_app {
 	struct sweetwall_config config;
 	struct sweetwall_dirscan scan;
 	struct sweetwall_grid grid;
+	// Panel geometry inside the surface; equal to the surface without
+	// preview
+	struct sweetwall_rect panel;
+	struct sweetwall_preview preview;
 
 	struct sweetwall_worker_pool *workers;
 	struct sweetwall_thumb *thumbs;
