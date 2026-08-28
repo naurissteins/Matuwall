@@ -1,12 +1,12 @@
-#include "app_thumbs.h"
+#include "app/thumbs.h"
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "app.h"
-#include "app_preview.h"
+#include "app/app.h"
+#include "app/preview.h"
 #include "thumb/worker.h"
 
 static void on_result(

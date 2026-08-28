@@ -1,9 +1,9 @@
-#include "app_input.h"
+#include "app/input.h"
 
 #include <stddef.h>
 
-#include "app.h"
-#include "app_preview.h"
+#include "app/app.h"
+#include "app/preview.h"
 #include "util/clock.h"
 
 // Selection changed: the backdrop follows it after a short dwell

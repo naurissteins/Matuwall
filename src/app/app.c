@@ -1,4 +1,4 @@
-#include "app.h"
+#include "app/app.h"
 
 #include <errno.h>
 #include <poll.h>
@@ -7,9 +7,9 @@
 #include <string.h>
 #include <wayland-client.h>
 
-#include "app_input.h"
-#include "app_preview.h"
-#include "app_thumbs.h"
+#include "app/input.h"
+#include "app/preview.h"
+#include "app/thumbs.h"
 #include "backend/backend.h"
 #include "hooks/hooks.h"
 #include "render/frame.h"

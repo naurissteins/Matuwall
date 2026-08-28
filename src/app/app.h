@@ -1,11 +1,11 @@
-#ifndef SWEETWALL_APP_H
-#define SWEETWALL_APP_H
+#ifndef SWEETWALL_APP_APP_H
+#define SWEETWALL_APP_APP_H
 
 #include <stdbool.h>
 
 #include <stddef.h>
 
-#include "app_preview.h"
+#include "app/preview.h"
 #include "config/config.h"
 #include "grid/navigate.h"
 #include "scan/dirscan.h"

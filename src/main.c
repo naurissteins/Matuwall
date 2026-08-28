@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "app.h"
+#include "app/app.h"
 
 static void usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
