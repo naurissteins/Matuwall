@@ -7,8 +7,8 @@
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
 directory = "~/Pictures/Wallpapers"
 
-# Wallpaper daemon used to apply the selection. A backend name (currently only
-# "sweetbg") or "auto" to probe the known backends in order.
+# Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto".
+# "auto" probes sweetbg then awww and picks the first one actually running.
 backend = "sweetbg"
 
 [window]

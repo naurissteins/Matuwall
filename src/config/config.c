@@ -199,7 +199,7 @@ static bool apply(void *user_data, const char *section, const char *key,
 		}
 		if (strcmp(key, "backend") == 0) {
 			apply_name(cfg->backend, sizeof(cfg->backend), v, line,
-				"backend must be a name like \"sweetbg\" or "
+				"backend must be \"sweetbg\", \"awww\", or "
 				"\"auto\"");
 			return true;
 		}

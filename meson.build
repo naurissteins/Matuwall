@@ -55,6 +55,7 @@ executable(
 	'src/app/input.c',
 	'src/app/preview.c',
 	'src/app/thumbs.c',
+	'src/backend/awww.c',
 	'src/backend/registry.c',
 	'src/backend/sweetbg.c',
 	'src/config/config.c',

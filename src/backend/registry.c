@@ -6,11 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+// Probe order for backend = "auto"
 static const struct sweetwall_backend *const backends[] = {
 	&sweetwall_backend_sweetbg,
+	&sweetwall_backend_awww,
 };
 
 const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
@@ -60,6 +63,32 @@ bool sweetwall_backend_available(const char *file) {
 		path = sep + 1;
 	}
 	return false;
+}
+
+bool sweetwall_backend_socket_ready(const char *leaf) {
+	if (leaf == NULL || leaf[0] == '\0') {
+		return false;
+	}
+
+	const char *dir = getenv("XDG_RUNTIME_DIR");
+	char fallback[64];
+	if (dir == NULL || dir[0] != '/') {
+		int n = snprintf(fallback, sizeof(fallback), "/run/user/%lu",
+			(unsigned long)getuid());
+		if (n < 0 || (size_t)n >= sizeof(fallback)) {
+			return false;
+		}
+		dir = fallback;
+	}
+
+	char path[PATH_MAX];
+	int n = snprintf(path, sizeof(path), "%s/%s", dir, leaf);
+	if (n < 0 || (size_t)n >= sizeof(path)) {
+		return false;
+	}
+
+	struct stat st;
+	return stat(path, &st) == 0 && S_ISSOCK(st.st_mode);
 }
 
 bool sweetwall_backend_run(const char *file, char *const argv[]) {

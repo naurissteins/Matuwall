@@ -31,11 +31,23 @@ line. Comments are not allowed inside an array.
 	Defaults to _"~/Pictures/Wallpapers"_.
 
 *backend*
-	Wallpaper daemon used to apply the selection. A backend name, currently
-	only _"sweetbg"_, or _"auto"_ to probe the known backends in order and use
-	the first one found. Defaults to _"sweetbg"_. An unknown name, or _"auto"_
-	with nothing installed, is reported when you press *Enter* and the picker
-	exits non-zero without changing the wallpaper.
+	Wallpaper daemon used to apply the selection. One of _"sweetbg"_
+	(*sweetbg img <path>*), _"awww"_ (*awww img -- <path>*), or _"auto"_.
+	Defaults to _"sweetbg"_.
+
+	_"auto"_ probes sweetbg first, then awww, and picks the first one that is
+	both installed and *running*: its client on *PATH* and its daemon socket
+	live. A daemon that is installed but stopped is skipped rather than
+	selected and failed on.
+
+	Naming a backend explicitly never probes; it is used exactly as given.
+
+	For awww, only the default daemon namespace is probed. With
+	*awww-daemon --namespace <name>*, set _"awww"_ explicitly instead of
+	_"auto"_.
+
+	An unknown name, or _"auto"_ with no daemon running, is reported when you
+	press *Enter*; the picker exits non-zero without changing the wallpaper.
 
 ## [window]
 
