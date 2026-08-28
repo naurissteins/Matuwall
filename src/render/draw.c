@@ -37,6 +37,16 @@ static inline uint32_t blend(uint32_t dst, uint32_t src, uint32_t coverage) {
 	return a << 24 | r << 16 | g << 8 | b;
 }
 
+// A radius past half the shorter side is a pill, not a bigger curve. Every
+// rounded primitive clamps the same way
+static int32_t clamp_radius(int32_t radius, int32_t width, int32_t height) {
+	int32_t limit = (width < height ? width : height) / 2;
+	if (radius > limit) {
+		radius = limit;
+	}
+	return radius < 0 ? 0 : radius;
+}
+
 struct sweetwall_clip sweetwall_clip_buffer(
 	const struct sweetwall_buffer *buffer) {
 	return (struct sweetwall_clip){
@@ -149,6 +159,7 @@ void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
 	if (thickness * 2 > width || thickness * 2 > height) {
 		return;
 	}
+	radius = clamp_radius(radius, width, height);
 
 	double inner_x = x + thickness;
 	double inner_y = y + thickness;
@@ -202,13 +213,7 @@ void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 		return;
 	}
 
-	int32_t limit = (width < height ? width : height) / 2;
-	if (radius > limit) {
-		radius = limit;
-	}
-	if (radius < 0) {
-		radius = 0;
-	}
+	radius = clamp_radius(radius, width, height);
 
 	int32_t right = x + width;
 	int32_t bottom = y + height;
@@ -316,13 +321,7 @@ void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 		return;
 	}
 
-	int32_t limit = (width < height ? width : height) / 2;
-	if (radius > limit) {
-		radius = limit;
-	}
-	if (radius < 0) {
-		radius = 0;
-	}
+	radius = clamp_radius(radius, width, height);
 
 	int32_t top = y < clip->y0 ? clip->y0 : y;
 	int32_t bottom = y + height > clip->y1 ? clip->y1 : y + height;
