@@ -4,8 +4,11 @@
 
 // sweetbg is the user's wallpaper daemon, driven by `sweetbg img <path>`
 
+// The socket check keeps "auto" from picking an installed-but-dead sweetbg
+// and stopping before it reaches the next backend
 static bool sweetbg_detect(void) {
-	return sweetwall_backend_available("sweetbg");
+	return sweetwall_backend_available("sweetbg") &&
+	       sweetwall_backend_socket_ready("sweetbg.sock");
 }
 
 static bool sweetbg_apply(const char *path) {

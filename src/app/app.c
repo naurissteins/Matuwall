@@ -243,8 +243,8 @@ static bool apply_selection(struct sweetwall_app *app) {
 		sweetwall_backend_select(app->config.backend);
 	if (backend == NULL) {
 		if (strcmp(app->config.backend, "auto") == 0) {
-			fprintf(stderr,
-				"sweetwall: no wallpaper backend found\n");
+			fprintf(stderr, "sweetwall: no running wallpaper "
+					"backend found\n");
 		} else {
 			fprintf(stderr, "sweetwall: unknown backend '%s'\n",
 				app->config.backend);
