@@ -53,6 +53,7 @@ executable(
 	'src/main.c',
 	'src/app/app.c',
 	'src/app/input.c',
+	'src/app/loop.c',
 	'src/app/preview.c',
 	'src/app/thumbs.c',
 	'src/backend/awww.c',
