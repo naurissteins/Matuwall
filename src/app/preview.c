@@ -1,8 +1,8 @@
-#include "app_preview.h"
+#include "app/preview.h"
 
 #include <stdlib.h>
 
-#include "app.h"
+#include "app/app.h"
 
 // Settle time before a decode is worth starting; holding an arrow key must not
 // queue one full-resolution decode per step
