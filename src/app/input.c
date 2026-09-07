@@ -4,11 +4,13 @@
 
 #include "app/app.h"
 #include "app/preview.h"
+#include "app/thumbs.h"
 #include "util/clock.h"
 
 // Selection changed: the backdrop follows it after a short dwell
 static void selection_changed(struct sweetwall_app *app) {
 	app->layer.needs_repaint = true;
+	sweetwall_app_thumbs_prioritize_visible(app);
 	sweetwall_app_preview_select(
 		app, app->grid.selected, sweetwall_now_ms());
 }

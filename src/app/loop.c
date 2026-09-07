@@ -49,6 +49,9 @@ static void refresh_panel(struct sweetwall_app *app) {
 	app->panel = sweetwall_layout_panel(&app->config.layout,
 		app->scan.count, app->config.visible_rows, app->config.position,
 		app->layer.width, app->layer.height);
+	sweetwall_grid_reveal(
+		&app->grid, &app->config.layout, (uint32_t)app->panel.height);
+	sweetwall_app_thumbs_prioritize_visible(app);
 }
 
 // Draw only when something actually changed
@@ -68,9 +71,6 @@ static bool render_if_needed(struct sweetwall_app *app) {
 	double scale = app->layer.width > 0
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
-
-	sweetwall_grid_reveal(
-		&app->grid, &app->config.layout, (uint32_t)app->panel.height);
 
 	int32_t step = (int32_t)(app->config.layout.tile_height +
 				 app->config.layout.spacing);

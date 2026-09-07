@@ -53,6 +53,39 @@ static void thumbnail_target(
 	*th = (uint32_t)(app->config.layout.tile_height * scale + 0.5);
 }
 
+static void visible_range(
+	const struct sweetwall_app *app, size_t *first, size_t *end) {
+	size_t columns = app->config.layout.columns;
+	if (columns == 0) {
+		columns = 1;
+	}
+
+	*first = (size_t)app->grid.first_row * columns;
+	if (*first >= app->scan.count) {
+		*first = app->scan.count;
+		*end = app->scan.count;
+		return;
+	}
+
+	uint32_t height =
+		app->panel.height > 0 ? (uint32_t)app->panel.height : 0;
+	size_t rows = sweetwall_grid_visible_rows(&app->config.layout, height);
+	size_t count = rows * columns;
+	size_t remaining = app->scan.count - *first;
+	*end = *first + (count < remaining ? count : remaining);
+}
+
+static void submit_range(struct sweetwall_app *app, size_t first, size_t end) {
+	for (size_t i = first; i < end; i++) {
+		if (sweetwall_worker_submit(
+			    app->workers, i, app->scan.paths[i])) {
+			app->pending++;
+		} else {
+			app->thumbs[i].state = SWEETWALL_THUMB_FAILED;
+		}
+	}
+}
+
 void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
 	if (app->scan.count == 0) {
 		return;
@@ -74,14 +107,34 @@ void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
 		return;
 	}
 
-	for (size_t i = 0; i < app->scan.count; i++) {
-		if (sweetwall_worker_submit(
-			    app->workers, i, app->scan.paths[i])) {
-			app->pending++;
-		} else {
-			app->thumbs[i].state = SWEETWALL_THUMB_FAILED;
-		}
+	size_t first;
+	size_t end;
+	visible_range(app, &first, &end);
+	submit_range(app, first, end);
+	submit_range(app, 0, first);
+	submit_range(app, end, app->scan.count);
+	app->thumb_priority_first = first;
+	app->thumb_priority_end = end;
+	app->thumb_priority_set = true;
+}
+
+void sweetwall_app_thumbs_prioritize_visible(struct sweetwall_app *app) {
+	if (app->workers == NULL) {
+		return;
 	}
+
+	size_t first;
+	size_t end;
+	visible_range(app, &first, &end);
+	if (app->thumb_priority_set && first == app->thumb_priority_first &&
+		end == app->thumb_priority_end) {
+		return;
+	}
+
+	sweetwall_worker_prioritize_thumbs(app->workers, first, end);
+	app->thumb_priority_first = first;
+	app->thumb_priority_end = end;
+	app->thumb_priority_set = true;
 }
 
 void sweetwall_app_thumbs_drain(struct sweetwall_app *app) {
@@ -103,4 +156,7 @@ void sweetwall_app_thumbs_finish(struct sweetwall_app *app) {
 		app->thumbs = NULL;
 		app->thumb_count = 0;
 	}
+	app->thumb_priority_first = 0;
+	app->thumb_priority_end = 0;
+	app->thumb_priority_set = false;
 }
