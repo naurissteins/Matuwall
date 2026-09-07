@@ -54,6 +54,12 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 	case XKB_KEY_j:
 		move = SWEETWALL_MOVE_DOWN;
 		break;
+	case XKB_KEY_Prior:
+		move = SWEETWALL_MOVE_PAGE_UP;
+		break;
+	case XKB_KEY_Next:
+		move = SWEETWALL_MOVE_PAGE_DOWN;
+		break;
 	case XKB_KEY_Home:
 	case XKB_KEY_g:
 		move = SWEETWALL_MOVE_FIRST;

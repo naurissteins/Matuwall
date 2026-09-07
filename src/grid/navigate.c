@@ -22,6 +22,39 @@ static uint32_t row_of(const struct sweetwall_layout *layout, size_t index) {
 	return (uint32_t)(index / columns);
 }
 
+static uint32_t shift_row(
+	uint32_t row, uint32_t amount, uint32_t last, bool forward) {
+	if (row > last) {
+		row = last;
+	}
+	if (!forward) {
+		return amount < row ? row - amount : 0;
+	}
+	return amount < last - row ? row + amount : last;
+}
+
+static size_t move_page(struct sweetwall_grid *grid,
+	const struct sweetwall_layout *layout, uint32_t surface_height,
+	bool forward) {
+	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
+	uint32_t visible = sweetwall_grid_visible_rows(layout, surface_height);
+	uint32_t last_row = row_of(layout, grid->count - 1);
+	uint32_t row = row_of(layout, grid->selected);
+	uint32_t column = (uint32_t)(grid->selected % columns);
+
+	uint32_t target_row = shift_row(row, visible, last_row, forward);
+	size_t selected = (size_t)target_row * columns + column;
+	if (selected >= grid->count) {
+		selected = grid->count - 1;
+	}
+
+	uint32_t total_rows = last_row + 1;
+	uint32_t max_first = total_rows > visible ? total_rows - visible : 0;
+	grid->first_row =
+		shift_row(grid->first_row, visible, max_first, forward);
+	return selected;
+}
+
 // Keep the selected row inside the viewport and never scroll past the end
 static bool scroll_into_view(struct sweetwall_grid *grid,
 	const struct sweetwall_layout *layout, uint32_t surface_height) {
@@ -58,6 +91,8 @@ bool sweetwall_grid_move(struct sweetwall_grid *grid,
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
 	size_t last = grid->count - 1;
 	size_t selected = grid->selected;
+	size_t previous_selected = grid->selected;
+	uint32_t first_row = grid->first_row;
 
 	switch (move) {
 	case SWEETWALL_MOVE_LEFT:
@@ -84,6 +119,12 @@ bool sweetwall_grid_move(struct sweetwall_grid *grid,
 			selected = last;
 		}
 		break;
+	case SWEETWALL_MOVE_PAGE_UP:
+		selected = move_page(grid, layout, surface_height, false);
+		break;
+	case SWEETWALL_MOVE_PAGE_DOWN:
+		selected = move_page(grid, layout, surface_height, true);
+		break;
 	case SWEETWALL_MOVE_FIRST:
 		selected = 0;
 		break;
@@ -92,11 +133,9 @@ bool sweetwall_grid_move(struct sweetwall_grid *grid,
 		break;
 	}
 
-	bool moved = selected != grid->selected;
 	grid->selected = selected;
-
-	bool scrolled = scroll_into_view(grid, layout, surface_height);
-	return moved || scrolled;
+	scroll_into_view(grid, layout, surface_height);
+	return selected != previous_selected || grid->first_row != first_row;
 }
 
 bool sweetwall_grid_select(struct sweetwall_grid *grid,
