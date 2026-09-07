@@ -31,6 +31,9 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 *Arrow keys*, *h* *j* *k* *l*
 	Move the selection.
 
+*Page Up*, *Page Down*
+	Move the selection by one visible page.
+
 *Home*, *g*
 	Jump to the first tile.
 
