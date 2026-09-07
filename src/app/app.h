@@ -32,6 +32,9 @@ struct sweetwall_app {
 	struct sweetwall_thumb *thumbs;
 	size_t thumb_count;
 	size_t pending;
+	size_t thumb_priority_first;
+	size_t thumb_priority_end;
+	bool thumb_priority_set;
 	bool running;
 	bool apply_requested;
 };

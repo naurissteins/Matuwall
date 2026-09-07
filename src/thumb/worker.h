@@ -46,6 +46,10 @@ int sweetwall_worker_pool_fd(const struct sweetwall_worker_pool *pool);
 bool sweetwall_worker_submit(
 	struct sweetwall_worker_pool *pool, size_t index, const char *path);
 
+// Move queued thumbnails in [first, end) ahead of other thumbnail jobs
+void sweetwall_worker_prioritize_thumbs(
+	struct sweetwall_worker_pool *pool, size_t first, size_t end);
+
 // Jumps the queue and drops any preview that has not started; latest wins
 bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
 	size_t index, const char *path, uint32_t target_w, uint32_t target_h);

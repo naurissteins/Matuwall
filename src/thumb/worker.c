@@ -26,6 +26,11 @@ struct result {
 	struct result *next;
 };
 
+struct job_list {
+	struct job *head;
+	struct job *tail;
+};
+
 struct sweetwall_worker_pool {
 	pthread_t threads[MAX_WORKERS];
 	size_t thread_count;
@@ -195,6 +200,28 @@ static struct job *make_job(enum sweetwall_job_kind kind, size_t index,
 	return job;
 }
 
+static void job_list_append(struct job_list *list, struct job *job) {
+	job->next = NULL;
+	if (list->tail != NULL) {
+		list->tail->next = job;
+	} else {
+		list->head = job;
+	}
+	list->tail = job;
+}
+
+static void job_list_extend(struct job_list *list, struct job_list *addition) {
+	if (addition->head == NULL) {
+		return;
+	}
+	if (list->tail != NULL) {
+		list->tail->next = addition->head;
+	} else {
+		list->head = addition->head;
+	}
+	list->tail = addition->tail;
+}
+
 // Caller holds the mutex
 static void drop_queued_previews(struct sweetwall_worker_pool *pool) {
 	struct job **cursor = &pool->jobs_head;
@@ -234,6 +261,37 @@ bool sweetwall_worker_submit(
 	pthread_cond_signal(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 	return true;
+}
+
+void sweetwall_worker_prioritize_thumbs(
+	struct sweetwall_worker_pool *pool, size_t first, size_t end) {
+	if (first >= end) {
+		return;
+	}
+
+	struct job_list previews = {0};
+	struct job_list visible = {0};
+	struct job_list remaining = {0};
+
+	pthread_mutex_lock(&pool->mutex);
+	struct job *job = pool->jobs_head;
+	while (job != NULL) {
+		struct job *next = job->next;
+		if (job->kind == SWEETWALL_JOB_PREVIEW) {
+			job_list_append(&previews, job);
+		} else if (job->index >= first && job->index < end) {
+			job_list_append(&visible, job);
+		} else {
+			job_list_append(&remaining, job);
+		}
+		job = next;
+	}
+
+	job_list_extend(&previews, &visible);
+	job_list_extend(&previews, &remaining);
+	pool->jobs_head = previews.head;
+	pool->jobs_tail = previews.tail;
+	pthread_mutex_unlock(&pool->mutex);
 }
 
 bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
