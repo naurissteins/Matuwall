@@ -47,17 +47,8 @@ static struct sweetwall_clip content_clip(
 	return clip;
 }
 
-// Fill the output behind the panel with the selected wallpaper
-static void draw_backdrop(struct sweetwall_buffer *buffer,
+static void draw_panel(struct sweetwall_buffer *buffer,
 	const struct sweetwall_frame *frame, int32_t radius) {
-	if (frame->preview != NULL) {
-		sweetwall_draw_image_cover(buffer, frame->preview,
-			frame->preview_width, frame->preview_height);
-	} else {
-		// Nothing decoded yet: let the real desktop show through
-		sweetwall_draw_clear(buffer, 0);
-	}
-
 	struct sweetwall_clip full = sweetwall_clip_buffer(buffer);
 	int32_t left = to_pixels(frame->panel.x, frame->scale);
 	int32_t top = to_pixels(frame->panel.y, frame->scale);
@@ -75,11 +66,14 @@ void sweetwall_frame_draw(
 	int32_t radius =
 		to_pixels((int32_t)frame->layout->radius, frame->scale);
 
-	if (frame->backdrop) {
-		draw_backdrop(buffer, frame, radius);
+	if (frame->backdrop && frame->preview != NULL) {
+		sweetwall_draw_image_cover(buffer, frame->preview,
+			frame->preview_width, frame->preview_height);
 	} else {
-		sweetwall_draw_clear(buffer, frame->background);
+		// Let the real desktop show outside the rounded panel
+		sweetwall_draw_clear(buffer, 0);
 	}
+	draw_panel(buffer, frame, radius);
 
 	struct sweetwall_clip clip = content_clip(buffer, frame);
 
