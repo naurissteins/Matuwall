@@ -15,7 +15,7 @@ backend = "sweetbg"
 # Show the selected wallpaper full-screen behind the grid. Nothing is applied
 # until you press Enter. Costs one output-sized image in memory; set to false
 # for a panel-sized window with no backdrop.
-preview = true
+preview = false
 
 # Placement on screen: "center", "left", "right", "top", or "bottom". With
 # preview on, this places the panel inside the full-screen surface.
