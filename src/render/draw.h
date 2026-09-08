@@ -25,7 +25,7 @@ void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
 	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t thickness, uint32_t color);
 
-// Fill the whole buffer with src, center-cropped to the buffer aspect
+// Fill from opaque ARGB8888 src, center-cropped to the buffer aspect
 void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
 	const uint32_t *src, uint32_t src_w, uint32_t src_h);
 
