@@ -307,8 +307,7 @@ void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
 			if (sx >= src_w) {
 				sx = src_w - 1;
 			}
-			// A wallpaper backdrop is always opaque
-			dst_row[x] = 0xff000000u | (src_row[sx] & 0x00ffffffu);
+			dst_row[x] = src_row[sx];
 		}
 	}
 }
