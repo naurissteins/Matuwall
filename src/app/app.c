@@ -11,10 +11,25 @@
 // Lifecycle only: build every subsystem, tear every one back down. The run
 // phase lives in loop.c
 
+static bool wait_for_configure(struct sweetwall_app *app) {
+	if (wl_display_roundtrip(app->display) < 0) {
+		fprintf(stderr, "sweetwall: wayland roundtrip failed\n");
+		return false;
+	}
+	if (!app->layer.configured) {
+		fprintf(stderr,
+			"sweetwall: compositor never configured the surface\n");
+		return false;
+	}
+	return true;
+}
+
 bool sweetwall_app_init(
 	struct sweetwall_app *app, const struct sweetwall_config *config) {
 	*app = (struct sweetwall_app){
 		.config = *config,
+		.layout = config->layout,
+		.visible_rows = config->visible_rows,
 		.running = true,
 	};
 
@@ -50,27 +65,32 @@ bool sweetwall_app_init(
 		return false;
 	}
 
-	uint32_t width;
-	uint32_t height;
-	sweetwall_layout_surface_size(&app->config.layout, app->scan.count,
-		app->config.visible_rows, &width, &height);
-
-	if (!sweetwall_layer_create(&app->layer, &app->registry, width, height,
-		    app->config.position, app->config.preview)) {
+	if (!sweetwall_layer_create(&app->layer, &app->registry)) {
 		fprintf(stderr, "sweetwall: failed to create the layer "
 				"surface\n");
 		return false;
 	}
 
-	// Wait for the first configure so the surface has a real size
-	if (wl_display_roundtrip(app->display) < 0) {
-		fprintf(stderr, "sweetwall: wayland roundtrip failed\n");
+	// The bufferless output probe gives the compositor-selected bounds
+	if (!wait_for_configure(app)) {
 		return false;
 	}
-	if (!app->layer.configured) {
-		fprintf(stderr,
-			"sweetwall: compositor never configured the surface\n");
-		return false;
+	app->output_width = app->layer.width;
+	app->output_height = app->layer.height;
+	sweetwall_layout_adapt(&app->config.layout, app->config.visible_rows,
+		app->output_width, app->output_height, &app->layout,
+		&app->visible_rows);
+
+	if (!app->config.preview) {
+		uint32_t width;
+		uint32_t height;
+		sweetwall_layout_surface_size(&app->layout, app->scan.count,
+			app->visible_rows, &width, &height);
+		sweetwall_layer_set_panel(
+			&app->layer, width, height, app->config.position);
+		if (!wait_for_configure(app)) {
+			return false;
+		}
 	}
 	return true;
 }

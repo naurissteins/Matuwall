@@ -87,7 +87,8 @@ line. Comments are not allowed inside an array.
 ## [grid]
 
 *columns*
-	Number of tile columns. Defaults to _5_.
+	Maximum number of tile columns. Sweetwall uses fewer when the selected
+	output is too narrow for the configured grid. Defaults to _5_.
 
 *spacing*
 	Pixels between tiles. Defaults to _16_.
@@ -96,7 +97,11 @@ line. Comments are not allowed inside an array.
 	Tile corner radius in pixels. Defaults to _8_.
 
 *visible_rows*
-	Rows kept visible before the grid scrolls. Defaults to _2_.
+	Maximum rows kept visible before the grid scrolls. Sweetwall uses fewer when
+	the selected output is too short for the configured grid. Defaults to _2_.
+
+Sweetwall keeps the configured tile size, spacing, and margin while fitting the
+grid, and always displays at least one tile.
 
 ## [thumbnail]
 
@@ -153,6 +158,7 @@ margin     = 24
 columns = 5
 spacing = 16
 radius  = 8
+visible_rows = 2
 
 [thumbnail]
 width  = 240

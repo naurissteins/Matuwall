@@ -160,16 +160,9 @@ static uint32_t anchor_for(enum sweetwall_position position) {
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |                            \
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT)
 
-bool sweetwall_layer_create(struct sweetwall_layer *layer,
-	const struct sweetwall_registry *reg, uint32_t width, uint32_t height,
-	enum sweetwall_position position, bool fullscreen) {
-	if (fullscreen) {
-		width = 0;
-		height = 0;
-	}
+bool sweetwall_layer_create(
+	struct sweetwall_layer *layer, const struct sweetwall_registry *reg) {
 	*layer = (struct sweetwall_layer){
-		.width = width,
-		.height = height,
 		.buffer_scale = 1,
 	};
 
@@ -204,9 +197,8 @@ bool sweetwall_layer_create(struct sweetwall_layer *layer,
 
 	zwlr_layer_surface_v1_add_listener(
 		layer->layer_surface, &layer_surface_listener, layer);
-	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
-	zwlr_layer_surface_v1_set_anchor(layer->layer_surface,
-		fullscreen ? ANCHOR_ALL : anchor_for(position));
+	zwlr_layer_surface_v1_set_size(layer->layer_surface, 0, 0);
+	zwlr_layer_surface_v1_set_anchor(layer->layer_surface, ANCHOR_ALL);
 	// A picker overlays the desktop; it must not reserve space
 	zwlr_layer_surface_v1_set_exclusive_zone(layer->layer_surface, 0);
 	// Every key belongs to the picker while it is open
@@ -215,6 +207,15 @@ bool sweetwall_layer_create(struct sweetwall_layer *layer,
 
 	wl_surface_commit(layer->wl_surface);
 	return true;
+}
+
+void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
+	uint32_t height, enum sweetwall_position position) {
+	layer->configured = false;
+	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
+	zwlr_layer_surface_v1_set_anchor(
+		layer->layer_surface, anchor_for(position));
+	wl_surface_commit(layer->wl_surface);
 }
 
 void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,

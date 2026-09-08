@@ -49,13 +49,13 @@ static void thumbnail_target(
 	sweetwall_layer_buffer_size(&app->layer, &pw, &ph);
 	double scale =
 		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
-	*tw = (uint32_t)(app->config.layout.tile_width * scale + 0.5);
-	*th = (uint32_t)(app->config.layout.tile_height * scale + 0.5);
+	*tw = (uint32_t)(app->layout.tile_width * scale + 0.5);
+	*th = (uint32_t)(app->layout.tile_height * scale + 0.5);
 }
 
 static void visible_range(
 	const struct sweetwall_app *app, size_t *first, size_t *end) {
-	size_t columns = app->config.layout.columns;
+	size_t columns = app->layout.columns;
 	if (columns == 0) {
 		columns = 1;
 	}
@@ -69,7 +69,7 @@ static void visible_range(
 
 	uint32_t height =
 		app->panel.height > 0 ? (uint32_t)app->panel.height : 0;
-	size_t rows = sweetwall_grid_visible_rows(&app->config.layout, height);
+	size_t rows = sweetwall_grid_visible_rows(&app->layout, height);
 	size_t count = rows * columns;
 	size_t remaining = app->scan.count - *first;
 	*end = *first + (count < remaining ? count : remaining);

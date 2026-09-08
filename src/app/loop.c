@@ -46,11 +46,18 @@ bool sweetwall_app_loop_install_signals(void) {
 
 // The panel is the whole surface unless a backdrop is drawn around it
 static void refresh_panel(struct sweetwall_app *app) {
-	app->panel = sweetwall_layout_panel(&app->config.layout,
-		app->scan.count, app->config.visible_rows, app->config.position,
-		app->layer.width, app->layer.height);
+	if (app->config.preview) {
+		app->output_width = app->layer.width;
+		app->output_height = app->layer.height;
+	}
+	sweetwall_layout_adapt(&app->config.layout, app->config.visible_rows,
+		app->output_width, app->output_height, &app->layout,
+		&app->visible_rows);
+	app->panel = sweetwall_layout_panel(&app->layout, app->scan.count,
+		app->visible_rows, app->config.position, app->layer.width,
+		app->layer.height);
 	sweetwall_grid_reveal(
-		&app->grid, &app->config.layout, (uint32_t)app->panel.height);
+		&app->grid, &app->layout, (uint32_t)app->panel.height);
 	sweetwall_app_thumbs_prioritize_visible(app);
 }
 
@@ -72,11 +79,10 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
 
-	int32_t step = (int32_t)(app->config.layout.tile_height +
-				 app->config.layout.spacing);
+	int32_t step = (int32_t)(app->layout.tile_height + app->layout.spacing);
 
 	struct sweetwall_frame frame = {
-		.layout = &app->config.layout,
+		.layout = &app->layout,
 		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
 		.selected = app->grid.selected,

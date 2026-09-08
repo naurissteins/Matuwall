@@ -28,7 +28,7 @@ background = "#1e1e2ecc"
 margin = 24
 
 [grid]
-# Number of tile columns.
+# Maximum number of tile columns. Fewer are used on narrow outputs.
 columns = 5
 
 # Gap in pixels between tiles.
@@ -37,7 +37,7 @@ spacing = 16
 # Tile corner radius in pixels.
 radius = 8
 
-# Rows kept visible before the grid scrolls.
+# Maximum rows kept visible. Fewer are used on short outputs.
 visible_rows = 2
 
 [thumbnail]
