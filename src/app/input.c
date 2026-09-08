@@ -72,7 +72,7 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 		return;
 	}
 
-	if (sweetwall_grid_move(&app->grid, &app->config.layout,
+	if (sweetwall_grid_move(&app->grid, &app->layout,
 		    (uint32_t)app->panel.height, move)) {
 		selection_changed(app);
 	}
@@ -88,11 +88,10 @@ static void handle_focus_lost(void *user_data) {
 // Hover selects the tile under the cursor
 static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
 	struct sweetwall_app *app = user_data;
-	size_t hit = sweetwall_layout_hit(&app->config.layout, &app->panel,
+	size_t hit = sweetwall_layout_hit(&app->layout, &app->panel,
 		app->grid.first_row, app->scan.count, x, y);
-	if (hit != SIZE_MAX &&
-		sweetwall_grid_select(&app->grid, &app->config.layout,
-			(uint32_t)app->panel.height, hit)) {
+	if (hit != SIZE_MAX && sweetwall_grid_select(&app->grid, &app->layout,
+				       (uint32_t)app->panel.height, hit)) {
 		selection_changed(app);
 	}
 }
@@ -104,7 +103,7 @@ static void handle_pointer_button(
 	if (!pressed) {
 		return;
 	}
-	size_t hit = sweetwall_layout_hit(&app->config.layout, &app->panel,
+	size_t hit = sweetwall_layout_hit(&app->layout, &app->panel,
 		app->grid.first_row, app->scan.count, x, y);
 	if (hit == SIZE_MAX) {
 		// Only a backdrop surface has anywhere to click past the panel
@@ -113,8 +112,8 @@ static void handle_pointer_button(
 		}
 		return;
 	}
-	sweetwall_grid_select(&app->grid, &app->config.layout,
-		(uint32_t)app->panel.height, hit);
+	sweetwall_grid_select(
+		&app->grid, &app->layout, (uint32_t)app->panel.height, hit);
 	apply_and_exit(app);
 }
 
@@ -125,7 +124,7 @@ static void handle_pointer_scroll(void *user_data, int32_t steps) {
 	int32_t count = steps > 0 ? steps : -steps;
 	bool changed = false;
 	for (int32_t i = 0; i < count; i++) {
-		changed |= sweetwall_grid_move(&app->grid, &app->config.layout,
+		changed |= sweetwall_grid_move(&app->grid, &app->layout,
 			(uint32_t)app->panel.height, move);
 	}
 	if (changed) {

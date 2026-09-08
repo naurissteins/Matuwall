@@ -30,6 +30,11 @@ struct sweetwall_layout {
 	uint32_t radius;
 };
 
+void sweetwall_layout_adapt(const struct sweetwall_layout *configured,
+	uint32_t configured_rows, uint32_t available_width,
+	uint32_t available_height, struct sweetwall_layout *layout,
+	uint32_t *visible_rows);
+
 uint32_t sweetwall_layout_rows(
 	const struct sweetwall_layout *layout, size_t count);
 

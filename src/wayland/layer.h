@@ -31,11 +31,13 @@ struct sweetwall_layer {
 	struct sweetwall_buffer *retired;
 };
 
-// fullscreen spans the whole output so the picker can paint a backdrop;
-// width/height and position are ignored in that mode
-bool sweetwall_layer_create(struct sweetwall_layer *layer,
-	const struct sweetwall_registry *reg, uint32_t width, uint32_t height,
-	enum sweetwall_position position, bool fullscreen);
+// Starts bufferless across the selected output so its bounds are known
+bool sweetwall_layer_create(
+	struct sweetwall_layer *layer, const struct sweetwall_registry *reg);
+
+// Replace the output probe with the final compact panel geometry
+void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
+	uint32_t height, enum sweetwall_position position);
 
 void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);

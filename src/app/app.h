@@ -21,6 +21,11 @@ struct sweetwall_app {
 	struct sweetwall_seat seat;
 
 	struct sweetwall_config config;
+	// Effective grid after fitting the configured maxima to the output
+	struct sweetwall_layout layout;
+	uint32_t visible_rows;
+	uint32_t output_width;
+	uint32_t output_height;
 	struct sweetwall_dirscan scan;
 	struct sweetwall_grid grid;
 	// Panel geometry inside the surface; equal to the surface without

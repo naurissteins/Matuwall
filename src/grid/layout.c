@@ -1,5 +1,36 @@
 #include "grid/layout.h"
 
+static uint32_t fit_cells(uint32_t available, uint32_t margin, uint32_t tile,
+	uint32_t spacing, uint32_t maximum) {
+	if (maximum == 0 || tile == 0) {
+		return 1;
+	}
+
+	uint64_t margins = (uint64_t)margin * 2;
+	if (available <= margins) {
+		return 1;
+	}
+	uint64_t inner = available - margins;
+	uint64_t step = (uint64_t)tile + spacing;
+	uint64_t count = (inner + spacing) / step;
+	if (count == 0) {
+		count = 1;
+	}
+	return count < maximum ? (uint32_t)count : maximum;
+}
+
+void sweetwall_layout_adapt(const struct sweetwall_layout *configured,
+	uint32_t configured_rows, uint32_t available_width,
+	uint32_t available_height, struct sweetwall_layout *layout,
+	uint32_t *visible_rows) {
+	*layout = *configured;
+	layout->columns = fit_cells(available_width, configured->margin,
+		configured->tile_width, configured->spacing,
+		configured->columns);
+	*visible_rows = fit_cells(available_height, configured->margin,
+		configured->tile_height, configured->spacing, configured_rows);
+}
+
 uint32_t sweetwall_layout_rows(
 	const struct sweetwall_layout *layout, size_t count) {
 	if (layout->columns == 0 || count == 0) {
