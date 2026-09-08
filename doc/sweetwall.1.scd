@@ -20,6 +20,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 
 # OPTIONS
 
+*-p* _POSITION_, *--position* _POSITION_
+	Temporarily override the configured window position for this invocation.
+	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
+	configuration file is not changed.
+
 *-h*, *--help*
 	Show a help message and exit.
 
@@ -117,7 +122,8 @@ before that point are still persisted when startup fails.
 
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
 _~/.config/sweetwall/config.toml_. It runs with defaults when no file is
-present. See *sweetwall*(5) for the keys.
+present. Command-line overrides take precedence over the loaded configuration.
+See *sweetwall*(5) for the keys.
 
 # FILES
 

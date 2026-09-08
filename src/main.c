@@ -1,21 +1,10 @@
 #include <stdio.h>
-#include <string.h>
 
 #include "app/app.h"
+#include "cli/options.h"
 #include "diagnose/diagnose.h"
 #include "thumb/cache.h"
 #include "util/log.h"
-
-static void usage(FILE *out) {
-	fputs("usage: sweetwall [options]\n"
-	      "\n"
-	      "options:\n"
-	      "  -h, --help         show this help and exit\n"
-	      "  -V, --version      show version information and exit\n"
-	      "      --clear-cache  remove cached thumbnails and exit\n"
-	      "      --diagnose     check the current setup and exit\n",
-		out);
-}
 
 static int clear_cache(void) {
 	size_t removed;
@@ -34,44 +23,38 @@ static int clear_cache(void) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc == 2 && strcmp(argv[1], "--clear-cache") == 0) {
+	struct sweetwall_cli_options options;
+	char err[256];
+	if (!sweetwall_cli_parse(argc, argv, &options, err, sizeof(err))) {
+		fprintf(stderr, "sweetwall: %s\n", err);
+		sweetwall_cli_usage(stderr);
+		return 2;
+	}
+	if (options.action == SWEETWALL_CLI_HELP) {
+		sweetwall_cli_usage(stdout);
+		return 0;
+	}
+	if (options.action == SWEETWALL_CLI_VERSION) {
+		puts("sweetwall " SWEETWALL_VERSION);
+		return 0;
+	}
+	if (options.action == SWEETWALL_CLI_CLEAR_CACHE) {
 		return clear_cache();
 	}
-	if (argc == 2 && strcmp(argv[1], "--diagnose") == 0) {
+	if (options.action == SWEETWALL_CLI_DIAGNOSE) {
 		return sweetwall_diagnose_run();
-	}
-
-	for (int i = 1; i < argc; i++) {
-		const char *arg = argv[i];
-
-		if (strcmp(arg, "--clear-cache") == 0 ||
-			strcmp(arg, "--diagnose") == 0) {
-			fprintf(stderr, "sweetwall: %s must be used alone\n",
-				arg);
-			return 2;
-		}
-
-		if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
-			usage(stdout);
-			return 0;
-		}
-
-		if (strcmp(arg, "-V") == 0 || strcmp(arg, "--version") == 0) {
-			puts("sweetwall " SWEETWALL_VERSION);
-			return 0;
-		}
-
-		fprintf(stderr, "sweetwall: unknown option '%s'\n", arg);
-		usage(stderr);
-		return 2;
 	}
 
 	sweetwall_log_start(SWEETWALL_VERSION);
 	struct sweetwall_config config;
-	char err[256];
 	if (!sweetwall_config_load(&config, err, sizeof(err))) {
 		// A bad config is a warning, not a crash: run with defaults
 		sweetwall_log_warn("config", "%s; using defaults", err);
+	}
+	sweetwall_cli_apply(&options, &config);
+	if (options.position_set) {
+		sweetwall_log_info("config", "position overridden to %s",
+			sweetwall_position_name(config.position));
 	}
 
 	struct sweetwall_app app;
