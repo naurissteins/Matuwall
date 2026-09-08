@@ -12,7 +12,9 @@ struct sweetwall_image {
 
 bool sweetwall_image_dimensions_ok(uint32_t width, uint32_t height);
 
-bool sweetwall_image_decode(struct sweetwall_image *img, const char *path);
+// JPEG uses the target as a lower bound; other formats decode fully
+bool sweetwall_image_decode(struct sweetwall_image *img, const char *path,
+	uint32_t target_w, uint32_t target_h);
 
 void sweetwall_image_free(struct sweetwall_image *img);
 

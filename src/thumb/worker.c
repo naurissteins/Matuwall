@@ -67,13 +67,14 @@ static bool produce(const struct job *job, struct sweetwall_image *out) {
 		return true;
 	}
 
-	struct sweetwall_image full;
-	if (!sweetwall_image_decode(&full, job->path)) {
+	struct sweetwall_image decoded;
+	if (!sweetwall_image_decode(
+		    &decoded, job->path, job->target_w, job->target_h)) {
 		return false;
 	}
-	bool scaled =
-		sweetwall_scale_cover(&full, job->target_w, job->target_h, out);
-	sweetwall_image_free(&full);
+	bool scaled = sweetwall_scale_cover(
+		&decoded, job->target_w, job->target_h, out);
+	sweetwall_image_free(&decoded);
 	if (!scaled) {
 		return false;
 	}
