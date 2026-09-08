@@ -40,8 +40,32 @@ static void jpeg_on_error(j_common_ptr cinfo) {
 	longjmp(guard->jmp, 1);
 }
 
-static bool decode_jpeg(FILE *fp, struct sweetwall_image *img) {
-	struct jpeg_decompress_struct cinfo;
+static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
+	uint32_t target_w, uint32_t target_h) {
+	static const unsigned int denominators[] = {8, 4, 2};
+	if (target_w == 0 || target_h == 0) {
+		return;
+	}
+
+	// Keep enough decoded pixels for the final cover crop
+	for (size_t i = 0; i < sizeof(denominators) / sizeof(denominators[0]);
+		i++) {
+		cinfo->scale_num = 1;
+		cinfo->scale_denom = denominators[i];
+		jpeg_calc_output_dimensions(cinfo);
+		if (cinfo->output_width >= target_w &&
+			cinfo->output_height >= target_h) {
+			return;
+		}
+	}
+
+	cinfo->scale_num = 1;
+	cinfo->scale_denom = 1;
+}
+
+static bool decode_jpeg(FILE *fp, struct sweetwall_image *img,
+	uint32_t target_w, uint32_t target_h) {
+	struct jpeg_decompress_struct cinfo = {0};
 	struct jpeg_guard guard;
 	cinfo.err = jpeg_std_error(&guard.base);
 	guard.base.error_exit = jpeg_on_error;
@@ -63,6 +87,7 @@ static bool decode_jpeg(FILE *fp, struct sweetwall_image *img) {
 		return false;
 	}
 
+	jpeg_scale_for_target(&cinfo, target_w, target_h);
 	cinfo.out_color_space = JCS_EXT_BGRA;
 	jpeg_start_decompress(&cinfo);
 
@@ -244,7 +269,8 @@ static bool is_webp(const uint8_t *sig, size_t n) {
 	       memcmp(sig + 8, "WEBP", 4) == 0;
 }
 
-bool sweetwall_image_decode(struct sweetwall_image *img, const char *path) {
+bool sweetwall_image_decode(struct sweetwall_image *img, const char *path,
+	uint32_t target_w, uint32_t target_h) {
 	*img = (struct sweetwall_image){0};
 
 	FILE *fp = fopen(path, "rb");
@@ -263,7 +289,7 @@ bool sweetwall_image_decode(struct sweetwall_image *img, const char *path) {
 	if (is_png(sig, got)) {
 		ok = decode_png(fp, img);
 	} else if (is_jpeg(sig, got)) {
-		ok = decode_jpeg(fp, img);
+		ok = decode_jpeg(fp, img, target_w, target_h);
 	} else if (is_webp(sig, got)) {
 		ok = decode_webp(fp, img);
 	} else {
