@@ -12,4 +12,6 @@ bool sweetwall_cache_read(const char *key, struct sweetwall_image *img);
 
 void sweetwall_cache_write(const char *key, const struct sweetwall_image *img);
 
+bool sweetwall_cache_clear(size_t *removed, char *err, size_t err_size);
+
 #endif

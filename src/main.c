@@ -2,19 +2,47 @@
 #include <string.h>
 
 #include "app/app.h"
+#include "thumb/cache.h"
 
 static void usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
 	      "options:\n"
-	      "  -h, --help     show this help and exit\n"
-	      "  -V, --version  show version and exit\n",
+	      "  -h, --help         show this help and exit\n"
+	      "  -V, --version      show version information and exit\n"
+	      "      --clear-cache  remove cached thumbnails and exit\n",
 		out);
 }
 
+static int clear_cache(void) {
+	size_t removed;
+	char err[640];
+	if (!sweetwall_cache_clear(&removed, err, sizeof(err))) {
+		fprintf(stderr, "sweetwall: failed to clear cache: %s\n", err);
+		return 1;
+	}
+	if (removed == 0) {
+		puts("sweetwall: thumbnail cache is already empty");
+	} else {
+		printf("sweetwall: removed %zu cached thumbnail%s\n", removed,
+			removed == 1 ? "" : "s");
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
+	if (argc == 2 && strcmp(argv[1], "--clear-cache") == 0) {
+		return clear_cache();
+	}
+
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
+
+		if (strcmp(arg, "--clear-cache") == 0) {
+			fprintf(stderr, "sweetwall: --clear-cache must be used "
+					"alone\n");
+			return 2;
+		}
 
 		if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
 			usage(stdout);
