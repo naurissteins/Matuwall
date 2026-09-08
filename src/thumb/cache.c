@@ -1,5 +1,6 @@
 #include "thumb/cache.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -195,4 +196,78 @@ void sweetwall_cache_write(const char *key, const struct sweetwall_image *img) {
 	if (fclose(fp) != 0 || !ok || rename(tmp, key) != 0) {
 		unlink(tmp);
 	}
+}
+
+// --- maintenance ---
+
+bool sweetwall_cache_clear(size_t *removed, char *err, size_t err_size) {
+	*removed = 0;
+	char path[512];
+	if (!cache_dir(path, sizeof(path))) {
+		snprintf(err, err_size, "cannot resolve the cache directory");
+		return false;
+	}
+
+	int fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+	if (fd < 0) {
+		if (errno == ENOENT) {
+			return true;
+		}
+		snprintf(err, err_size, "%s: %s", path, strerror(errno));
+		return false;
+	}
+
+	DIR *dir = fdopendir(fd);
+	if (dir == NULL) {
+		int saved = errno;
+		close(fd);
+		snprintf(err, err_size, "%s: %s", path, strerror(saved));
+		return false;
+	}
+
+	int failure = 0;
+	errno = 0;
+	for (struct dirent *entry = readdir(dir); entry != NULL;
+		entry = readdir(dir)) {
+		if (strcmp(entry->d_name, ".") == 0 ||
+			strcmp(entry->d_name, "..") == 0) {
+			continue;
+		}
+
+		struct stat info;
+		if (fstatat(fd, entry->d_name, &info, AT_SYMLINK_NOFOLLOW) !=
+			0) {
+			if (errno == ENOENT) {
+				errno = 0;
+				continue;
+			}
+			failure = errno;
+			break;
+		}
+		if (!S_ISREG(info.st_mode) && !S_ISLNK(info.st_mode)) {
+			continue;
+		}
+		if (unlinkat(fd, entry->d_name, 0) != 0) {
+			if (errno == ENOENT) {
+				errno = 0;
+				continue;
+			}
+			failure = errno;
+			break;
+		}
+		(*removed)++;
+		errno = 0;
+	}
+	if (failure == 0 && errno != 0) {
+		failure = errno;
+	}
+	if (closedir(dir) != 0 && failure == 0) {
+		failure = errno;
+	}
+
+	if (failure != 0) {
+		snprintf(err, err_size, "%s: %s", path, strerror(failure));
+		return false;
+	}
+	return true;
 }

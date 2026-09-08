@@ -26,6 +26,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 *-V*, *--version*
 	Show version information and exit.
 
+*--clear-cache*
+	Remove cached thumbnails and exit without opening the picker. Wallpapers and
+	configuration are not touched.
+
 # KEY BINDINGS
 
 *Arrow keys*, *h* *j* *k* *l*
