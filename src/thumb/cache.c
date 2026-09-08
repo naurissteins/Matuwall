@@ -37,7 +37,7 @@ static uint64_t fnv1a(uint64_t hash, const void *data, size_t len) {
 	return hash;
 }
 
-static bool cache_dir(char *out, size_t out_size) {
+bool sweetwall_cache_dir(char *out, size_t out_size) {
 	const char *xdg = getenv("XDG_CACHE_HOME");
 	if (xdg != NULL && xdg[0] == '/') {
 		return (size_t)snprintf(out, out_size, "%s/sweetwall/thumbs",
@@ -66,7 +66,7 @@ bool sweetwall_cache_key(const char *source_path, uint32_t target_w,
 	hash = fnv1a(hash, &target_h, sizeof(target_h));
 
 	char dir[512];
-	if (!cache_dir(dir, sizeof(dir))) {
+	if (!sweetwall_cache_dir(dir, sizeof(dir))) {
 		return false;
 	}
 	return (size_t)snprintf(out, out_size, "%s/%016llx", dir,
@@ -141,7 +141,7 @@ bool sweetwall_cache_read(const char *key, struct sweetwall_image *img) {
 
 static bool make_cache_dir(void) {
 	char dir[512];
-	if (!cache_dir(dir, sizeof(dir))) {
+	if (!sweetwall_cache_dir(dir, sizeof(dir))) {
 		return false;
 	}
 
@@ -203,7 +203,7 @@ void sweetwall_cache_write(const char *key, const struct sweetwall_image *img) {
 bool sweetwall_cache_clear(size_t *removed, char *err, size_t err_size) {
 	*removed = 0;
 	char path[512];
-	if (!cache_dir(path, sizeof(path))) {
+	if (!sweetwall_cache_dir(path, sizeof(path))) {
 		snprintf(err, err_size, "cannot resolve the cache directory");
 		return false;
 	}

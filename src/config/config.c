@@ -10,6 +10,9 @@
 
 #define DEFAULT_DIRECTORY "Pictures/Wallpapers"
 
+// Config loads before workers; this describes only the latest load
+static size_t warning_count;
+
 const char *sweetwall_position_name(enum sweetwall_position position) {
 	switch (position) {
 	case SWEETWALL_POSITION_LEFT:
@@ -87,6 +90,7 @@ static bool expand_path(const char *in, char *out, size_t out_size) {
 // --- schema application ---
 
 static void warn(int line, const char *detail) {
+	warning_count++;
 	sweetwall_log_warn(
 		"config", "line %d: %s; using default", line, detail);
 }
@@ -307,6 +311,7 @@ bool sweetwall_config_path(char *out, size_t out_size) {
 
 bool sweetwall_config_load(
 	struct sweetwall_config *cfg, char *err, size_t err_size) {
+	warning_count = 0;
 	sweetwall_config_defaults(cfg);
 
 	char path[PATH_MAX];
@@ -333,4 +338,8 @@ bool sweetwall_config_load(
 		sweetwall_log_info("config", "loaded %s", path);
 	}
 	return ok;
+}
+
+size_t sweetwall_config_warning_count(void) {
+	return warning_count;
 }

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "app/app.h"
+#include "diagnose/diagnose.h"
 #include "thumb/cache.h"
 #include "util/log.h"
 
@@ -11,7 +12,8 @@ static void usage(FILE *out) {
 	      "options:\n"
 	      "  -h, --help         show this help and exit\n"
 	      "  -V, --version      show version information and exit\n"
-	      "      --clear-cache  remove cached thumbnails and exit\n",
+	      "      --clear-cache  remove cached thumbnails and exit\n"
+	      "      --diagnose     check the current setup and exit\n",
 		out);
 }
 
@@ -35,13 +37,17 @@ int main(int argc, char *argv[]) {
 	if (argc == 2 && strcmp(argv[1], "--clear-cache") == 0) {
 		return clear_cache();
 	}
+	if (argc == 2 && strcmp(argv[1], "--diagnose") == 0) {
+		return sweetwall_diagnose_run();
+	}
 
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
 
-		if (strcmp(arg, "--clear-cache") == 0) {
-			fprintf(stderr, "sweetwall: --clear-cache must be used "
-					"alone\n");
+		if (strcmp(arg, "--clear-cache") == 0 ||
+			strcmp(arg, "--diagnose") == 0) {
+			fprintf(stderr, "sweetwall: %s must be used alone\n",
+				arg);
 			return 2;
 		}
 
