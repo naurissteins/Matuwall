@@ -56,6 +56,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "position overridden to %s",
 			sweetwall_position_name(config.position));
 	}
+	if (options.preview_set) {
+		sweetwall_log_info("config", "preview overridden to %s",
+			config.preview ? "true" : "false");
+	}
 
 	struct sweetwall_app app;
 	bool ok = sweetwall_app_init(&app, &config) && sweetwall_app_run(&app);

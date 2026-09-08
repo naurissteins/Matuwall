@@ -19,6 +19,8 @@ struct sweetwall_cli_options {
 	enum sweetwall_cli_action action;
 	bool position_set;
 	enum sweetwall_position position;
+	bool preview_set;
+	bool preview;
 };
 
 bool sweetwall_cli_parse(int argc, char *argv[],

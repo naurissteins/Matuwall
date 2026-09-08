@@ -25,6 +25,14 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
 	configuration file is not changed.
 
+*--preview*
+	Enable the full-screen live preview for this invocation, overriding the
+	configured _preview_ value.
+
+*--no-preview*
+	Disable the full-screen live preview for this invocation, overriding the
+	configured _preview_ value.
+
 *-h*, *--help*
 	Show a help message and exit.
 
@@ -123,6 +131,7 @@ before that point are still persisted when startup fails.
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
 _~/.config/sweetwall/config.toml_. It runs with defaults when no file is
 present. Command-line overrides take precedence over the loaded configuration.
+When conflicting overrides are supplied, the last one takes effect.
 See *sweetwall*(5) for the keys.
 
 # FILES
