@@ -68,6 +68,7 @@ executable(
 	'src/render/frame.c',
 	'src/render/spinner.c',
 	'src/scan/dirscan.c',
+	'src/state/selection.c',
 	'src/thumb/cache.c',
 	'src/thumb/decode.c',
 	'src/thumb/scale.c',

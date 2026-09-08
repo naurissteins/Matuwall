@@ -68,6 +68,15 @@ and sweetwall exits non-zero without changing the wallpaper.
 After a successful apply, the _hooks.on_apply_ commands run (for example a
 colorscheme generator), spawned detached. See *sweetwall*(5).
 
+# REMEMBERED SELECTION
+
+After a wallpaper is applied successfully, sweetwall remembers its path. The
+next launch selects it and scrolls it into view when it is still present in the
+configured directory. Missing, moved, corrupt, and unreadable state is ignored.
+
+The state is read only after the first placeholder frame is committed, keeping
+persistent file I/O off the instant-open path.
+
 # CONFIGURATION
 
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
@@ -78,6 +87,9 @@ present. See *sweetwall*(5) for the keys.
 
 _$XDG_CONFIG_HOME/sweetwall/config.toml_, _~/.config/sweetwall/config.toml_
 	Per-user configuration. See *sweetwall*(5).
+
+_$XDG_STATE_HOME/sweetwall/last-selection_, _~/.local/state/sweetwall/last-selection_
+	Last successfully applied wallpaper.
 
 # SEE ALSO
 

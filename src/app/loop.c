@@ -1,6 +1,7 @@
 #include "app/loop.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include "hooks/hooks.h"
 #include "render/frame.h"
 #include "render/spinner.h"
+#include "state/selection.h"
 #include "util/clock.h"
 
 // The run phase. Owns no lifetimes: app.c builds and tears down every
@@ -102,6 +104,23 @@ static bool render_if_needed(struct sweetwall_app *app) {
 	sweetwall_frame_draw(buffer, &frame);
 	sweetwall_layer_commit_frame(&app->layer);
 	return true;
+}
+
+static void restore_selection(struct sweetwall_app *app) {
+	char path[PATH_MAX];
+	if (!sweetwall_selection_load(path, sizeof(path))) {
+		return;
+	}
+	for (size_t i = 0; i < app->scan.count; i++) {
+		if (strcmp(path, app->scan.paths[i]) != 0) {
+			continue;
+		}
+		if (sweetwall_grid_select(&app->grid, &app->layout,
+			    (uint32_t)app->panel.height, i)) {
+			app->layer.needs_repaint = true;
+		}
+		return;
+	}
 }
 
 // --- event loop ---
@@ -205,6 +224,10 @@ static bool apply_selection(struct sweetwall_app *app) {
 			backend->name);
 		return false;
 	}
+	if (!sweetwall_selection_save(path)) {
+		fprintf(stderr,
+			"sweetwall: could not remember the selection\n");
+	}
 	sweetwall_hooks_run(&app->config, path);
 	return true;
 }
@@ -220,6 +243,8 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 		return false;
 	}
 
+	// Persistent state stays off the first-frame path
+	restore_selection(app);
 	sweetwall_app_thumbs_start(app);
 	sweetwall_app_preview_init(app);
 	sweetwall_app_preview_select(
