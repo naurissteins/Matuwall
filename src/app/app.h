@@ -39,6 +39,9 @@ struct sweetwall_app {
 	size_t pending;
 	size_t thumb_priority_first;
 	size_t thumb_priority_end;
+	size_t thumb_cache_hits;
+	size_t thumb_decoded;
+	size_t thumb_failed;
 	bool thumb_priority_set;
 	bool running;
 	bool apply_requested;

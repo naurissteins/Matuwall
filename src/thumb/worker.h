@@ -28,6 +28,7 @@ struct sweetwall_thumb_result {
 	enum sweetwall_job_kind kind;
 	size_t index;
 	bool ok;
+	bool cache_hit;
 	uint32_t *pixels;
 	uint32_t width;
 	uint32_t height;

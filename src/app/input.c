@@ -6,6 +6,7 @@
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "util/clock.h"
+#include "util/log.h"
 
 // Selection changed: the backdrop follows it after a short dwell
 static void selection_changed(struct sweetwall_app *app) {
@@ -30,6 +31,7 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 
 	switch (sym) {
 	case XKB_KEY_Escape:
+		sweetwall_log_info("exit", "cancelled by Escape");
 		app->running = false;
 		return;
 	case XKB_KEY_Return:
@@ -80,6 +82,10 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 
 static void handle_focus_lost(void *user_data) {
 	struct sweetwall_app *app = user_data;
+	if (!app->running) {
+		return;
+	}
+	sweetwall_log_info("exit", "cancelled after keyboard focus was lost");
 	app->running = false;
 }
 
@@ -108,6 +114,8 @@ static void handle_pointer_button(
 	if (hit == SIZE_MAX) {
 		// Only a backdrop surface has anywhere to click past the panel
 		if (app->config.preview) {
+			sweetwall_log_info(
+				"exit", "cancelled by click outside the panel");
 			app->running = false;
 		}
 		return;

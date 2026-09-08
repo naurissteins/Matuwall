@@ -1,12 +1,12 @@
 #include "wayland/seat.h"
 
-#include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "util/clock.h"
+#include "util/log.h"
 
 // evdev keycodes are offset by 8 in the xkb keymap
 #define XKB_KEYCODE_OFFSET 8
@@ -35,12 +35,16 @@ static void handle_keymap(void *data, struct wl_keyboard *keyboard,
 	(void)keyboard;
 
 	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+		sweetwall_log_warn(
+			"input", "compositor sent an unsupported keymap");
 		close(fd);
 		return;
 	}
 
 	char *text = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (text == MAP_FAILED) {
+		sweetwall_log_error(
+			"input", "failed to map the keyboard keymap");
 		close(fd);
 		return;
 	}
@@ -51,15 +55,16 @@ static void handle_keymap(void *data, struct wl_keyboard *keyboard,
 	close(fd);
 
 	if (keymap == NULL) {
-		fprintf(stderr, "sweetwall: failed to compile the keymap\n");
+		sweetwall_log_error(
+			"input", "failed to compile the keyboard keymap");
 		return;
 	}
 
 	struct xkb_state *state = xkb_state_new(keymap);
 	if (state == NULL) {
 		xkb_keymap_unref(keymap);
-		fprintf(stderr, "sweetwall: failed to create the keyboard "
-				"state\n");
+		sweetwall_log_error(
+			"input", "failed to create the keyboard state");
 		return;
 	}
 
@@ -229,7 +234,7 @@ bool sweetwall_seat_init(struct sweetwall_seat *seat, struct wl_seat *wl_seat,
 
 	seat->context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (seat->context == NULL) {
-		fprintf(stderr, "sweetwall: failed to create an xkb context\n");
+		sweetwall_log_error("input", "failed to create an xkb context");
 		return false;
 	}
 

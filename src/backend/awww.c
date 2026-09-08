@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "backend/backend.h"
+#include "util/log.h"
 
 // awww is a swww-style daemon: the `awww` client talks to `awww-daemon` over a
 // per-display socket, and `awww img <path>` sets the wallpaper
@@ -34,7 +35,17 @@ static bool awww_socket_ready(void) {
 // Both halves matter: the client binary applies, the socket proves the daemon
 // is up. A default-namespace daemon only; -n namespaces are not probed
 static bool awww_detect(void) {
-	return sweetwall_backend_available("awww") && awww_socket_ready();
+	if (!sweetwall_backend_available("awww")) {
+		sweetwall_log_info(
+			"backend", "awww skipped: client not found on PATH");
+		return false;
+	}
+	if (!awww_socket_ready()) {
+		sweetwall_log_info("backend",
+			"awww skipped: default daemon socket is missing");
+		return false;
+	}
+	return true;
 }
 
 static bool awww_apply(const char *path) {

@@ -1,9 +1,11 @@
 #include "hooks/hooks.h"
 
 #include <errno.h>
-#include <stdio.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "util/log.h"
 
 #define HOOK_MAX_ARGS 64
 #define HOOK_CMD_MAX 4096
@@ -60,18 +62,51 @@ static bool expand_token(const char *token, const char *path, char *dst,
 }
 
 static void spawn_detached(char *const argv[]) {
+	int exec_error[2];
+	if (pipe2(exec_error, O_CLOEXEC) != 0) {
+		sweetwall_log_warn("hook", "cannot create exec pipe for %s: %s",
+			argv[0], strerror(errno));
+		return;
+	}
 	pid_t pid = fork();
 	if (pid < 0) {
-		fprintf(stderr, "sweetwall: cannot fork hook %s: %s\n", argv[0],
-			strerror(errno));
+		close(exec_error[0]);
+		close(exec_error[1]);
+		sweetwall_log_warn(
+			"hook", "cannot fork %s: %s", argv[0], strerror(errno));
 		return;
 	}
 	if (pid == 0) {
-		setsid();
+		close(exec_error[0]);
+		if (setsid() < 0) {
+			int saved = errno;
+			ssize_t written =
+				write(exec_error[1], &saved, sizeof(saved));
+			(void)written;
+			_exit(127);
+		}
 		execvp(argv[0], argv);
-		fprintf(stderr, "sweetwall: cannot run hook %s: %s\n", argv[0],
-			strerror(errno));
+		int saved = errno;
+		ssize_t written = write(exec_error[1], &saved, sizeof(saved));
+		(void)written;
 		_exit(127);
+	}
+	close(exec_error[1]);
+	int saved;
+	ssize_t count;
+	do {
+		count = read(exec_error[0], &saved, sizeof(saved));
+	} while (count < 0 && errno == EINTR);
+	int read_error = errno;
+	close(exec_error[0]);
+	if (count == (ssize_t)sizeof(saved)) {
+		sweetwall_log_warn("hook", "cannot start %s: %s", argv[0],
+			strerror(saved));
+	} else if (count < 0) {
+		sweetwall_log_warn("hook", "cannot inspect %s startup: %s",
+			argv[0], strerror(read_error));
+	} else {
+		sweetwall_log_info("hook", "started %s", argv[0]);
 	}
 }
 
@@ -92,9 +127,8 @@ static void run_one(const char *command, const char *path) {
 		size_t written;
 		if (!expand_token(raw[i], path, buf + used, sizeof(buf) - used,
 			    &written)) {
-			fprintf(stderr,
-				"sweetwall: hook too long, skipping: %s\n",
-				command);
+			sweetwall_log_warn("hook",
+				"%s command is too long; skipped", raw[0]);
 			return;
 		}
 		argv[i] = buf + used;

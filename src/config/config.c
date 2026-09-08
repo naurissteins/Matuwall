@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "config/toml.h"
+#include "util/log.h"
 
 #define DEFAULT_DIRECTORY "Pictures/Wallpapers"
 
@@ -86,8 +87,8 @@ static bool expand_path(const char *in, char *out, size_t out_size) {
 // --- schema application ---
 
 static void warn(int line, const char *detail) {
-	fprintf(stderr, "sweetwall: config: line %d: %s; using default\n", line,
-		detail);
+	sweetwall_log_warn(
+		"config", "line %d: %s; using default", line, detail);
 }
 
 static void apply_string(char *dst, size_t size,
@@ -316,6 +317,8 @@ bool sweetwall_config_load(
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL) {
 		if (errno == ENOENT) {
+			sweetwall_log_info(
+				"config", "%s not found; using defaults", path);
 			return true;
 		}
 		snprintf(err, err_size, "%s: %s", path, strerror(errno));
@@ -326,6 +329,8 @@ bool sweetwall_config_load(
 	fclose(fp);
 	if (!ok) {
 		sweetwall_config_defaults(cfg);
+	} else {
+		sweetwall_log_info("config", "loaded %s", path);
 	}
 	return ok;
 }

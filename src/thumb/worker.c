@@ -56,7 +56,9 @@ static size_t worker_count(void) {
 	return online < MAX_WORKERS ? (size_t)online : MAX_WORKERS;
 }
 
-static bool produce(const struct job *job, struct sweetwall_image *out) {
+static bool produce(
+	const struct job *job, struct sweetwall_image *out, bool *cache_hit) {
+	*cache_hit = false;
 	// Output-sized previews would bloat the cache for one keypress of value
 	bool cached = job->kind == SWEETWALL_JOB_THUMB;
 
@@ -64,6 +66,7 @@ static bool produce(const struct job *job, struct sweetwall_image *out) {
 	bool have_key = cached && sweetwall_cache_key(job->path, job->target_w,
 					  job->target_h, key, sizeof(key));
 	if (have_key && sweetwall_cache_read(key, out)) {
+		*cache_hit = true;
 		return true;
 	}
 
@@ -128,7 +131,7 @@ static void *worker_main(void *arg) {
 			res->data.kind = job->kind;
 			res->data.index = job->index;
 			struct sweetwall_image img;
-			if (produce(job, &img)) {
+			if (produce(job, &img, &res->data.cache_hit)) {
 				res->data.ok = true;
 				res->data.pixels = img.pixels;
 				res->data.width = img.width;
