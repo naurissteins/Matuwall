@@ -37,6 +37,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg);
 
 bool sweetwall_config_load(
 	struct sweetwall_config *cfg, char *err, size_t err_size);
+size_t sweetwall_config_warning_count(void);
 
 bool sweetwall_config_path(char *out, size_t out_size);
 

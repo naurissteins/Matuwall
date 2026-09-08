@@ -61,6 +61,7 @@ executable(
 	'src/backend/sweetbg.c',
 	'src/config/config.c',
 	'src/config/toml.c',
+	'src/diagnose/diagnose.c',
 	'src/grid/layout.c',
 	'src/grid/navigate.c',
 	'src/hooks/hooks.c',

@@ -30,6 +30,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Remove cached thumbnails and exit without opening the picker. Wallpapers and
 	configuration are not touched.
 
+*--diagnose*
+	Check the current Sweetwall setup and print a compact report without opening
+	the picker. Exit with status 1 for a blocking problem, or 0 when only warnings
+	remain.
+
 # KEY BINDINGS
 
 *Arrow keys*, *h* *j* *k* *l*
@@ -76,6 +81,18 @@ configured directory. Missing, moved, corrupt, and unreadable state is ignored.
 
 The state is read only after the first placeholder frame is committed, keeping
 persistent file I/O off the instant-open path.
+
+# DIAGNOSTICS
+
+*sweetwall --diagnose* reports the effective config, wallpaper-directory access,
+Wayland reachability, backend clients and daemon detection, configured hook
+executables, remembered selection, and cache, state, and log paths. It may connect
+to the compositor, but does not create a surface, apply a wallpaper, run hooks, or
+create persistent files. Hook arguments are not printed.
+
+An *ERROR* is a problem that prevents normal use and makes the command exit with
+status 1. A *WARN* identifies a non-blocking problem and does not change the
+successful exit status. Invalid command-line usage exits with status 2.
 
 # LOGGING
 

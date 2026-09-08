@@ -34,6 +34,15 @@ static bool state_dir(char *out, size_t out_size) {
 		       home) < out_size;
 }
 
+bool sweetwall_selection_path(char *path, size_t path_size) {
+	char dir[PATH_MAX];
+	if (!state_dir(dir, sizeof(dir))) {
+		return false;
+	}
+	int length = snprintf(path, path_size, "%s/%s", dir, STATE_FILE);
+	return length > 0 && (size_t)length < path_size;
+}
+
 static bool make_state_dir(const char *path) {
 	char dir[PATH_MAX];
 	if (strlen(path) >= sizeof(dir)) {

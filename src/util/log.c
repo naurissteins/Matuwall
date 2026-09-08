@@ -75,6 +75,15 @@ static bool state_dir(char *out, size_t out_size) {
 		       home) < out_size;
 }
 
+bool sweetwall_log_path(char *out, size_t out_size) {
+	char dir[PATH_MAX];
+	if (!state_dir(dir, sizeof(dir))) {
+		return false;
+	}
+	int length = snprintf(out, out_size, "%s/%s", dir, LOG_FILE);
+	return length > 0 && (size_t)length < out_size;
+}
+
 static bool make_dir(const char *path) {
 	char copy[PATH_MAX];
 	size_t length = strlen(path);

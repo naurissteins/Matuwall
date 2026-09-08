@@ -2,6 +2,9 @@
 #define SWEETWALL_UTIL_LOG_H
 
 #include <stdbool.h>
+#include <stddef.h>
+
+bool sweetwall_log_path(char *out, size_t out_size);
 
 void sweetwall_log_start(const char *version);
 bool sweetwall_log_activate(void);

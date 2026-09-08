@@ -5,6 +5,8 @@
 
 #include "thumb/decode.h"
 
+bool sweetwall_cache_dir(char *out, size_t out_size);
+
 bool sweetwall_cache_key(const char *source_path, uint32_t target_w,
 	uint32_t target_h, char *out, size_t out_size);
 
