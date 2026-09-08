@@ -1,9 +1,9 @@
 #include "wayland/registry.h"
 
-#include <stdio.h>
 #include <string.h>
 
 #include "fractional-scale-v1-client-protocol.h"
+#include "util/log.h"
 #include "viewporter-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
@@ -68,39 +68,39 @@ bool sweetwall_registry_init(
 
 	reg->registry = wl_display_get_registry(display);
 	if (reg->registry == NULL) {
-		fprintf(stderr,
-			"sweetwall: failed to get the wayland registry\n");
+		sweetwall_log_error("wayland", "failed to get the registry");
 		return false;
 	}
 
 	wl_registry_add_listener(reg->registry, &registry_listener, reg);
 
 	if (wl_display_roundtrip(display) < 0) {
-		fprintf(stderr, "sweetwall: wayland roundtrip failed\n");
+		sweetwall_log_error("wayland", "registry roundtrip failed");
 		return false;
 	}
 
 	bool ok = true;
 	if (reg->compositor == NULL) {
-		fprintf(stderr, "sweetwall: compositor does not expose "
-				"wl_compositor\n");
+		sweetwall_log_error(
+			"wayland", "compositor does not expose wl_compositor");
 		ok = false;
 	}
 	if (reg->shm == NULL) {
-		fprintf(stderr,
-			"sweetwall: compositor does not expose wl_shm\n");
+		sweetwall_log_error(
+			"wayland", "compositor does not expose wl_shm");
 		ok = false;
 	}
 	if (reg->layer_shell == NULL) {
-		fprintf(stderr, "sweetwall: compositor lacks wlr-layer-shell "
-				"(zwlr_layer_shell_v1)\n");
+		sweetwall_log_error("wayland",
+			"compositor lacks wlr-layer-shell "
+			"(zwlr_layer_shell_v1)");
 		ok = false;
 	}
 	// The picker takes exclusive keyboard focus; without a seat there
 	// would be no way to dismiss it
 	if (reg->seat == NULL) {
-		fprintf(stderr,
-			"sweetwall: compositor does not expose wl_seat\n");
+		sweetwall_log_error(
+			"wayland", "compositor does not expose wl_seat");
 		ok = false;
 	}
 

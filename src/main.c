@@ -3,6 +3,7 @@
 
 #include "app/app.h"
 #include "thumb/cache.h"
+#include "util/log.h"
 
 static void usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
@@ -59,16 +60,19 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
+	sweetwall_log_start(SWEETWALL_VERSION);
 	struct sweetwall_config config;
 	char err[256];
 	if (!sweetwall_config_load(&config, err, sizeof(err))) {
 		// A bad config is a warning, not a crash: run with defaults
-		fprintf(stderr, "sweetwall: %s\n", err);
+		sweetwall_log_warn("config", "%s; using defaults", err);
 	}
 
 	struct sweetwall_app app;
 	bool ok = sweetwall_app_init(&app, &config) && sweetwall_app_run(&app);
 	sweetwall_app_finish(&app);
+	sweetwall_log_info("exit", "status %s", ok ? "success" : "failure");
+	sweetwall_log_finish();
 
 	return ok ? 0 : 1;
 }

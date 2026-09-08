@@ -77,6 +77,25 @@ configured directory. Missing, moved, corrupt, and unreadable state is ignored.
 The state is read only after the first placeholder frame is committed, keeping
 persistent file I/O off the instant-open path.
 
+# LOGGING
+
+Sweetwall writes human-readable diagnostics to
+_$XDG_STATE_HOME/sweetwall/sweetwall.log_, falling back to
+_~/.local/state/sweetwall/sweetwall.log_. Warnings and errors are also written
+to standard error. The log includes config warnings, wallpaper scan results,
+output and grid geometry, thumbnail failures and summary counts, backend
+detection and exit status, hook launch failures, remembered selection state,
+and the exit reason.
+
+Routine navigation and individual cache hits are not logged. Wallpaper and
+config paths may appear in the log. Hook arguments are never recorded; only the
+executable name is included.
+
+Log files are capped at 256 KiB. The current file and two rotated files are kept:
+_sweetwall.log_, _sweetwall.log.1_, and _sweetwall.log.2_. Logging starts after
+the first frame so it adds no file I/O to normal startup. Diagnostics buffered
+before that point are still persisted when startup fails.
+
 # CONFIGURATION
 
 Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
@@ -90,6 +109,9 @@ _$XDG_CONFIG_HOME/sweetwall/config.toml_, _~/.config/sweetwall/config.toml_
 
 _$XDG_STATE_HOME/sweetwall/last-selection_, _~/.local/state/sweetwall/last-selection_
 	Last successfully applied wallpaper.
+
+_$XDG_STATE_HOME/sweetwall/sweetwall.log_, _~/.local/state/sweetwall/sweetwall.log_
+	Current diagnostic log. The _.1_ and _.2_ suffixes are older rotations.
 
 # SEE ALSO
 

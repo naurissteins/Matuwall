@@ -1,10 +1,13 @@
 #include "scan/dirscan.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+
+#include "util/log.h"
 
 // A picker, not a file browser; refuse to build an unbounded grid
 #define MAX_ITEMS 4096
@@ -73,7 +76,8 @@ bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
 
 	DIR *handle = opendir(dir);
 	if (handle == NULL) {
-		fprintf(stderr, "sweetwall: cannot open %s\n", dir);
+		sweetwall_log_error("wallpapers", "cannot open %s: %s", dir,
+			strerror(errno));
 		return false;
 	}
 
@@ -105,9 +109,8 @@ bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
 	closedir(handle);
 
 	if (scan->truncated) {
-		fprintf(stderr,
-			"sweetwall: %s holds more than %d images; "
-			"showing the first %d\n",
+		sweetwall_log_warn("wallpapers",
+			"%s holds more than %d images; showing the first %d",
 			dir, MAX_ITEMS, MAX_ITEMS);
 	}
 

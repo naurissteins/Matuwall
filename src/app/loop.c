@@ -17,6 +17,7 @@
 #include "render/spinner.h"
 #include "state/selection.h"
 #include "util/clock.h"
+#include "util/log.h"
 
 // The run phase. Owns no lifetimes: app.c builds and tears down every
 // subsystem this file drives
@@ -72,8 +73,8 @@ static bool render_if_needed(struct sweetwall_app *app) {
 	struct sweetwall_buffer *buffer =
 		sweetwall_layer_begin_frame(&app->layer, app->registry.shm);
 	if (buffer == NULL) {
-		fprintf(stderr,
-			"sweetwall: failed to acquire a frame buffer\n");
+		sweetwall_log_error(
+			"render", "failed to acquire a frame buffer");
 		return false;
 	}
 
@@ -119,8 +120,11 @@ static void restore_selection(struct sweetwall_app *app) {
 			    (uint32_t)app->panel.height, i)) {
 			app->layer.needs_repaint = true;
 		}
+		sweetwall_log_info("state", "restored selection %s", path);
 		return;
 	}
+	sweetwall_log_info(
+		"state", "remembered wallpaper is no longer present");
 }
 
 // --- event loop ---
@@ -171,7 +175,7 @@ static bool pump_events(struct sweetwall_app *app) {
 
 	if ((pfd[0].revents & (POLLERR | POLLHUP)) != 0) {
 		wl_display_cancel_read(app->display);
-		fprintf(stderr, "sweetwall: compositor disconnected\n");
+		sweetwall_log_error("wayland", "compositor disconnected");
 		return false;
 	}
 
@@ -211,23 +215,27 @@ static bool apply_selection(struct sweetwall_app *app) {
 		sweetwall_backend_select(app->config.backend);
 	if (backend == NULL) {
 		if (strcmp(app->config.backend, "auto") == 0) {
-			fprintf(stderr, "sweetwall: no running wallpaper "
-					"backend found\n");
+			sweetwall_log_error("backend",
+				"no running wallpaper backend found");
 		} else {
-			fprintf(stderr, "sweetwall: unknown backend '%s'\n",
+			sweetwall_log_error("backend", "unknown backend '%s'",
 				app->config.backend);
 		}
 		return false;
 	}
-	if (!backend->apply(path)) {
-		fprintf(stderr, "sweetwall: %s failed to apply the wallpaper\n",
+	if (strcmp(app->config.backend, "auto") != 0) {
+		sweetwall_log_info("backend", "selected configured backend %s",
 			backend->name);
+	}
+	if (!backend->apply(path)) {
+		sweetwall_log_error("backend",
+			"%s failed to apply the wallpaper", backend->name);
 		return false;
 	}
 	if (!sweetwall_selection_save(path)) {
-		fprintf(stderr,
-			"sweetwall: could not remember the selection\n");
+		sweetwall_log_warn("state", "could not remember the selection");
 	}
+	sweetwall_log_info("apply", "applied %s with %s", path, backend->name);
 	sweetwall_hooks_run(&app->config, path);
 	return true;
 }
@@ -241,6 +249,9 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 	app->layer.needs_repaint = true;
 	if (!render_if_needed(app)) {
 		return false;
+	}
+	if (!sweetwall_log_activate()) {
+		sweetwall_log_warn("logging", "persistent log is unavailable");
 	}
 
 	// Persistent state stays off the first-frame path
@@ -257,6 +268,11 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 		if (!render_if_needed(app)) {
 			return false;
 		}
+	}
+	if (interrupted != 0) {
+		sweetwall_log_info("exit", "stopped by signal");
+	} else if (app->layer.closed) {
+		sweetwall_log_warn("exit", "surface closed by compositor");
 	}
 
 	// Enter requested an apply: do it now, off the input path, on the way

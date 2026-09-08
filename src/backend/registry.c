@@ -1,6 +1,7 @@
 #include "backend/backend.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -9,6 +10,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "util/log.h"
 
 // Probe order for backend = "auto"
 static const struct sweetwall_backend *const backends[] = {
@@ -31,6 +34,8 @@ const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
 	// auto: first backend that detects itself
 	for (size_t i = 0; i < count; i++) {
 		if (backends[i]->detect()) {
+			sweetwall_log_info("backend", "auto selected %s",
+				backends[i]->name);
 			return backends[i];
 		}
 	}
@@ -92,26 +97,66 @@ bool sweetwall_backend_socket_ready(const char *leaf) {
 }
 
 bool sweetwall_backend_run(const char *file, char *const argv[]) {
-	pid_t pid = fork();
-	if (pid < 0) {
-		fprintf(stderr, "sweetwall: fork failed: %s\n",
+	int exec_error[2];
+	if (pipe2(exec_error, O_CLOEXEC) != 0) {
+		sweetwall_log_error("backend", "cannot create exec pipe: %s",
 			strerror(errno));
 		return false;
 	}
+	pid_t pid = fork();
+	if (pid < 0) {
+		close(exec_error[0]);
+		close(exec_error[1]);
+		sweetwall_log_error(
+			"backend", "cannot fork %s: %s", file, strerror(errno));
+		return false;
+	}
 	if (pid == 0) {
+		close(exec_error[0]);
 		execvp(file, argv);
-		fprintf(stderr, "sweetwall: cannot run %s: %s\n", file,
-			strerror(errno));
+		int saved = errno;
+		ssize_t written = write(exec_error[1], &saved, sizeof(saved));
+		(void)written;
 		_exit(127);
 	}
+	close(exec_error[1]);
 
 	int status;
 	while (waitpid(pid, &status, 0) < 0) {
 		if (errno != EINTR) {
-			fprintf(stderr, "sweetwall: waitpid failed: %s\n",
-				strerror(errno));
+			close(exec_error[0]);
+			sweetwall_log_error("backend", "wait for %s failed: %s",
+				file, strerror(errno));
 			return false;
 		}
 	}
-	return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+
+	int saved;
+	ssize_t count;
+	do {
+		count = read(exec_error[0], &saved, sizeof(saved));
+	} while (count < 0 && errno == EINTR);
+	int read_error = errno;
+	close(exec_error[0]);
+	if (count < 0) {
+		sweetwall_log_error("backend", "cannot inspect %s startup: %s",
+			file, strerror(read_error));
+		return false;
+	}
+	if (count == (ssize_t)sizeof(saved)) {
+		sweetwall_log_error(
+			"backend", "cannot run %s: %s", file, strerror(saved));
+		return false;
+	}
+	if (WIFSIGNALED(status)) {
+		sweetwall_log_error("backend", "%s terminated by signal %d",
+			file, WTERMSIG(status));
+		return false;
+	}
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		sweetwall_log_error("backend", "%s exited with status %d", file,
+			WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+		return false;
+	}
+	return true;
 }
