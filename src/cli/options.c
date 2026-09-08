@@ -7,6 +7,8 @@
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
+	OPTION_PREVIEW,
+	OPTION_NO_PREVIEW,
 };
 
 void sweetwall_cli_usage(FILE *out) {
@@ -16,6 +18,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
+	      "      --preview      enable full-screen live preview\n"
+	      "      --no-preview   disable full-screen live preview\n"
 	      "  -h, --help         show this help and exit\n"
 	      "  -V, --version      show version information and exit\n"
 	      "      --clear-cache  remove cached thumbnails and exit\n"
@@ -55,6 +59,8 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 		{"version", no_argument, NULL, 'V'},
 		{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
 		{"diagnose", no_argument, NULL, OPTION_DIAGNOSE},
+		{"preview", no_argument, NULL, OPTION_PREVIEW},
+		{"no-preview", no_argument, NULL, OPTION_NO_PREVIEW},
 		{0},
 	};
 
@@ -87,6 +93,14 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 			snprintf(
 				err, err_size, "--diagnose must be used alone");
 			return false;
+		case OPTION_PREVIEW:
+			options->preview_set = true;
+			options->preview = true;
+			break;
+		case OPTION_NO_PREVIEW:
+			options->preview_set = true;
+			options->preview = false;
+			break;
 		case ':':
 			snprintf(err, err_size, "option '%s' requires a value",
 				argv[optind - 1]);
@@ -113,5 +127,8 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	struct sweetwall_config *config) {
 	if (options->position_set) {
 		config->position = options->position;
+	}
+	if (options->preview_set) {
+		config->preview = options->preview;
 	}
 }
