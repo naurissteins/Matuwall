@@ -64,6 +64,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "margin overridden to %u",
 			config.layout.margin);
 	}
+	if (options.radius_set) {
+		sweetwall_log_info("config", "radius overridden to %u",
+			config.layout.radius);
+	}
 	if (options.rows_set) {
 		sweetwall_log_info("config", "visible rows overridden to %u",
 			config.visible_rows);
