@@ -24,6 +24,7 @@ sweetwall --backend auto              # detect a running backend
 sweetwall -c 4                        # use at most four columns
 sweetwall -r 3                        # use at most three visible rows
 sweetwall -s 12                       # set tile spacing to 12
+sweetwall -m 24                       # set the window margin to 24
 sweetwall -p left                     # move the panel
 sweetwall --no-preview                # open without the backdrop
 ```
@@ -31,7 +32,7 @@ sweetwall --no-preview                # open without the backdrop
 Run `sweetwall --help` for every option. Command-line options do not change the
 config file. `--columns` and `--rows` accept decimal values from 1 to 1024;
 smaller outputs may still use fewer columns or rows. `--spacing` accepts decimal
-values from 0 to 4096.
+values from 0 to 4096, as does `--margin`.
 
 ## Controls
 

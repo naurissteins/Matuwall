@@ -26,6 +26,7 @@ static const struct option long_options[] = {
 	{"backend", required_argument, NULL, 'b'},
 	{"columns", required_argument, NULL, 'c'},
 	{"directory", required_argument, NULL, 'd'},
+	{"margin", required_argument, NULL, 'm'},
 	{"position", required_argument, NULL, 'p'},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
@@ -48,6 +49,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override maximum grid columns (1..1024)\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
+	      "  -m, --margin MARGIN\n"
+	      "                     override window margin (0..4096)\n"
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
@@ -120,6 +123,19 @@ static bool parse_directory(const char *value,
 	return true;
 }
 
+static bool parse_margin(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!parse_uint(value, 0, 4096, &options->margin)) {
+		snprintf(err, err_size,
+			"invalid margin '%s': expected an integer from 0 to "
+			"4096",
+			value);
+		return false;
+	}
+	options->margin_set = true;
+	return true;
+}
+
 static bool parse_position(const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	if (!sweetwall_position_from_name(value, &options->position)) {
@@ -171,6 +187,10 @@ static enum parse_result parse_override(int option, const char *value,
 			       : PARSE_ERROR;
 	case 'd':
 		return parse_directory(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'm':
+		return parse_margin(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case 'p':
@@ -242,7 +262,7 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	optind = 1;
 	for (;;) {
 		int option = getopt_long(
-			argc, argv, ":b:c:d:p:r:s:hV", long_options, NULL);
+			argc, argv, ":b:c:d:m:p:r:s:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
@@ -282,6 +302,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
+	}
+	if (options->margin_set) {
+		config->layout.margin = options->margin;
 	}
 	if (options->rows_set) {
 		config->visible_rows = options->rows;
