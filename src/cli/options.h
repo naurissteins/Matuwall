@@ -17,6 +17,8 @@ enum sweetwall_cli_action {
 
 struct sweetwall_cli_options {
 	enum sweetwall_cli_action action;
+	bool directory_set;
+	char directory[PATH_MAX];
 	bool position_set;
 	enum sweetwall_position position;
 	bool preview_set;
