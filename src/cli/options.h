@@ -21,6 +21,8 @@ struct sweetwall_cli_options {
 	char backend[32];
 	bool columns_set;
 	uint32_t columns;
+	bool margin_set;
+	uint32_t margin;
 	bool rows_set;
 	uint32_t rows;
 	bool spacing_set;
