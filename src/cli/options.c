@@ -15,6 +15,8 @@ void sweetwall_cli_usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
 	      "options:\n"
+	      "  -d, --directory DIRECTORY\n"
+	      "                     override the wallpaper directory\n"
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
@@ -25,6 +27,20 @@ void sweetwall_cli_usage(FILE *out) {
 	      "      --clear-cache  remove cached thumbnails and exit\n"
 	      "      --diagnose     check the current setup and exit\n",
 		out);
+}
+
+static bool parse_directory(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!sweetwall_config_expand_path(
+		    value, options->directory, sizeof(options->directory))) {
+		snprintf(err, err_size,
+			"invalid directory '%s': path is empty, too long, or "
+			"HOME is unset",
+			value);
+		return false;
+	}
+	options->directory_set = true;
+	return true;
 }
 
 static bool parse_position(const char *value,
@@ -54,6 +70,7 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	}
 
 	static const struct option long_options[] = {
+		{"directory", required_argument, NULL, 'd'},
 		{"position", required_argument, NULL, 'p'},
 		{"help", no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 'V'},
@@ -68,12 +85,17 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	optind = 1;
 	for (;;) {
 		int option =
-			getopt_long(argc, argv, ":p:hV", long_options, NULL);
+			getopt_long(argc, argv, ":d:p:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
 
 		switch (option) {
+		case 'd':
+			if (!parse_directory(optarg, options, err, err_size)) {
+				return false;
+			}
+			break;
 		case 'p':
 			if (!parse_position(optarg, options, err, err_size)) {
 				return false;
@@ -125,6 +147,10 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 
 void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	struct sweetwall_config *config) {
+	if (options->directory_set) {
+		memcpy(config->directory, options->directory,
+			strlen(options->directory) + 1);
+	}
 	if (options->position_set) {
 		config->position = options->position;
 	}

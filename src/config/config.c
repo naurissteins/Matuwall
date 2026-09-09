@@ -73,7 +73,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 }
 
 // Expand a leading ~ to $HOME; other paths are copied verbatim
-static bool expand_path(const char *in, char *out, size_t out_size) {
+bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size) {
 	int n;
 	if (in[0] == '~' && (in[1] == '/' || in[1] == '\0')) {
 		const char *home = getenv("HOME");
@@ -102,7 +102,8 @@ static void apply_string(char *dst, size_t size,
 		return;
 	}
 	char tmp[PATH_MAX];
-	if (!expand_path(v->string, tmp, sizeof(tmp)) || strlen(tmp) >= size) {
+	if (!sweetwall_config_expand_path(v->string, tmp, sizeof(tmp)) ||
+		strlen(tmp) >= size) {
 		warn(line, what);
 		return;
 	}

@@ -52,6 +52,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_warn("config", "%s; using defaults", err);
 	}
 	sweetwall_cli_apply(&options, &config);
+	if (options.directory_set) {
+		sweetwall_log_info("config", "directory overridden to %s",
+			config.directory);
+	}
 	if (options.position_set) {
 		sweetwall_log_info("config", "position overridden to %s",
 			sweetwall_position_name(config.position));

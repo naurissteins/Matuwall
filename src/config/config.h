@@ -34,6 +34,7 @@ struct sweetwall_config {
 };
 
 void sweetwall_config_defaults(struct sweetwall_config *cfg);
+bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size);
 
 bool sweetwall_config_load(
 	struct sweetwall_config *cfg, char *err, size_t err_size);
