@@ -21,12 +21,14 @@ sweetwall                              # use the config or built-in defaults
 sweetwall -d ~/Pictures/Photography   # use another directory
 sweetwall -b awww                     # use awww once
 sweetwall --backend auto              # detect a running backend
+sweetwall -c 4                        # use at most four columns
 sweetwall -p left                     # move the panel
 sweetwall --no-preview                # open without the backdrop
 ```
 
 Run `sweetwall --help` for every option. Command-line options do not change the
-config file.
+config file. `--columns` accepts decimal values from 1 to 1024; smaller outputs
+may still use fewer columns.
 
 ## Controls
 

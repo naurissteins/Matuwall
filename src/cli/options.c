@@ -1,7 +1,9 @@
 #include "cli/options.h"
 
+#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "backend/backend.h"
@@ -13,12 +15,35 @@ enum {
 	OPTION_NO_PREVIEW,
 };
 
+enum parse_result {
+	PARSE_CONTINUE,
+	PARSE_DONE,
+	PARSE_ERROR,
+	PARSE_UNHANDLED,
+};
+
+static const struct option long_options[] = {
+	{"backend", required_argument, NULL, 'b'},
+	{"columns", required_argument, NULL, 'c'},
+	{"directory", required_argument, NULL, 'd'},
+	{"position", required_argument, NULL, 'p'},
+	{"help", no_argument, NULL, 'h'},
+	{"version", no_argument, NULL, 'V'},
+	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
+	{"diagnose", no_argument, NULL, OPTION_DIAGNOSE},
+	{"preview", no_argument, NULL, OPTION_PREVIEW},
+	{"no-preview", no_argument, NULL, OPTION_NO_PREVIEW},
+	{0},
+};
+
 void sweetwall_cli_usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
 	      "options:\n"
 	      "  -b, --backend BACKEND\n"
 	      "                     override backend: sweetbg, awww, or auto\n"
+	      "  -c, --columns COLUMNS\n"
+	      "                     override maximum grid columns (1..1024)\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
 	      "  -p, --position POSITION\n"
@@ -33,6 +58,22 @@ void sweetwall_cli_usage(FILE *out) {
 		out);
 }
 
+static bool parse_uint(
+	const char *value, uint32_t min, uint32_t max, uint32_t *out) {
+	if (value[0] < '0' || value[0] > '9') {
+		return false;
+	}
+
+	errno = 0;
+	char *end;
+	unsigned long parsed = strtoul(value, &end, 10);
+	if (errno == ERANGE || *end != '\0' || parsed < min || parsed > max) {
+		return false;
+	}
+	*out = (uint32_t)parsed;
+	return true;
+}
+
 static bool parse_backend(const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	if (!sweetwall_backend_name_valid(value)) {
@@ -43,6 +84,19 @@ static bool parse_backend(const char *value,
 	}
 	memcpy(options->backend, value, strlen(value) + 1);
 	options->backend_set = true;
+	return true;
+}
+
+static bool parse_columns(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!parse_uint(value, 1, 1024, &options->columns)) {
+		snprintf(err, err_size,
+			"invalid columns '%s': expected an integer from 1 to "
+			"1024",
+			value);
+		return false;
+	}
+	options->columns_set = true;
 	return true;
 }
 
@@ -73,6 +127,65 @@ static bool parse_position(const char *value,
 	return true;
 }
 
+static enum parse_result parse_override(int option, const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	switch (option) {
+	case 'b':
+		return parse_backend(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'c':
+		return parse_columns(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'd':
+		return parse_directory(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'p':
+		return parse_position(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case OPTION_PREVIEW:
+		options->preview_set = true;
+		options->preview = true;
+		return PARSE_CONTINUE;
+	case OPTION_NO_PREVIEW:
+		options->preview_set = true;
+		options->preview = false;
+		return PARSE_CONTINUE;
+	default:
+		return PARSE_UNHANDLED;
+	}
+}
+
+static enum parse_result parse_control(int option, const char *token,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	switch (option) {
+	case 'h':
+		options->action = SWEETWALL_CLI_HELP;
+		return PARSE_DONE;
+	case 'V':
+		options->action = SWEETWALL_CLI_VERSION;
+		return PARSE_DONE;
+	case OPTION_CLEAR_CACHE:
+		snprintf(err, err_size, "--clear-cache must be used alone");
+		return PARSE_ERROR;
+	case OPTION_DIAGNOSE:
+		snprintf(err, err_size, "--diagnose must be used alone");
+		return PARSE_ERROR;
+	case ':':
+		snprintf(err, err_size, "option '%s' requires a value", token);
+		return PARSE_ERROR;
+	case '?':
+		snprintf(err, err_size, "unknown option '%s'", token);
+		return PARSE_ERROR;
+	default:
+		snprintf(err, err_size, "invalid command line");
+		return PARSE_ERROR;
+	}
+}
+
 bool sweetwall_cli_parse(int argc, char *argv[],
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	*options = (struct sweetwall_cli_options){0};
@@ -86,77 +199,31 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 		return true;
 	}
 
-	static const struct option long_options[] = {
-		{"backend", required_argument, NULL, 'b'},
-		{"directory", required_argument, NULL, 'd'},
-		{"position", required_argument, NULL, 'p'},
-		{"help", no_argument, NULL, 'h'},
-		{"version", no_argument, NULL, 'V'},
-		{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
-		{"diagnose", no_argument, NULL, OPTION_DIAGNOSE},
-		{"preview", no_argument, NULL, OPTION_PREVIEW},
-		{"no-preview", no_argument, NULL, OPTION_NO_PREVIEW},
-		{0},
-	};
-
 	opterr = 0;
 	optind = 1;
 	for (;;) {
 		int option = getopt_long(
-			argc, argv, ":b:d:p:hV", long_options, NULL);
+			argc, argv, ":b:c:d:p:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
 
-		switch (option) {
-		case 'b':
-			if (!parse_backend(optarg, options, err, err_size)) {
-				return false;
-			}
-			break;
-		case 'd':
-			if (!parse_directory(optarg, options, err, err_size)) {
-				return false;
-			}
-			break;
-		case 'p':
-			if (!parse_position(optarg, options, err, err_size)) {
-				return false;
-			}
-			break;
-		case 'h':
-			options->action = SWEETWALL_CLI_HELP;
+		enum parse_result result =
+			parse_override(option, optarg, options, err, err_size);
+		if (result == PARSE_ERROR) {
+			return false;
+		}
+		if (result == PARSE_CONTINUE) {
+			continue;
+		}
+
+		result = parse_control(
+			option, argv[optind - 1], options, err, err_size);
+		if (result == PARSE_ERROR) {
+			return false;
+		}
+		if (result == PARSE_DONE) {
 			return true;
-		case 'V':
-			options->action = SWEETWALL_CLI_VERSION;
-			return true;
-		case OPTION_CLEAR_CACHE:
-			snprintf(err, err_size,
-				"--clear-cache must be used alone");
-			return false;
-		case OPTION_DIAGNOSE:
-			snprintf(
-				err, err_size, "--diagnose must be used alone");
-			return false;
-		case OPTION_PREVIEW:
-			options->preview_set = true;
-			options->preview = true;
-			break;
-		case OPTION_NO_PREVIEW:
-			options->preview_set = true;
-			options->preview = false;
-			break;
-		case ':':
-			snprintf(err, err_size, "option '%s' requires a value",
-				argv[optind - 1]);
-			return false;
-		case '?':
-			snprintf(err, err_size, "unknown option '%s'",
-				argv[optind - 1]);
-			return false;
-		default:
-			snprintf(err, err_size, "invalid command line");
-			return false;
 		}
 	}
 
@@ -173,6 +240,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,
 			strlen(options->backend) + 1);
+	}
+	if (options->columns_set) {
+		config->layout.columns = options->columns;
 	}
 	if (options->directory_set) {
 		memcpy(config->directory, options->directory,

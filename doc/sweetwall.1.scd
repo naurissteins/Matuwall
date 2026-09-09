@@ -26,6 +26,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	is used without probing; _auto_ probes when a wallpaper is applied. The
 	configuration file is not changed.
 
+*-c* _COLUMNS_, *--columns* _COLUMNS_
+	Temporarily set the maximum number of grid columns. _COLUMNS_ must be a
+	decimal integer from 1 to 1024. The grid may use fewer columns to fit the
+	selected output. The configuration file is not changed.
+
 *-d* _DIRECTORY_, *--directory* _DIRECTORY_
 	Temporarily scan _DIRECTORY_ instead of the configured wallpaper directory.
 	A leading _~_ expands to _$HOME_. The configuration file is not changed.
