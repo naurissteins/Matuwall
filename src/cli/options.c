@@ -11,6 +11,7 @@
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
+	OPTION_RADIUS,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
 };
@@ -28,6 +29,7 @@ static const struct option long_options[] = {
 	{"directory", required_argument, NULL, 'd'},
 	{"margin", required_argument, NULL, 'm'},
 	{"position", required_argument, NULL, 'p'},
+	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
 	{"help", no_argument, NULL, 'h'},
@@ -54,6 +56,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
+	      "      --radius RADIUS\n"
+	      "                     override grid corner radius (0..4096)\n"
 	      "  -r, --rows ROWS\n"
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"
@@ -149,6 +153,19 @@ static bool parse_position(const char *value,
 	return true;
 }
 
+static bool parse_radius(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!parse_uint(value, 0, 4096, &options->radius)) {
+		snprintf(err, err_size,
+			"invalid radius '%s': expected an integer from 0 to "
+			"4096",
+			value);
+		return false;
+	}
+	options->radius_set = true;
+	return true;
+}
+
 static bool parse_rows(const char *value, struct sweetwall_cli_options *options,
 	char *err, size_t err_size) {
 	if (!parse_uint(value, 1, 1024, &options->rows)) {
@@ -195,6 +212,10 @@ static enum parse_result parse_override(int option, const char *value,
 			       : PARSE_ERROR;
 	case 'p':
 		return parse_position(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case OPTION_RADIUS:
+		return parse_radius(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case 'r':
@@ -305,6 +326,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->margin_set) {
 		config->layout.margin = options->margin;
+	}
+	if (options->radius_set) {
+		config->layout.radius = options->radius;
 	}
 	if (options->rows_set) {
 		config->visible_rows = options->rows;
