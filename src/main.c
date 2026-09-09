@@ -56,6 +56,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info(
 			"config", "backend overridden to %s", config.backend);
 	}
+	if (options.columns_set) {
+		sweetwall_log_info("config", "columns overridden to %u",
+			config.layout.columns);
+	}
 	if (options.directory_set) {
 		sweetwall_log_info("config", "directory overridden to %s",
 			config.directory);
