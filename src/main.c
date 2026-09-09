@@ -64,6 +64,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "visible rows overridden to %u",
 			config.visible_rows);
 	}
+	if (options.spacing_set) {
+		sweetwall_log_info("config", "spacing overridden to %u",
+			config.layout.spacing);
+	}
 	if (options.directory_set) {
 		sweetwall_log_info("config", "directory overridden to %s",
 			config.directory);
