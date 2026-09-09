@@ -1,0 +1,68 @@
+# Sweetwall configuration
+# Place this file at $XDG_CONFIG_HOME/sweetwall/config.toml
+# (or ~/.config/sweetwall/config.toml). Every key is optional, and the values
+# below are the defaults. A missing file runs with these same defaults.
+
+[general]
+# Directory scanned for wallpapers. A leading ~ expands to $HOME.
+directory = "~/Pictures/Wallpapers"
+
+# Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto".
+# "auto" probes sweetbg then awww and picks the first one actually running.
+backend = "sweetbg"
+
+[window]
+# Show the selected wallpaper full-screen behind the grid. Nothing is applied
+# until you press Enter. Costs one output-sized image in memory; set to false
+# for a panel-sized window with no backdrop.
+preview = false
+
+# Placement on screen: "center", "left", "right", "top", or "bottom". With
+# preview on, this places the panel inside the full-screen surface.
+position = "center"
+
+# Panel color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha).
+background = "#1e1e2ecc"
+
+# Gap in pixels between the tiles and the panel edge.
+margin = 24
+
+[grid]
+# Maximum number of tile columns. Fewer are used on narrow outputs.
+columns = 5
+
+# Gap in pixels between tiles.
+spacing = 16
+
+# Tile corner radius in pixels.
+radius = 8
+
+# Maximum rows kept visible. Fewer are used on short outputs.
+visible_rows = 2
+
+[thumbnail]
+# Tile size in logical pixels. The cache key includes these, so changing
+# them regenerates thumbnails at the new size.
+width = 240
+height = 400
+
+[colors]
+# Placeholder tile shown until a thumbnail is ready.
+tile = "#313244ff"
+
+# Selection ring around the focused tile.
+ring = "#f2cdcdff"
+
+# Loading dot pulsing on tiles that are still decoding.
+spinner = "#cdd0e6ff"
+
+[hooks]
+# Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme.
+# {path} expands to the absolute wallpaper path. Each command is split on
+# whitespace and run directly (no shell), so shell syntax like pipes, globs, or
+# quotes has no effect; {path} is always passed as a single argument, so spaces
+# in a filename are safe. Hooks run detached and are not waited on.
+# on_apply = [
+#   "matugen image {path}",
+#   "wal -i {path} -n",
+# ]

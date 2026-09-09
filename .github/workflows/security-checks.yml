@@ -1,0 +1,46 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flawfinder:
+    name: Flawfinder
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # Public code-scanning mode also needs:
+      # security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Scan with Flawfinder
+        # flawfinder action 2.0.20
+        uses: david-a-wheeler/flawfinder@c4216b74cf2639ffa98503768bd6e4299b5440c9
+        with:
+          arguments: "--sarif ./"
+          output: flawfinder_results.sarif
+
+      - name: Upload private-repo scan artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: flawfinder-results
+          path: flawfinder_results.sarif
+          if-no-files-found: error
+
+      # Public repo code-scanning mode:
+      # - name: Upload analysis results
+      #   uses: github/codeql-action/upload-sarif@v4
+      #   with:
+      #     sarif_file: ${{ github.workspace }}/flawfinder_results.sarif

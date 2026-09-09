@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if [ -d build ]; then
+	meson setup --reconfigure build --werror
+else
+	meson setup build --werror
+fi
+ninja -C build
+
+files=$(find src -type f -name '*.c' -print)
+if [ -z "$files" ]; then
+	exit 0
+fi
+
+printf '%s\n' "$files" | xargs clang-tidy --quiet --warnings-as-errors='*' -p build

@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if ! command -v valgrind >/dev/null 2>&1; then
+	printf 'valgrind not found; install it and rerun this script.\n' >&2
+	exit 127
+fi
+
+if [ -d build-valgrind ]; then
+	meson setup --reconfigure build-valgrind --werror -Dbuildtype=debug
+else
+	meson setup build-valgrind --werror -Dbuildtype=debug
+fi
+
+ninja -C build-valgrind
+
+valgrind \
+	--leak-check=full \
+	--show-leak-kinds=definite,possible \
+	--track-origins=yes \
+	--error-exitcode=125 \
+	./build-valgrind/sweetwall -V

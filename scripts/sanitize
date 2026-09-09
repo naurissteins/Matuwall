@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if [ -d build-asan ]; then
+	meson setup --reconfigure build-asan --werror -Db_sanitize=address,undefined
+else
+	meson setup build-asan --werror -Db_sanitize=address,undefined
+fi
+
+ninja -C build-asan
+
+if meson test -C build-asan --list >/dev/null 2>&1; then
+	ASAN_OPTIONS=${ASAN_OPTIONS:-detect_leaks=1} \
+	UBSAN_OPTIONS=${UBSAN_OPTIONS:-print_stacktrace=1} \
+	meson test -C build-asan --print-errorlogs
+else
+	printf 'No tests present (tests/ is local-only); skipping.\n'
+fi

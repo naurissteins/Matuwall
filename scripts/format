@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+mode=${1:-write}
+
+dirs=""
+for d in src tests; do
+	[ -d "$d" ] && dirs="$dirs $d"
+done
+
+if [ -z "$dirs" ]; then
+	exit 0
+fi
+
+# shellcheck disable=SC2086
+files=$(find $dirs -type f \( -name '*.c' -o -name '*.h' \) -print)
+
+if [ -z "$files" ]; then
+	exit 0
+fi
+
+case "$mode" in
+check|--check)
+	printf '%s\n' "$files" | xargs clang-format --dry-run --Werror
+	;;
+write|--write)
+	printf '%s\n' "$files" | xargs clang-format -i
+	;;
+*)
+	printf 'usage: %s [check|write]\n' "$0" >&2
+	exit 2
+	;;
+esac
