@@ -45,6 +45,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	integer from 1 to 1024. The grid may use fewer rows to fit the selected
 	output. The configuration file is not changed.
 
+*-s* _SPACING_, *--spacing* _SPACING_
+	Temporarily set _grid.spacing_. _SPACING_ must be a decimal integer from 0
+	to 4096. The configuration file is not changed.
+
 *--preview*
 	Enable the full-screen live preview for this invocation, overriding the
 	configured _preview_ value.

@@ -23,6 +23,8 @@ struct sweetwall_cli_options {
 	uint32_t columns;
 	bool rows_set;
 	uint32_t rows;
+	bool spacing_set;
+	uint32_t spacing;
 	bool directory_set;
 	char directory[PATH_MAX];
 	bool position_set;
