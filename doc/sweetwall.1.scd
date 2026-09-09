@@ -40,6 +40,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
 	configuration file is not changed.
 
+*-r* _ROWS_, *--rows* _ROWS_
+	Temporarily set the _grid.visible_rows_ maximum. _ROWS_ must be a decimal
+	integer from 1 to 1024. The grid may use fewer rows to fit the selected
+	output. The configuration file is not changed.
+
 *--preview*
 	Enable the full-screen live preview for this invocation, overriding the
 	configured _preview_ value.

@@ -27,6 +27,7 @@ static const struct option long_options[] = {
 	{"columns", required_argument, NULL, 'c'},
 	{"directory", required_argument, NULL, 'd'},
 	{"position", required_argument, NULL, 'p'},
+	{"rows", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
 	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
@@ -49,6 +50,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
+	      "  -r, --rows ROWS\n"
+	      "                     override maximum visible rows (1..1024)\n"
 	      "      --preview      enable full-screen live preview\n"
 	      "      --no-preview   disable full-screen live preview\n"
 	      "  -h, --help         show this help and exit\n"
@@ -127,6 +130,18 @@ static bool parse_position(const char *value,
 	return true;
 }
 
+static bool parse_rows(const char *value, struct sweetwall_cli_options *options,
+	char *err, size_t err_size) {
+	if (!parse_uint(value, 1, 1024, &options->rows)) {
+		snprintf(err, err_size,
+			"invalid rows '%s': expected an integer from 1 to 1024",
+			value);
+		return false;
+	}
+	options->rows_set = true;
+	return true;
+}
+
 static enum parse_result parse_override(int option, const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
@@ -144,6 +159,10 @@ static enum parse_result parse_override(int option, const char *value,
 			       : PARSE_ERROR;
 	case 'p':
 		return parse_position(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'r':
+		return parse_rows(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_PREVIEW:
@@ -203,7 +222,7 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	optind = 1;
 	for (;;) {
 		int option = getopt_long(
-			argc, argv, ":b:c:d:p:hV", long_options, NULL);
+			argc, argv, ":b:c:d:p:r:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
@@ -243,6 +262,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
+	}
+	if (options->rows_set) {
+		config->visible_rows = options->rows;
 	}
 	if (options->directory_set) {
 		memcpy(config->directory, options->directory,
