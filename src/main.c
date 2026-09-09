@@ -60,6 +60,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "columns overridden to %u",
 			config.layout.columns);
 	}
+	if (options.rows_set) {
+		sweetwall_log_info("config", "visible rows overridden to %u",
+			config.visible_rows);
+	}
 	if (options.directory_set) {
 		sweetwall_log_info("config", "directory overridden to %s",
 			config.directory);
