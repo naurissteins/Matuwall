@@ -19,19 +19,28 @@ static const struct sweetwall_backend *const backends[] = {
 	&sweetwall_backend_awww,
 };
 
-const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
+static const struct sweetwall_backend *backend_by_name(const char *name) {
 	size_t count = sizeof(backends) / sizeof(backends[0]);
-
-	if (name != NULL && name[0] != '\0' && strcmp(name, "auto") != 0) {
-		for (size_t i = 0; i < count; i++) {
-			if (strcmp(backends[i]->name, name) == 0) {
-				return backends[i];
-			}
+	for (size_t i = 0; i < count; i++) {
+		if (strcmp(backends[i]->name, name) == 0) {
+			return backends[i];
 		}
-		return NULL;
+	}
+	return NULL;
+}
+
+bool sweetwall_backend_name_valid(const char *name) {
+	return name != NULL &&
+	       (strcmp(name, "auto") == 0 || backend_by_name(name) != NULL);
+}
+
+const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
+	if (name != NULL && name[0] != '\0' && strcmp(name, "auto") != 0) {
+		return backend_by_name(name);
 	}
 
 	// auto: first backend that detects itself
+	size_t count = sizeof(backends) / sizeof(backends[0]);
 	for (size_t i = 0; i < count; i++) {
 		if (backends[i]->detect()) {
 			sweetwall_log_info("backend", "auto selected %s",

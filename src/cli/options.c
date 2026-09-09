@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "backend/backend.h"
+
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
@@ -15,6 +17,8 @@ void sweetwall_cli_usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
 	      "options:\n"
+	      "  -b, --backend BACKEND\n"
+	      "                     override backend: sweetbg, awww, or auto\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
 	      "  -p, --position POSITION\n"
@@ -27,6 +31,19 @@ void sweetwall_cli_usage(FILE *out) {
 	      "      --clear-cache  remove cached thumbnails and exit\n"
 	      "      --diagnose     check the current setup and exit\n",
 		out);
+}
+
+static bool parse_backend(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!sweetwall_backend_name_valid(value)) {
+		snprintf(err, err_size,
+			"invalid backend '%s': expected sweetbg, awww, or auto",
+			value);
+		return false;
+	}
+	memcpy(options->backend, value, strlen(value) + 1);
+	options->backend_set = true;
+	return true;
 }
 
 static bool parse_directory(const char *value,
@@ -70,6 +87,7 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	}
 
 	static const struct option long_options[] = {
+		{"backend", required_argument, NULL, 'b'},
 		{"directory", required_argument, NULL, 'd'},
 		{"position", required_argument, NULL, 'p'},
 		{"help", no_argument, NULL, 'h'},
@@ -84,13 +102,18 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	opterr = 0;
 	optind = 1;
 	for (;;) {
-		int option =
-			getopt_long(argc, argv, ":d:p:hV", long_options, NULL);
+		int option = getopt_long(
+			argc, argv, ":b:d:p:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
 
 		switch (option) {
+		case 'b':
+			if (!parse_backend(optarg, options, err, err_size)) {
+				return false;
+			}
+			break;
 		case 'd':
 			if (!parse_directory(optarg, options, err, err_size)) {
 				return false;
@@ -147,6 +170,10 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 
 void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	struct sweetwall_config *config) {
+	if (options->backend_set) {
+		memcpy(config->backend, options->backend,
+			strlen(options->backend) + 1);
+	}
 	if (options->directory_set) {
 		memcpy(config->directory, options->directory,
 			strlen(options->directory) + 1);

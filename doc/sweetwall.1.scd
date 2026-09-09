@@ -20,6 +20,12 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 
 # OPTIONS
 
+*-b* _BACKEND_, *--backend* _BACKEND_
+	Temporarily use _BACKEND_ instead of the configured wallpaper backend.
+	_BACKEND_ must be _sweetbg_, _awww_, or _auto_. An explicitly named backend
+	is used without probing; _auto_ probes when a wallpaper is applied. The
+	configuration file is not changed.
+
 *-d* _DIRECTORY_, *--directory* _DIRECTORY_
 	Temporarily scan _DIRECTORY_ instead of the configured wallpaper directory.
 	A leading _~_ expands to _$HOME_. The configuration file is not changed.

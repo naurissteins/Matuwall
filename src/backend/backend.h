@@ -10,6 +10,7 @@ struct sweetwall_backend {
 };
 
 const struct sweetwall_backend *sweetwall_backend_select(const char *name);
+bool sweetwall_backend_name_valid(const char *name);
 
 bool sweetwall_backend_available(const char *file);
 
