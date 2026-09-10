@@ -33,6 +33,7 @@ struct sweetwall_cli_options {
 	uint32_t height;
 	bool margin_set;
 	uint32_t margin;
+	bool no_hooks;
 	bool radius_set;
 	uint32_t radius;
 	bool rows_set;
