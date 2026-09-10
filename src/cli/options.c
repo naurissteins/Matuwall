@@ -32,6 +32,7 @@ static const struct option long_options[] = {
 	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
+	{"width", required_argument, NULL, 'w'},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
 	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
@@ -62,6 +63,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"
 	      "                     override grid spacing (0..4096)\n"
+	      "  -w, --width WIDTH\n"
+	      "                     override thumbnail width (1..16384)\n"
 	      "      --preview      enable full-screen live preview\n"
 	      "      --no-preview   disable full-screen live preview\n"
 	      "  -h, --help         show this help and exit\n"
@@ -191,6 +194,19 @@ static bool parse_spacing(const char *value,
 	return true;
 }
 
+static bool parse_width(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!parse_uint(value, 1, 16384, &options->width)) {
+		snprintf(err, err_size,
+			"invalid width '%s': expected an integer from 1 to "
+			"16384",
+			value);
+		return false;
+	}
+	options->width_set = true;
+	return true;
+}
+
 static enum parse_result parse_override(int option, const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
@@ -224,6 +240,10 @@ static enum parse_result parse_override(int option, const char *value,
 			       : PARSE_ERROR;
 	case 's':
 		return parse_spacing(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case 'w':
+		return parse_width(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_PREVIEW:
@@ -283,7 +303,7 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	optind = 1;
 	for (;;) {
 		int option = getopt_long(
-			argc, argv, ":b:c:d:m:p:r:s:hV", long_options, NULL);
+			argc, argv, ":b:c:d:m:p:r:s:w:hV", long_options, NULL);
 		if (option == -1) {
 			break;
 		}
@@ -335,6 +355,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->spacing_set) {
 		config->layout.spacing = options->spacing;
+	}
+	if (options->width_set) {
+		config->layout.tile_width = options->width;
 	}
 	if (options->directory_set) {
 		memcpy(config->directory, options->directory,
