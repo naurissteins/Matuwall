@@ -11,6 +11,7 @@
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
+	OPTION_BACKGROUND,
 	OPTION_HEIGHT,
 	OPTION_RADIUS,
 	OPTION_PREVIEW,
@@ -25,6 +26,7 @@ enum parse_result {
 };
 
 static const struct option long_options[] = {
+	{"background", required_argument, NULL, OPTION_BACKGROUND},
 	{"backend", required_argument, NULL, 'b'},
 	{"columns", required_argument, NULL, 'c'},
 	{"directory", required_argument, NULL, 'd'},
@@ -48,6 +50,8 @@ void sweetwall_cli_usage(FILE *out) {
 	fputs("usage: sweetwall [options]\n"
 	      "\n"
 	      "options:\n"
+	      "      --background COLOR\n"
+	      "                     override background: #rrggbb or #rrggbbaa\n"
 	      "  -b, --backend BACKEND\n"
 	      "                     override backend: sweetbg, awww, or auto\n"
 	      "  -c, --columns COLUMNS\n"
@@ -106,6 +110,19 @@ static bool parse_backend(const char *value,
 	}
 	memcpy(options->backend, value, strlen(value) + 1);
 	options->backend_set = true;
+	return true;
+}
+
+static bool parse_background(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	if (!sweetwall_color_parse(value, &options->background)) {
+		snprintf(err, err_size,
+			"invalid background '%s': expected #rrggbb or "
+			"#rrggbbaa",
+			value);
+		return false;
+	}
+	options->background_set = true;
 	return true;
 }
 
@@ -176,6 +193,10 @@ static enum parse_result parse_override(int option, const char *value,
 	}
 
 	switch (option) {
+	case OPTION_BACKGROUND:
+		return parse_background(value, options, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
 	case 'b':
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
@@ -279,6 +300,9 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 
 void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	struct sweetwall_config *config) {
+	if (options->background_set) {
+		config->background = options->background;
+	}
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,
 			strlen(options->backend) + 1);

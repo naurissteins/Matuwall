@@ -52,6 +52,12 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_warn("config", "%s; using defaults", err);
 	}
 	sweetwall_cli_apply(&options, &config);
+	if (options.background_set) {
+		sweetwall_log_info("config",
+			"background overridden to #%02x%02x%02x%02x",
+			config.background.r, config.background.g,
+			config.background.b, config.background.a);
+	}
 	if (options.backend_set) {
 		sweetwall_log_info(
 			"config", "backend overridden to %s", config.backend);
