@@ -13,6 +13,7 @@ enum {
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
 	OPTION_HEIGHT,
+	OPTION_NO_HOOKS,
 	OPTION_RADIUS,
 	OPTION_RING,
 	OPTION_SPINNER,
@@ -35,6 +36,7 @@ static const struct option long_options[] = {
 	{"directory", required_argument, NULL, 'd'},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"margin", required_argument, NULL, 'm'},
+	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"position", required_argument, NULL, 'p'},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"ring", required_argument, NULL, OPTION_RING},
@@ -68,6 +70,7 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override thumbnail height (1..16384)\n"
 	      "  -m, --margin MARGIN\n"
 	      "                     override window margin (0..4096)\n"
+	      "      --no-hooks     disable configured on-apply hooks\n"
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
@@ -222,6 +225,9 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_position(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_NO_HOOKS:
+		options->no_hooks = true;
+		return PARSE_CONTINUE;
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,
 			&options->ring_set, err, err_size);
@@ -346,6 +352,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->margin_set) {
 		config->layout.margin = options->margin;
+	}
+	if (options->no_hooks) {
+		config->on_apply_count = 0;
 	}
 	if (options->radius_set) {
 		config->layout.radius = options->radius;

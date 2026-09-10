@@ -48,6 +48,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Temporarily set _window.margin_. _MARGIN_ must be a decimal integer from 0 to
 	4096. The configuration file is not changed.
 
+*--no-hooks*
+	Disable all configured _hooks.on_apply_ commands for this invocation. The
+	configuration file is not changed.
+
 *-p* _POSITION_, *--position* _POSITION_
 	Temporarily override the configured window position for this invocation.
 	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
