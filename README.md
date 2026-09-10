@@ -1,23 +1,55 @@
-# sweetwall
+<h1 align=center>sweetwall</h1>
 
-A minimal, instant-open wallpaper picker for Wayland.
+<div align=center>
 
-Sweetwall opens before decoding thumbnails. Pick a wallpaper, apply it, and the
-picker exits. It uses `wlr-layer-shell` and software rendering—no GTK, Qt, or GPU
-context.
+![GitHub last commit](https://img.shields.io/github/last-commit/naurissteins/sweetwall?style=for-the-badge&labelColor=181825&color=a6e3a1)
+![GitHub repo size](https://img.shields.io/github/repo-size/naurissteins/sweetwall?style=for-the-badge&labelColor=181825&color=d3bfe6)
+![AUR Version](https://img.shields.io/aur/version/sweetwall-bin?style=for-the-badge&labelColor=181825&color=b4befe)
+![GitHub Repo stars](https://img.shields.io/github/stars/naurissteins/sweetwall?style=for-the-badge&labelColor=181825&color=f9e2af)
 
-## Build
+Simple, fast and lightweight wallpaper picker for Wayland
+
+</div>
+
+
+> [!IMPORTANT]
+> sweetwall
+
+---
+
+## 🔥 Features
+
+- feature 1
+- feature 1
+
+## Install
+
+### Arch Linux
+
+On Arch Linux, install sweetwall from the AUR:
+
+```bash
+# prebuilt release package (recommended)
+yay -S sweetwall-bin
+
+# or latest git build
+yay -S sweetwall-git
+
+## Build from source
 
 ```sh
-meson setup build
+meson setup build --buildtype=release
 ninja -C build
-./build/sweetwall
+sudo ninja -C build install
 ```
+
+Requires a C11 compiler, Meson, and Ninja. `scdoc` is optional and only needed
+to build the man page.
 
 ## Run
 
 ```sh
-sweetwall                              # use the config or built-in defaults
+sweetwall                             # use the config or built-in defaults
 sweetwall -d ~/Pictures/Photography   # use another directory
 sweetwall -b awww                     # use awww once
 sweetwall --backend auto              # detect a running backend
@@ -26,14 +58,23 @@ sweetwall -r 3                        # use at most three visible rows
 sweetwall -s 12                       # set tile spacing to 12
 sweetwall -m 24                       # set the window margin to 24
 sweetwall --radius 10                 # set the tile corner radius to 10
+sweetwall -w 320                      # set thumbnail width to 320
+sweetwall --height 480                # set thumbnail height to 480
+sweetwall --background "#181825cc"    # set the panel background color
+sweetwall --tile "#313244"            # set the tile color
+sweetwall --ring "#f2cdcd"            # set the selection ring color
+sweetwall --spinner "#cdd0e6"         # set the loading spinner color
 sweetwall -p left                     # move the panel
 sweetwall --no-preview                # open without the backdrop
+sweetwall --no-hooks                  # apply without running hooks
+sweetwall --hook 'matugen image {path}' # replace hooks for one run
 ```
 
 Run `sweetwall --help` for every option. Command-line options do not change the
-config file. `--columns` and `--rows` accept decimal values from 1 to 1024;
-smaller outputs may still use fewer columns or rows. `--spacing` accepts decimal
-values from 0 to 4096, as do `--margin` and `--radius`.
+config file. `--width` accepts decimal values from 1 to 16384.
+The same range applies to `--height`.
+`--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or
+`#rrggbbaa` colors.
 
 ## Controls
 
@@ -46,7 +87,7 @@ values from 0 to 4096, as do `--margin` and `--radius`.
 | `Enter` | Apply and exit |
 | `Escape` | Cancel and exit |
 
-Mouse: hover to select, click to apply, scroll to move. Click outside the panel
+Mouse users: hover to select, click to apply, scroll to move. Click outside the panel
 to cancel when preview is enabled.
 
 ## Configure
@@ -133,6 +174,17 @@ on_apply = ["matugen image {path}"]
 
 Hooks run detached and never through a shell. Pipes, globs, variables, and
 shell quoting are not supported.
+
+Use `sweetwall --no-hooks` to skip configured hooks for one invocation.
+Repeat `--hook COMMAND` to replace them temporarily with one or more commands:
+
+```sh
+sweetwall --hook 'matugen image {path}' --hook 'wal -i {path} -n'
+```
+
+The first `--hook` replaces the configured list and later occurrences append.
+Hook options are processed left to right, so `--no-hooks` clears any `--hook`
+options before it while a later `--hook` starts a new list.
 
 ## Maintenance
 

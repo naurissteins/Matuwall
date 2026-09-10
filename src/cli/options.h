@@ -31,9 +31,12 @@ struct sweetwall_cli_options {
 	uint32_t columns;
 	bool height_set;
 	uint32_t height;
+	bool hooks_set;
+	// Hook pointers borrow argv storage
+	const char *hooks[SWEETWALL_MAX_HOOKS];
+	size_t hook_count;
 	bool margin_set;
 	uint32_t margin;
-	bool no_hooks;
 	bool radius_set;
 	uint32_t radius;
 	bool rows_set;

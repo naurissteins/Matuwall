@@ -13,6 +13,7 @@ enum {
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
 	OPTION_HEIGHT,
+	OPTION_HOOK,
 	OPTION_NO_HOOKS,
 	OPTION_RADIUS,
 	OPTION_RING,
@@ -35,6 +36,7 @@ static const struct option long_options[] = {
 	{"columns", required_argument, NULL, 'c'},
 	{"directory", required_argument, NULL, 'd'},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
+	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"position", required_argument, NULL, 'p'},
@@ -68,6 +70,7 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override the wallpaper directory\n"
 	      "      --height HEIGHT\n"
 	      "                     override thumbnail height (1..16384)\n"
+	      "      --hook COMMAND replace/append a temporary on-apply hook\n"
 	      "  -m, --margin MARGIN\n"
 	      "                     override window margin (0..4096)\n"
 	      "      --no-hooks     disable configured on-apply hooks\n"
@@ -156,6 +159,29 @@ static bool parse_directory(const char *value,
 	return true;
 }
 
+static enum parse_result parse_hook(const char *value,
+	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	size_t length = strlen(value);
+	if (length == 0 || length >= SWEETWALL_HOOK_MAX) {
+		snprintf(err, err_size,
+			"invalid hook: command must contain 1 to %d bytes",
+			SWEETWALL_HOOK_MAX - 1);
+		return PARSE_ERROR;
+	}
+	if (!options->hooks_set) {
+		options->hooks_set = true;
+		options->hook_count = 0;
+	}
+	if (options->hook_count >= SWEETWALL_MAX_HOOKS) {
+		snprintf(err, err_size,
+			"too many --hook options: maximum is %d",
+			SWEETWALL_MAX_HOOKS);
+		return PARSE_ERROR;
+	}
+	options->hooks[options->hook_count++] = value;
+	return PARSE_CONTINUE;
+}
+
 static bool parse_position(const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	if (!sweetwall_position_from_name(value, &options->position)) {
@@ -221,12 +247,15 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_directory(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_HOOK:
+		return parse_hook(value, options, err, err_size);
 	case 'p':
 		return parse_position(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_NO_HOOKS:
-		options->no_hooks = true;
+		options->hooks_set = true;
+		options->hook_count = 0;
 		return PARSE_CONTINUE;
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,
@@ -324,58 +353,4 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 		return false;
 	}
 	return true;
-}
-
-void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
-	struct sweetwall_config *config) {
-	if (options->background_set) {
-		config->background = options->background;
-	}
-	if (options->tile_set) {
-		config->tile = options->tile;
-	}
-	if (options->ring_set) {
-		config->ring = options->ring;
-	}
-	if (options->spinner_set) {
-		config->spinner = options->spinner;
-	}
-	if (options->backend_set) {
-		memcpy(config->backend, options->backend,
-			strlen(options->backend) + 1);
-	}
-	if (options->columns_set) {
-		config->layout.columns = options->columns;
-	}
-	if (options->height_set) {
-		config->layout.tile_height = options->height;
-	}
-	if (options->margin_set) {
-		config->layout.margin = options->margin;
-	}
-	if (options->no_hooks) {
-		config->on_apply_count = 0;
-	}
-	if (options->radius_set) {
-		config->layout.radius = options->radius;
-	}
-	if (options->rows_set) {
-		config->visible_rows = options->rows;
-	}
-	if (options->spacing_set) {
-		config->layout.spacing = options->spacing;
-	}
-	if (options->width_set) {
-		config->layout.tile_width = options->width;
-	}
-	if (options->directory_set) {
-		memcpy(config->directory, options->directory,
-			strlen(options->directory) + 1);
-	}
-	if (options->position_set) {
-		config->position = options->position;
-	}
-	if (options->preview_set) {
-		config->preview = options->preview;
-	}
 }
