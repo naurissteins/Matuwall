@@ -44,13 +44,19 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Temporarily set _thumbnail.height_. _HEIGHT_ must be a decimal integer from 1
 	to 16384. The configuration file is not changed.
 
+*--hook* _COMMAND_
+	Temporarily replace the configured _hooks.on_apply_ list. The first occurrence
+	replaces the configured list and later occurrences append in command-line
+	order. Up to 16 non-empty commands of at most 511 bytes are accepted. Quote a
+	command containing spaces in the shell. The configuration file is not changed.
+
 *-m* _MARGIN_, *--margin* _MARGIN_
 	Temporarily set _window.margin_. _MARGIN_ must be a decimal integer from 0 to
 	4096. The configuration file is not changed.
 
 *--no-hooks*
-	Disable all configured _hooks.on_apply_ commands for this invocation. The
-	configuration file is not changed.
+	Clear the runtime _hooks.on_apply_ list at this point in option processing. A
+	later *--hook* starts a new list. The configuration file is not changed.
 
 *-p* _POSITION_, *--position* _POSITION_
 	Temporarily override the configured window position for this invocation.

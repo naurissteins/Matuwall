@@ -59,6 +59,7 @@ executable(
 	'src/backend/awww.c',
 	'src/backend/registry.c',
 	'src/backend/sweetbg.c',
+	'src/cli/apply.c',
 	'src/cli/options.c',
 	'src/config/config.c',
 	'src/config/toml.c',
