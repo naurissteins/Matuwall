@@ -38,6 +38,8 @@ bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size);
 
 bool sweetwall_config_load(
 	struct sweetwall_config *cfg, char *err, size_t err_size);
+bool sweetwall_config_load_path(struct sweetwall_config *cfg, const char *path,
+	char *err, size_t err_size);
 size_t sweetwall_config_warning_count(void);
 
 bool sweetwall_config_path(char *out, size_t out_size);

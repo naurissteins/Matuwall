@@ -47,7 +47,17 @@ int main(int argc, char *argv[]) {
 
 	sweetwall_log_start(SWEETWALL_VERSION);
 	struct sweetwall_config config;
-	if (!sweetwall_config_load(&config, err, sizeof(err))) {
+	bool config_ok =
+		options.config_path_set
+			? sweetwall_config_load_path(&config,
+				  options.config_path, err, sizeof(err))
+			: sweetwall_config_load(&config, err, sizeof(err));
+	if (!config_ok && options.config_path_set) {
+		sweetwall_log_error("config", "%s", err);
+		sweetwall_log_finish();
+		return 1;
+	}
+	if (!config_ok) {
 		// A bad config is a warning, not a crash: run with defaults
 		sweetwall_log_warn("config", "%s; using defaults", err);
 	}

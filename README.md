@@ -50,6 +50,7 @@ to build the man page.
 
 ```sh
 sweetwall                             # use the config or built-in defaults
+sweetwall --config ~/.config/sweetwall/work.toml # use another config once
 sweetwall -d ~/Pictures/Photography   # use another directory
 sweetwall -b awww                     # use awww once
 sweetwall --backend auto              # detect a running backend
@@ -75,6 +76,11 @@ config file. `--width` accepts decimal values from 1 to 16384.
 The same range applies to `--height`.
 `--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or
 `#rrggbbaa` colors.
+
+`--config PATH` loads an alternate configuration file for one invocation. A
+leading `~` expands to `$HOME`, relative paths use the current directory, and
+other command-line overrides are applied afterward. An explicitly selected
+file must exist and parse successfully.
 
 ## Controls
 
