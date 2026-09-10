@@ -66,6 +66,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Temporarily set _grid.spacing_. _SPACING_ must be a decimal integer from 0
 	to 4096. The configuration file is not changed.
 
+*--tile* _COLOR_
+	Temporarily set _colors.tile_. _COLOR_ must be _"#rrggbb"_ or
+	_"#rrggbbaa"_. Quote the value in a shell because it starts with _#_. The
+	configuration file is not changed.
+
 *-w* _WIDTH_, *--width* _WIDTH_
 	Temporarily set _thumbnail.width_. _WIDTH_ must be a decimal integer from 1
 	to 16384. The configuration file is not changed.
