@@ -15,6 +15,7 @@ enum {
 	OPTION_HEIGHT,
 	OPTION_RADIUS,
 	OPTION_RING,
+	OPTION_SPINNER,
 	OPTION_TILE,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
@@ -39,6 +40,7 @@ static const struct option long_options[] = {
 	{"ring", required_argument, NULL, OPTION_RING},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
+	{"spinner", required_argument, NULL, OPTION_SPINNER},
 	{"tile", required_argument, NULL, OPTION_TILE},
 	{"width", required_argument, NULL, 'w'},
 	{"help", no_argument, NULL, 'h'},
@@ -77,6 +79,9 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"
 	      "                     override grid spacing (0..4096)\n"
+	      "      --spinner COLOR\n"
+	      "                     override spinner color: #rrggbb or "
+	      "#rrggbbaa\n"
 	      "      --tile COLOR\n"
 	      "                     override tile color: #rrggbb or #rrggbbaa\n"
 	      "  -w, --width WIDTH\n"
@@ -220,6 +225,9 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,
 			&options->ring_set, err, err_size);
+	case OPTION_SPINNER:
+		return parse_color_override("spinner", value, &options->spinner,
+			&options->spinner_set, err, err_size);
 	case OPTION_TILE:
 		return parse_color_override("tile", value, &options->tile,
 			&options->tile_set, err, err_size);
@@ -322,6 +330,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->ring_set) {
 		config->ring = options->ring;
+	}
+	if (options->spinner_set) {
+		config->spinner = options->spinner;
 	}
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,

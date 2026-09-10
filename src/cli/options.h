@@ -23,6 +23,8 @@ struct sweetwall_cli_options {
 	struct sweetwall_color tile;
 	bool ring_set;
 	struct sweetwall_color ring;
+	bool spinner_set;
+	struct sweetwall_color spinner;
 	bool backend_set;
 	char backend[32];
 	bool columns_set;
