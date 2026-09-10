@@ -68,6 +68,12 @@ int main(int argc, char *argv[]) {
 			"ring overridden to #%02x%02x%02x%02x", config.ring.r,
 			config.ring.g, config.ring.b, config.ring.a);
 	}
+	if (options.spinner_set) {
+		sweetwall_log_info("config",
+			"spinner overridden to #%02x%02x%02x%02x",
+			config.spinner.r, config.spinner.g, config.spinner.b,
+			config.spinner.a);
+	}
 	if (options.backend_set) {
 		sweetwall_log_info(
 			"config", "backend overridden to %s", config.backend);
