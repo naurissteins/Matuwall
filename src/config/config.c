@@ -310,19 +310,14 @@ bool sweetwall_config_path(char *out, size_t out_size) {
 	return false;
 }
 
-bool sweetwall_config_load(
-	struct sweetwall_config *cfg, char *err, size_t err_size) {
+static bool load_path(struct sweetwall_config *cfg, const char *path,
+	bool missing_ok, char *err, size_t err_size) {
 	warning_count = 0;
 	sweetwall_config_defaults(cfg);
 
-	char path[PATH_MAX];
-	if (!sweetwall_config_path(path, sizeof(path))) {
-		return true;
-	}
-
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL) {
-		if (errno == ENOENT) {
+		if (missing_ok && errno == ENOENT) {
 			sweetwall_log_info(
 				"config", "%s not found; using defaults", path);
 			return true;
@@ -339,6 +334,22 @@ bool sweetwall_config_load(
 		sweetwall_log_info("config", "loaded %s", path);
 	}
 	return ok;
+}
+
+bool sweetwall_config_load(
+	struct sweetwall_config *cfg, char *err, size_t err_size) {
+	char path[PATH_MAX];
+	if (!sweetwall_config_path(path, sizeof(path))) {
+		warning_count = 0;
+		sweetwall_config_defaults(cfg);
+		return true;
+	}
+	return load_path(cfg, path, true, err, err_size);
+}
+
+bool sweetwall_config_load_path(struct sweetwall_config *cfg, const char *path,
+	char *err, size_t err_size) {
+	return load_path(cfg, path, false, err, err_size);
 }
 
 size_t sweetwall_config_warning_count(void) {

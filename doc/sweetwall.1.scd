@@ -36,6 +36,12 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	decimal integer from 1 to 1024. The grid may use fewer columns to fit the
 	selected output. The configuration file is not changed.
 
+*--config* _PATH_
+	Load _PATH_ instead of the standard configuration file. A leading _~_ expands
+	to _$HOME_; a relative path is resolved from the current directory. Other
+	command-line overrides are applied afterward. If repeated, the last path wins.
+	An explicitly selected file must exist and parse successfully.
+
 *-d* _DIRECTORY_, *--directory* _DIRECTORY_
 	Temporarily scan _DIRECTORY_ instead of the configured wallpaper directory.
 	A leading _~_ expands to _$HOME_. The configuration file is not changed.

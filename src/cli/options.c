@@ -12,6 +12,7 @@ enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
+	OPTION_CONFIG,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
 	OPTION_NO_HOOKS,
@@ -34,6 +35,7 @@ static const struct option long_options[] = {
 	{"background", required_argument, NULL, OPTION_BACKGROUND},
 	{"backend", required_argument, NULL, 'b'},
 	{"columns", required_argument, NULL, 'c'},
+	{"config", required_argument, NULL, OPTION_CONFIG},
 	{"directory", required_argument, NULL, 'd'},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
@@ -66,6 +68,7 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override backend: sweetbg, awww, or auto\n"
 	      "  -c, --columns COLUMNS\n"
 	      "                     override maximum grid columns (1..1024)\n"
+	      "      --config PATH  load an alternate configuration file\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
 	      "      --height HEIGHT\n"
@@ -145,17 +148,16 @@ static enum parse_result parse_color_override(const char *name,
 	return PARSE_CONTINUE;
 }
 
-static bool parse_directory(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!sweetwall_config_expand_path(
-		    value, options->directory, sizeof(options->directory))) {
+static bool parse_path_override(const char *name, const char *value, char *out,
+	size_t out_size, bool *is_set, char *err, size_t err_size) {
+	if (!sweetwall_config_expand_path(value, out, out_size)) {
 		snprintf(err, err_size,
-			"invalid directory '%s': path is empty, too long, or "
+			"invalid %s '%s': path is empty, too long, or "
 			"HOME is unset",
-			value);
+			name, value);
 		return false;
 	}
-	options->directory_set = true;
+	*is_set = true;
 	return true;
 }
 
@@ -243,8 +245,17 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_CONFIG:
+		return parse_path_override("config path", value,
+			       options->config_path,
+			       sizeof(options->config_path),
+			       &options->config_path_set, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
 	case 'd':
-		return parse_directory(value, options, err, err_size)
+		return parse_path_override("directory", value,
+			       options->directory, sizeof(options->directory),
+			       &options->directory_set, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_HOOK:
