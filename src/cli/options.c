@@ -14,6 +14,7 @@ enum {
 	OPTION_BACKGROUND,
 	OPTION_HEIGHT,
 	OPTION_RADIUS,
+	OPTION_TILE,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
 };
@@ -36,6 +37,7 @@ static const struct option long_options[] = {
 	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
+	{"tile", required_argument, NULL, OPTION_TILE},
 	{"width", required_argument, NULL, 'w'},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
@@ -71,6 +73,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"
 	      "                     override grid spacing (0..4096)\n"
+	      "      --tile COLOR\n"
+	      "                     override tile color: #rrggbb or #rrggbbaa\n"
 	      "  -w, --width WIDTH\n"
 	      "                     override thumbnail width (1..16384)\n"
 	      "      --preview      enable full-screen live preview\n"
@@ -113,17 +117,17 @@ static bool parse_backend(const char *value,
 	return true;
 }
 
-static bool parse_background(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!sweetwall_color_parse(value, &options->background)) {
+static enum parse_result parse_color_override(const char *name,
+	const char *value, struct sweetwall_color *out, bool *is_set, char *err,
+	size_t err_size) {
+	if (!sweetwall_color_parse(value, out)) {
 		snprintf(err, err_size,
-			"invalid background '%s': expected #rrggbb or "
-			"#rrggbbaa",
+			"invalid %s '%s': expected #rrggbb or #rrggbbaa", name,
 			value);
-		return false;
+		return PARSE_ERROR;
 	}
-	options->background_set = true;
-	return true;
+	*is_set = true;
+	return PARSE_CONTINUE;
 }
 
 static bool parse_directory(const char *value,
@@ -194,9 +198,9 @@ static enum parse_result parse_override(int option, const char *value,
 
 	switch (option) {
 	case OPTION_BACKGROUND:
-		return parse_background(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
+		return parse_color_override("background", value,
+			&options->background, &options->background_set, err,
+			err_size);
 	case 'b':
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
@@ -209,6 +213,9 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_position(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_TILE:
+		return parse_color_override("tile", value, &options->tile,
+			&options->tile_set, err, err_size);
 	case OPTION_PREVIEW:
 		options->preview_set = true;
 		options->preview = true;
@@ -302,6 +309,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	struct sweetwall_config *config) {
 	if (options->background_set) {
 		config->background = options->background;
+	}
+	if (options->tile_set) {
+		config->tile = options->tile;
 	}
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,
