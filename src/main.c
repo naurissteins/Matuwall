@@ -76,6 +76,10 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "spacing overridden to %u",
 			config.layout.spacing);
 	}
+	if (options.width_set) {
+		sweetwall_log_info("config", "thumbnail width overridden to %u",
+			config.layout.tile_width);
+	}
 	if (options.directory_set) {
 		sweetwall_log_info("config", "directory overridden to %s",
 			config.directory);
