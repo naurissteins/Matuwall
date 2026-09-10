@@ -63,6 +63,11 @@ int main(int argc, char *argv[]) {
 			"tile overridden to #%02x%02x%02x%02x", config.tile.r,
 			config.tile.g, config.tile.b, config.tile.a);
 	}
+	if (options.ring_set) {
+		sweetwall_log_info("config",
+			"ring overridden to #%02x%02x%02x%02x", config.ring.r,
+			config.ring.g, config.ring.b, config.ring.a);
+	}
 	if (options.backend_set) {
 		sweetwall_log_info(
 			"config", "backend overridden to %s", config.backend);

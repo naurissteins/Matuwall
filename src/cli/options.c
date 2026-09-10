@@ -14,6 +14,7 @@ enum {
 	OPTION_BACKGROUND,
 	OPTION_HEIGHT,
 	OPTION_RADIUS,
+	OPTION_RING,
 	OPTION_TILE,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
@@ -35,6 +36,7 @@ static const struct option long_options[] = {
 	{"margin", required_argument, NULL, 'm'},
 	{"position", required_argument, NULL, 'p'},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
+	{"ring", required_argument, NULL, OPTION_RING},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
 	{"tile", required_argument, NULL, OPTION_TILE},
@@ -69,6 +71,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "top, or bottom\n"
 	      "      --radius RADIUS\n"
 	      "                     override grid corner radius (0..4096)\n"
+	      "      --ring COLOR\n"
+	      "                     override ring color: #rrggbb or #rrggbbaa\n"
 	      "  -r, --rows ROWS\n"
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"
@@ -213,6 +217,9 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_position(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_RING:
+		return parse_color_override("ring", value, &options->ring,
+			&options->ring_set, err, err_size);
 	case OPTION_TILE:
 		return parse_color_override("tile", value, &options->tile,
 			&options->tile_set, err, err_size);
@@ -312,6 +319,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->tile_set) {
 		config->tile = options->tile;
+	}
+	if (options->ring_set) {
+		config->ring = options->ring;
 	}
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,
