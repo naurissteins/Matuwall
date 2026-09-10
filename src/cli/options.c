@@ -11,6 +11,7 @@
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
+	OPTION_HEIGHT,
 	OPTION_RADIUS,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
@@ -27,6 +28,7 @@ static const struct option long_options[] = {
 	{"backend", required_argument, NULL, 'b'},
 	{"columns", required_argument, NULL, 'c'},
 	{"directory", required_argument, NULL, 'd'},
+	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"margin", required_argument, NULL, 'm'},
 	{"position", required_argument, NULL, 'p'},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
@@ -52,6 +54,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override maximum grid columns (1..1024)\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
+	      "      --height HEIGHT\n"
+	      "                     override thumbnail height (1..16384)\n"
 	      "  -m, --margin MARGIN\n"
 	      "                     override window margin (0..4096)\n"
 	      "  -p, --position POSITION\n"
@@ -74,20 +78,22 @@ void sweetwall_cli_usage(FILE *out) {
 		out);
 }
 
-static bool parse_uint(
-	const char *value, uint32_t min, uint32_t max, uint32_t *out) {
-	if (value[0] < '0' || value[0] > '9') {
-		return false;
-	}
-
+static enum parse_result parse_uint_override(const char *name,
+	const char *value, uint32_t min, uint32_t max, uint32_t *out,
+	bool *is_set, char *err, size_t err_size) {
 	errno = 0;
 	char *end;
 	unsigned long parsed = strtoul(value, &end, 10);
-	if (errno == ERANGE || *end != '\0' || parsed < min || parsed > max) {
-		return false;
+	if (value[0] < '0' || value[0] > '9' || errno == ERANGE ||
+		*end != '\0' || parsed < min || parsed > max) {
+		snprintf(err, err_size,
+			"invalid %s '%s': expected an integer from %u to %u",
+			name, value, min, max);
+		return PARSE_ERROR;
 	}
 	*out = (uint32_t)parsed;
-	return true;
+	*is_set = true;
+	return PARSE_CONTINUE;
 }
 
 static bool parse_backend(const char *value,
@@ -100,19 +106,6 @@ static bool parse_backend(const char *value,
 	}
 	memcpy(options->backend, value, strlen(value) + 1);
 	options->backend_set = true;
-	return true;
-}
-
-static bool parse_columns(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!parse_uint(value, 1, 1024, &options->columns)) {
-		snprintf(err, err_size,
-			"invalid columns '%s': expected an integer from 1 to "
-			"1024",
-			value);
-		return false;
-	}
-	options->columns_set = true;
 	return true;
 }
 
@@ -130,19 +123,6 @@ static bool parse_directory(const char *value,
 	return true;
 }
 
-static bool parse_margin(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!parse_uint(value, 0, 4096, &options->margin)) {
-		snprintf(err, err_size,
-			"invalid margin '%s': expected an integer from 0 to "
-			"4096",
-			value);
-		return false;
-	}
-	options->margin_set = true;
-	return true;
-}
-
 static bool parse_position(const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
 	if (!sweetwall_position_from_name(value, &options->position)) {
@@ -156,94 +136,56 @@ static bool parse_position(const char *value,
 	return true;
 }
 
-static bool parse_radius(const char *value,
+static enum parse_result parse_numeric_override(int option, const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!parse_uint(value, 0, 4096, &options->radius)) {
-		snprintf(err, err_size,
-			"invalid radius '%s': expected an integer from 0 to "
-			"4096",
-			value);
-		return false;
+	switch (option) {
+	case 'c':
+		return parse_uint_override("columns", value, 1, 1024,
+			&options->columns, &options->columns_set, err,
+			err_size);
+	case OPTION_HEIGHT:
+		return parse_uint_override("height", value, 1, 16384,
+			&options->height, &options->height_set, err, err_size);
+	case 'm':
+		return parse_uint_override("margin", value, 0, 4096,
+			&options->margin, &options->margin_set, err, err_size);
+	case OPTION_RADIUS:
+		return parse_uint_override("radius", value, 0, 4096,
+			&options->radius, &options->radius_set, err, err_size);
+	case 'r':
+		return parse_uint_override("rows", value, 1, 1024,
+			&options->rows, &options->rows_set, err, err_size);
+	case 's':
+		return parse_uint_override("spacing", value, 0, 4096,
+			&options->spacing, &options->spacing_set, err,
+			err_size);
+	case 'w':
+		return parse_uint_override("width", value, 1, 16384,
+			&options->width, &options->width_set, err, err_size);
+	default:
+		return PARSE_UNHANDLED;
 	}
-	options->radius_set = true;
-	return true;
-}
-
-static bool parse_rows(const char *value, struct sweetwall_cli_options *options,
-	char *err, size_t err_size) {
-	if (!parse_uint(value, 1, 1024, &options->rows)) {
-		snprintf(err, err_size,
-			"invalid rows '%s': expected an integer from 1 to 1024",
-			value);
-		return false;
-	}
-	options->rows_set = true;
-	return true;
-}
-
-static bool parse_spacing(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!parse_uint(value, 0, 4096, &options->spacing)) {
-		snprintf(err, err_size,
-			"invalid spacing '%s': expected an integer from 0 to "
-			"4096",
-			value);
-		return false;
-	}
-	options->spacing_set = true;
-	return true;
-}
-
-static bool parse_width(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!parse_uint(value, 1, 16384, &options->width)) {
-		snprintf(err, err_size,
-			"invalid width '%s': expected an integer from 1 to "
-			"16384",
-			value);
-		return false;
-	}
-	options->width_set = true;
-	return true;
 }
 
 static enum parse_result parse_override(int option, const char *value,
 	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	enum parse_result result =
+		parse_numeric_override(option, value, options, err, err_size);
+	if (result != PARSE_UNHANDLED) {
+		return result;
+	}
+
 	switch (option) {
 	case 'b':
 		return parse_backend(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
-	case 'c':
-		return parse_columns(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case 'd':
 		return parse_directory(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
-	case 'm':
-		return parse_margin(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
 	case 'p':
 		return parse_position(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
-	case OPTION_RADIUS:
-		return parse_radius(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
-	case 'r':
-		return parse_rows(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
-	case 's':
-		return parse_spacing(value, options, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
-	case 'w':
-		return parse_width(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_PREVIEW:
@@ -343,6 +285,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	}
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
+	}
+	if (options->height_set) {
+		config->layout.tile_height = options->height;
 	}
 	if (options->margin_set) {
 		config->layout.margin = options->margin;
