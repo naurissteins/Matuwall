@@ -17,6 +17,8 @@ enum sweetwall_cli_action {
 
 struct sweetwall_cli_options {
 	enum sweetwall_cli_action action;
+	bool background_set;
+	struct sweetwall_color background;
 	bool backend_set;
 	char backend[32];
 	bool columns_set;

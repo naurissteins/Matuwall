@@ -20,6 +20,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 
 # OPTIONS
 
+*--background* _COLOR_
+	Temporarily set _window.background_. _COLOR_ must be _"#rrggbb"_ or
+	_"#rrggbbaa"_. Quote the value in a shell because it starts with _#_. The
+	configuration file is not changed.
+
 *-b* _BACKEND_, *--backend* _BACKEND_
 	Temporarily use _BACKEND_ instead of the configured wallpaper backend.
 	_BACKEND_ must be _sweetbg_, _awww_, or _auto_. An explicitly named backend
