@@ -35,6 +35,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Temporarily scan _DIRECTORY_ instead of the configured wallpaper directory.
 	A leading _~_ expands to _$HOME_. The configuration file is not changed.
 
+*--height* _HEIGHT_
+	Temporarily set _thumbnail.height_. _HEIGHT_ must be a decimal integer from 1
+	to 16384. The configuration file is not changed.
+
 *-m* _MARGIN_, *--margin* _MARGIN_
 	Temporarily set _window.margin_. _MARGIN_ must be a decimal integer from 0 to
 	4096. The configuration file is not changed.
