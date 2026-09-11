@@ -97,6 +97,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	_"#rrggbbaa"_. Quote the value in a shell because it starts with _#_. The
 	configuration file is not changed.
 
+*--ring-width* _WIDTH_
+	Temporarily set _grid.ring_width_. _WIDTH_ must be a decimal integer from 1
+	to 4096. The configuration file is not changed.
+
 *-r* _ROWS_, *--rows* _ROWS_
 	Temporarily set the _grid.visible_rows_ maximum. _ROWS_ must be a decimal
 	integer from 1 to 1024. The grid may use fewer rows to fit the selected

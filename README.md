@@ -13,14 +13,17 @@ Simple, fast and lightweight wallpaper picker for Wayland
 
 
 > [!IMPORTANT]
-> sweetwall
+> sweetwall is a ground-up rewrite of Matuwall
 
 ---
 
 ## 🔥 Features
 
-- feature 1
-- feature 1
+- Asynchronous JPEG, PNG, and WebP thumbnails with a fast on-disk cache
+- Full-screen wallpaper previews without applying the selection
+- Configurable grid layout, colors, placement, output and fractional scaling
+- Native `sweetbg` and `awww` backends with automatic detection
+- Safe, detached post-apply hooks for tools such as Matugen and Pywal
 
 ## Install
 
@@ -49,129 +52,55 @@ to build the man page.
 ## Run
 
 ```sh
-sweetwall                             # use the config or built-in defaults
+sweetwall                                        # use the config or built-in defaults
 sweetwall --config ~/.config/sweetwall/work.toml # use another config once
-sweetwall --no-config -d ~/Pictures/Wallpapers # defaults plus CLI overrides
-sweetwall --print-config              # show the effective config and exit
-sweetwall -d ~/Pictures/Photography   # use another directory
-sweetwall -b awww                     # use awww once
-sweetwall --backend auto              # detect a running backend
-sweetwall -c 4                        # use at most four columns
-sweetwall -r 3                        # use at most three visible rows
-sweetwall -s 12                       # set tile spacing to 12
-sweetwall -m 24                       # set the window margin to 24
-sweetwall --radius 10                 # set the tile corner radius to 10
-sweetwall -w 320                      # set thumbnail width to 320
-sweetwall --height 480                # set thumbnail height to 480
-sweetwall --background "#181825cc"    # set the panel background color
-sweetwall --tile "#313244"            # set the tile color
-sweetwall --ring "#f2cdcd"            # set the selection ring color
-sweetwall --spinner "#cdd0e6"         # set the loading spinner color
-sweetwall -o DP-1                     # open explicitly on DP-1
-sweetwall -p left                     # move the panel
-sweetwall --no-preview                # open without the backdrop
-sweetwall --no-hooks                  # apply without running hooks
-sweetwall --hook 'matugen image {path}' # replace hooks for one run
+sweetwall --no-config -d ~/Pictures/Wallpapers   # defaults plus CLI overrides
+sweetwall --print-config                         # show the effective config and exit
+sweetwall -d ~/Pictures/Photography              # use another directory
+sweetwall -b awww                                # use awww once
+sweetwall --backend auto                         # detect a running backend
+sweetwall -c 4                                   # use at most four columns
+sweetwall -r 3                                   # use at most three visible rows
+sweetwall -s 12                                  # set tile spacing to 12
+sweetwall -m 24                                  # set the window margin to 24
+sweetwall --radius 10                            # set the tile corner radius to 10
+sweetwall -w 320                                 # set thumbnail width to 320
+sweetwall --height 480                           # set thumbnail height to 480
+sweetwall --background "#181825cc"               # set the panel background color
+sweetwall --tile "#313244"                       # set the tile color
+sweetwall --ring "#f2cdcd"                       # set the selection ring color
+sweetwall --ring-width 2                         # set the selection ring width
+sweetwall --spinner "#cdd0e6"                    # set the loading spinner color
+sweetwall -o DP-1                                # open explicitly on DP-1
+sweetwall -p left                                # move the panel
+sweetwall --no-preview                           # open without the backdrop
+sweetwall --no-hooks                             # apply without running hooks
+sweetwall --hook 'matugen image {path}'          # replace hooks for one run
 ```
 
-Run `sweetwall --help` for every option. Command-line options do not change the
-config file. `--width` accepts decimal values from 1 to 16384.
-The same range applies to `--height`.
-`--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or
-`#rrggbbaa` colors.
+Run `sweetwall --help` for every option.
 
-`-o NAME` or `--output NAME` opens Sweetwall on the named Wayland output, such
-as `DP-1` or `HDMI-A-1`. Without it, the compositor continues to choose the
-active output. An unknown name fails with the available output names and never
-falls back silently. This selection is temporary and is not part of
-`--print-config` output.
+> [!IMPORTANT]
+> Command-line options do not change the config file
 
-`--config PATH` loads an alternate configuration file for one invocation. A
-leading `~` expands to `$HOME`, relative paths use the current directory, and
-other command-line overrides are applied afterward. An explicitly selected
-file must exist and parse successfully.
-
-`--no-config` skips the standard configuration file and starts from built-in
-defaults before applying other CLI overrides. `--config` and `--no-config` are
-processed left to right, so the last one selects the configuration source.
-
-`--print-config` prints the fully resolved configuration as TOML and exits
-without scanning wallpapers, connecting to Wayland, applying a wallpaper, or
-running hooks. Config-source options and ordinary overrides can be combined
-with it, and its output can be redirected into a configuration file.
+- `--width` accepts decimal values from 1 to 16384. The same range applies to `--height`.
+- `--ring-width` accepts values from 1 to 4096 and overrides `grid.ring_width`, which defaults to 2 logical pixels.
+- `--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or `#rrggbbaa` colors.
 
 ## Controls
-
-| Key | Action |
-| --- | --- |
-| Arrows, `h` `j` `k` `l` | Move |
-| `Page Up`, `Page Down` | Move one page |
-| `Home`, `g` | First wallpaper |
-| `End`, `G` | Last wallpaper |
-| `Enter` | Apply and exit |
-| `Escape` | Cancel and exit |
-
-Mouse users: hover to select, click to apply, scroll to move. Click outside the panel
-to cancel when preview is enabled.
+- Arrows or `h` `j` `k` `l`
+- `Page Up`, `Page Down` | Move one page |
+- `Home`, `g` | First wallpaper |
+- `End`, `G` | Last wallpaper |
+- `Enter` | Apply and exit |
+- `Escape` | Cancel and exit |
 
 ## Configure
 
-Config: `$XDG_CONFIG_HOME/sweetwall/config.toml`, or
-`~/.config/sweetwall/config.toml`. The file is optional.
-
-```toml
-[general]
-directory = "~/Pictures/Wallpapers"
-backend = "sweetbg"              # sweetbg | awww | auto
-
-[window]
-preview = true
-position = "center"              # center | left | right | top | bottom
-background = "#1e1e2ecc"         # #rrggbb | #rrggbbaa
-margin = 24
-
-[grid]
-columns = 5                       # maximum
-visible_rows = 2                  # maximum
-spacing = 16
-radius = 8
-
-[thumbnail]
-width = 240
-height = 400
-
-[colors]
-tile = "#313244ff"
-ring = "#f2cdcdff"
-spinner = "#cdd0e6ff"
-
-[hooks]
-on_apply = [
-  "matugen image {path}",
-  "wal -i {path} -n",
-]
-```
+Config file is optional. It is read from `~/.config/sweetwall/config.toml` or `$XDG_CONFIG_HOME/sweetwall/config.toml`.
 
 See [`config/example.toml`](config/example.toml) for comments and `sweetwall(5)`
 for the full reference.
-
-Bad values produce a warning and use the default. Syntax errors include a line
-number. Unknown keys or sections reject the file.
-
-`columns` and `visible_rows` are maximums. Smaller outputs automatically use
-fewer tiles.
-
-## Preview
-
-Preview shows the selection behind the grid without applying it. `Enter`
-applies it. `Escape` exits and leaves the current wallpaper unchanged.
-
-```toml
-[window]
-preview = false   # panel only, no full-screen backdrop
-```
-
-The backdrop uses about 15 MB at 2560×1440 or 33 MB at 3840×2160.
 
 ## Backends
 
@@ -199,11 +128,8 @@ on_apply = ["matugen image {path}"]
 Hooks run detached and never through a shell. Pipes, globs, variables, and
 shell quoting are not supported.
 
-Use `sweetwall --no-hooks` to skip configured hooks for one invocation.
-Repeat `--hook COMMAND` to replace them temporarily with one or more commands:
-
 ```sh
-sweetwall --hook 'matugen image {path}' --hook 'wal -i {path} -n'
+sweetwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
 
 The first `--hook` replaces the configured list and later occurrences append.
@@ -213,7 +139,7 @@ options before it while a later `--hook` starts a new list.
 ## Maintenance
 
 ```sh
-sweetwall --diagnose      # check config, Wayland, backends, hooks, and paths
+sweetwall --diagnose      # check config, Wayland, backends, hooks and paths
 sweetwall --clear-cache   # remove thumbnails only
 ```
 
@@ -224,10 +150,4 @@ sweetwall --clear-cache   # remove thumbnails only
 | Thumbnails | `~/.cache/sweetwall/thumbs/` |
 
 `XDG_STATE_HOME` and `XDG_CACHE_HOME` override these base directories. Logs are
-limited to 256 KiB each; the current log and two rotations are kept.
-
-## Acknowledgments
-
-- [sweetbg](https://github.com/sweetwm/sweetbg) — first backend and reference for
-  the Wayland, TOML, and quality-check structure
-- [awww](https://codeberg.org/LGFae/awww) — second backend and socket reference
+limited to 256 KiB each, the current log and two rotations are kept

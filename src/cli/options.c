@@ -20,6 +20,7 @@ enum {
 	OPTION_PRINT_CONFIG,
 	OPTION_RADIUS,
 	OPTION_RING,
+	OPTION_RING_WIDTH,
 	OPTION_SPINNER,
 	OPTION_TILE,
 	OPTION_PREVIEW,
@@ -49,6 +50,7 @@ static const struct option long_options[] = {
 	{"print-config", no_argument, NULL, OPTION_PRINT_CONFIG},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"ring", required_argument, NULL, OPTION_RING},
+	{"ring-width", required_argument, NULL, OPTION_RING_WIDTH},
 	{"rows", required_argument, NULL, 'r'},
 	{"spacing", required_argument, NULL, 's'},
 	{"spinner", required_argument, NULL, OPTION_SPINNER},
@@ -172,6 +174,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 	case OPTION_RADIUS:
 		return parse_uint_override("radius", value, 0, 4096,
 			&options->radius, &options->radius_set, err, err_size);
+	case OPTION_RING_WIDTH:
+		return parse_uint_override("ring width", value, 1, 4096,
+			&options->ring_width, &options->ring_width_set, err,
+			err_size);
 	case 'r':
 		return parse_uint_override("rows", value, 1, 1024,
 			&options->rows, &options->rows_set, err, err_size);

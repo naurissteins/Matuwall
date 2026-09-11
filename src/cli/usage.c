@@ -32,6 +32,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "                     override grid corner radius (0..4096)\n"
 	      "      --ring COLOR\n"
 	      "                     override ring color: #rrggbb or #rrggbbaa\n"
+	      "      --ring-width WIDTH\n"
+	      "                     override selection ring width (1..4096)\n"
 	      "  -r, --rows ROWS\n"
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"

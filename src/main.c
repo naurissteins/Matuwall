@@ -104,6 +104,10 @@ int main(int argc, char *argv[]) {
 			"ring overridden to #%02x%02x%02x%02x", config.ring.r,
 			config.ring.g, config.ring.b, config.ring.a);
 	}
+	if (options.ring_width_set) {
+		sweetwall_log_info("config", "ring width overridden to %u",
+			config.ring_width);
+	}
 	if (options.spinner_set) {
 		sweetwall_log_info("config",
 			"spinner overridden to #%02x%02x%02x%02x",

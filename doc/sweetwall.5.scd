@@ -96,6 +96,10 @@ line. Comments are not allowed inside an array.
 *radius*
 	Tile corner radius in pixels. Defaults to _8_.
 
+*ring_width*
+	Selection ring width in logical pixels. Defaults to _2_. Must be an integer
+	from 1 to 4096.
+
 *visible_rows*
 	Maximum rows kept visible before the grid scrolls. Sweetwall uses fewer when
 	the selected output is too short for the configured grid. Defaults to _2_.
@@ -158,6 +162,7 @@ margin     = 24
 columns = 5
 spacing = 16
 radius  = 8
+ring_width = 2
 visible_rows = 2
 
 [thumbnail]

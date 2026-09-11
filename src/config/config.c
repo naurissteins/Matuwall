@@ -62,6 +62,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 			.tile_height = 400,
 			.radius = 8},
 		.visible_rows = 2,
+		.ring_width = 2,
 		.preview = true,
 	};
 
@@ -244,6 +245,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "radius") == 0) {
 			apply_uint(&cfg->layout.radius, v, line,
 				"radius must be 0..4096", 0, 4096);
+			return true;
+		}
+		if (strcmp(key, "ring_width") == 0) {
+			apply_uint(&cfg->ring_width, v, line,
+				"ring_width must be 1..4096", 1, 4096);
 			return true;
 		}
 		if (strcmp(key, "visible_rows") == 0) {

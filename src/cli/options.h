@@ -24,6 +24,8 @@ struct sweetwall_cli_options {
 	struct sweetwall_color tile;
 	bool ring_set;
 	struct sweetwall_color ring;
+	bool ring_width_set;
+	uint32_t ring_width;
 	bool spinner_set;
 	struct sweetwall_color spinner;
 	bool backend_set;

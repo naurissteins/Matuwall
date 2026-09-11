@@ -7,8 +7,6 @@
 #include "render/spinner.h"
 
 #define RING_GAP 3
-#define RING_WIDTH 2
-#define RING_INSET (RING_GAP + RING_WIDTH)
 #define SPINNER_DIVISOR 14
 // Large shapes read less round than small ones at the same radius
 #define PANEL_RADIUS_SCALE 2
@@ -20,7 +18,8 @@ static int32_t to_pixels(int32_t logical, double scale) {
 static struct sweetwall_clip content_clip(
 	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
 	struct sweetwall_clip clip = sweetwall_clip_buffer(buffer);
-	int32_t inset = (int32_t)frame->layout->margin - RING_INSET;
+	int32_t inset = (int32_t)frame->layout->margin - RING_GAP -
+			(int32_t)frame->ring_width;
 	if (inset < 0) {
 		inset = 0;
 	}
@@ -78,7 +77,8 @@ void sweetwall_frame_draw(
 	struct sweetwall_clip clip = content_clip(buffer, frame);
 
 	int32_t ring_gap = to_pixels(RING_GAP, frame->scale);
-	int32_t ring_width = to_pixels(RING_WIDTH, frame->scale);
+	int32_t ring_width =
+		to_pixels((int32_t)frame->ring_width, frame->scale);
 	if (ring_width < 1) {
 		ring_width = 1;
 	}
