@@ -1,7 +1,10 @@
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "app/app.h"
 #include "cli/options.h"
+#include "config/print.h"
 #include "diagnose/diagnose.h"
 #include "thumb/cache.h"
 #include "util/log.h"
@@ -75,6 +78,16 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	sweetwall_cli_apply(&options, &config);
+	if (options.action == SWEETWALL_CLI_PRINT_CONFIG) {
+		bool printed = sweetwall_config_print(stdout, &config) &&
+			       fflush(stdout) == 0;
+		if (!printed) {
+			sweetwall_log_error("config", "cannot write stdout: %s",
+				strerror(errno));
+		}
+		sweetwall_log_finish();
+		return printed ? 0 : 1;
+	}
 	if (options.background_set) {
 		sweetwall_log_info("config",
 			"background overridden to #%02x%02x%02x%02x",

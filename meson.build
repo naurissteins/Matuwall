@@ -62,6 +62,8 @@ executable(
 	'src/cli/apply.c',
 	'src/cli/options.c',
 	'src/config/config.c',
+	'src/config/print.c',
+	'src/config/string.c',
 	'src/config/toml.c',
 	'src/diagnose/diagnose.c',
 	'src/grid/layout.c',

@@ -52,6 +52,7 @@ to build the man page.
 sweetwall                             # use the config or built-in defaults
 sweetwall --config ~/.config/sweetwall/work.toml # use another config once
 sweetwall --no-config -d ~/Pictures/Wallpapers # defaults plus CLI overrides
+sweetwall --print-config              # show the effective config and exit
 sweetwall -d ~/Pictures/Photography   # use another directory
 sweetwall -b awww                     # use awww once
 sweetwall --backend auto              # detect a running backend
@@ -86,6 +87,11 @@ file must exist and parse successfully.
 `--no-config` skips the standard configuration file and starts from built-in
 defaults before applying other CLI overrides. `--config` and `--no-config` are
 processed left to right, so the last one selects the configuration source.
+
+`--print-config` prints the fully resolved configuration as TOML and exits
+without scanning wallpapers, connecting to Wayland, applying a wallpaper, or
+running hooks. Config-source options and ordinary overrides can be combined
+with it, and its output can be redirected into a configuration file.
 
 ## Controls
 

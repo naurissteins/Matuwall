@@ -17,6 +17,7 @@ enum {
 	OPTION_HOOK,
 	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
+	OPTION_PRINT_CONFIG,
 	OPTION_RADIUS,
 	OPTION_RING,
 	OPTION_SPINNER,
@@ -44,6 +45,7 @@ static const struct option long_options[] = {
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"position", required_argument, NULL, 'p'},
+	{"print-config", no_argument, NULL, OPTION_PRINT_CONFIG},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
 	{"ring", required_argument, NULL, OPTION_RING},
 	{"rows", required_argument, NULL, 'r'},
@@ -84,6 +86,7 @@ void sweetwall_cli_usage(FILE *out) {
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
 	      "top, or bottom\n"
+	      "      --print-config print the resolved config and exit\n"
 	      "      --radius RADIUS\n"
 	      "                     override grid corner radius (0..4096)\n"
 	      "      --ring COLOR\n"
@@ -276,6 +279,9 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_NO_CONFIG:
 		options->no_config = true;
 		options->config_path_set = false;
+		return PARSE_CONTINUE;
+	case OPTION_PRINT_CONFIG:
+		options->action = SWEETWALL_CLI_PRINT_CONFIG;
 		return PARSE_CONTINUE;
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,

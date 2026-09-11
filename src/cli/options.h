@@ -13,6 +13,7 @@ enum sweetwall_cli_action {
 	SWEETWALL_CLI_VERSION,
 	SWEETWALL_CLI_CLEAR_CACHE,
 	SWEETWALL_CLI_DIAGNOSE,
+	SWEETWALL_CLI_PRINT_CONFIG,
 };
 
 struct sweetwall_cli_options {
