@@ -131,15 +131,14 @@ static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
 	double half_h = height / 2.0;
 	double dx = fabs(((double)px + 0.5) - (x + half_w)) - (half_w - radius);
 	double dy = fabs(((double)py + 0.5) - (y + half_h)) - (half_h - radius);
-
-	if (dx < 0.0) {
-		dx = 0.0;
+	double outside_x = dx > 0.0 ? dx : 0.0;
+	double outside_y = dy > 0.0 ? dy : 0.0;
+	double inside = dx > dy ? dx : dy;
+	if (inside > 0.0) {
+		inside = 0.0;
 	}
-	if (dy < 0.0) {
-		dy = 0.0;
-	}
-
-	double distance = sqrt(dx * dx + dy * dy) - radius;
+	double distance = sqrt(outside_x * outside_x + outside_y * outside_y) +
+			  inside - radius;
 	double coverage = 0.5 - distance;
 	if (coverage <= 0.0) {
 		return 0;
