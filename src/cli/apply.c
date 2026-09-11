@@ -39,6 +39,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 				strlen(options->hooks[i]) + 1);
 		}
 	}
+	if (options->panel_radius_set) {
+		config->panel_radius = options->panel_radius;
+	}
 	if (options->radius_set) {
 		config->layout.radius = options->radius;
 	}

@@ -136,8 +136,12 @@ int main(int argc, char *argv[]) {
 			"on-apply hooks overridden with %zu command%s",
 			options.hook_count, options.hook_count == 1 ? "" : "s");
 	}
+	if (options.panel_radius_set) {
+		sweetwall_log_info("config", "panel radius overridden to %u",
+			config.panel_radius);
+	}
 	if (options.radius_set) {
-		sweetwall_log_info("config", "radius overridden to %u",
+		sweetwall_log_info("config", "tile radius overridden to %u",
 			config.layout.radius);
 	}
 	if (options.rows_set) {

@@ -68,7 +68,8 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 	print_quoted(out, sweetwall_position_name(config->position));
 	fputc('\n', out);
 	print_color(out, "background", config->background);
-	fprintf(out, "margin = %u\n", config->layout.margin);
+	fprintf(out, "margin = %u\nradius = %u\n", config->layout.margin,
+		config->panel_radius);
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\nspacing = %u\n"

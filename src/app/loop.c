@@ -97,6 +97,7 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.preview_height = app->preview.image.height,
 		.scale = scale,
 		.background = sweetwall_color_argb(app->config.background),
+		.panel_radius = app->config.panel_radius,
 		.tile = sweetwall_color_argb(app->config.tile),
 		.ring = sweetwall_color_argb(app->config.ring),
 		.ring_width = app->config.ring_width,

@@ -17,6 +17,7 @@ enum {
 	OPTION_HOOK,
 	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
+	OPTION_PANEL_RADIUS,
 	OPTION_PRINT_CONFIG,
 	OPTION_RADIUS,
 	OPTION_RING,
@@ -46,6 +47,7 @@ static const struct option long_options[] = {
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"output", required_argument, NULL, 'o'},
+	{"panel-radius", required_argument, NULL, OPTION_PANEL_RADIUS},
 	{"position", required_argument, NULL, 'p'},
 	{"print-config", no_argument, NULL, OPTION_PRINT_CONFIG},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
@@ -171,8 +173,12 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 	case 'm':
 		return parse_uint_override("margin", value, 0, 4096,
 			&options->margin, &options->margin_set, err, err_size);
+	case OPTION_PANEL_RADIUS:
+		return parse_uint_override("panel radius", value, 0, 4096,
+			&options->panel_radius, &options->panel_radius_set, err,
+			err_size);
 	case OPTION_RADIUS:
-		return parse_uint_override("radius", value, 0, 4096,
+		return parse_uint_override("tile radius", value, 0, 4096,
 			&options->radius, &options->radius_set, err, err_size);
 	case OPTION_RING_WIDTH:
 		return parse_uint_override("ring width", value, 1, 4096,

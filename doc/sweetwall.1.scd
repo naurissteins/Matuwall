@@ -82,6 +82,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
 	configuration file is not changed.
 
+*--panel-radius* _RADIUS_
+	Temporarily set _window.radius_. _RADIUS_ must be a decimal integer from 0
+	to 4096. The configuration file is not changed.
+
 *--print-config*
 	Print the fully resolved configuration as TOML and exit. Configuration-source
 	options and ordinary overrides are applied first. Sweetwall does not scan
