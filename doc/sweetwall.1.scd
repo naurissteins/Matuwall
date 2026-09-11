@@ -60,6 +60,12 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Temporarily set _window.margin_. _MARGIN_ must be a decimal integer from 0 to
 	4096. The configuration file is not changed.
 
+*--no-config*
+	Do not resolve or read the standard configuration file. Start from built-in
+	defaults, then apply other command-line overrides. *--config* and
+	*--no-config* are processed left to right, so the last one selects the
+	configuration source.
+
 *--no-hooks*
 	Clear the runtime _hooks.on_apply_ list at this point in option processing. A
 	later *--hook* starts a new list. The configuration file is not changed.

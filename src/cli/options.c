@@ -15,6 +15,7 @@ enum {
 	OPTION_CONFIG,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
+	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
 	OPTION_RADIUS,
 	OPTION_RING,
@@ -40,6 +41,7 @@ static const struct option long_options[] = {
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
+	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"position", required_argument, NULL, 'p'},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
@@ -76,6 +78,8 @@ void sweetwall_cli_usage(FILE *out) {
 	      "      --hook COMMAND replace/append a temporary on-apply hook\n"
 	      "  -m, --margin MARGIN\n"
 	      "                     override window margin (0..4096)\n"
+	      "      --no-config    use built-in defaults without loading "
+	      "config\n"
 	      "      --no-hooks     disable configured on-apply hooks\n"
 	      "  -p, --position POSITION\n"
 	      "                     override position: center, left, right, "
@@ -246,12 +250,13 @@ static enum parse_result parse_override(int option, const char *value,
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_CONFIG:
-		return parse_path_override("config path", value,
-			       options->config_path,
-			       sizeof(options->config_path),
-			       &options->config_path_set, err, err_size)
-			       ? PARSE_CONTINUE
-			       : PARSE_ERROR;
+		if (!parse_path_override("config path", value,
+			    options->config_path, sizeof(options->config_path),
+			    &options->config_path_set, err, err_size)) {
+			return PARSE_ERROR;
+		}
+		options->no_config = false;
+		return PARSE_CONTINUE;
 	case 'd':
 		return parse_path_override("directory", value,
 			       options->directory, sizeof(options->directory),
@@ -267,6 +272,10 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_NO_HOOKS:
 		options->hooks_set = true;
 		options->hook_count = 0;
+		return PARSE_CONTINUE;
+	case OPTION_NO_CONFIG:
+		options->no_config = true;
+		options->config_path_set = false;
 		return PARSE_CONTINUE;
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,

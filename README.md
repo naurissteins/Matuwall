@@ -51,6 +51,7 @@ to build the man page.
 ```sh
 sweetwall                             # use the config or built-in defaults
 sweetwall --config ~/.config/sweetwall/work.toml # use another config once
+sweetwall --no-config -d ~/Pictures/Wallpapers # defaults plus CLI overrides
 sweetwall -d ~/Pictures/Photography   # use another directory
 sweetwall -b awww                     # use awww once
 sweetwall --backend auto              # detect a running backend
@@ -81,6 +82,10 @@ The same range applies to `--height`.
 leading `~` expands to `$HOME`, relative paths use the current directory, and
 other command-line overrides are applied afterward. An explicitly selected
 file must exist and parse successfully.
+
+`--no-config` skips the standard configuration file and starts from built-in
+defaults before applying other CLI overrides. `--config` and `--no-config` are
+processed left to right, so the last one selects the configuration source.
 
 ## Controls
 
