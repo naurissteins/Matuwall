@@ -37,17 +37,17 @@ yay -S sweetwall-bin
 
 # or latest git build
 yay -S sweetwall-git
+```
 
 ## Build from source
-
 ```sh
 meson setup build --buildtype=release
 ninja -C build
 sudo ninja -C build install
 ```
 
-Requires a C11 compiler, Meson, and Ninja. `scdoc` is optional and only needed
-to build the man page.
+Build from source requires a C11 compiler, Meson and Ninja. `scdoc` is optional and only needed
+to build the man page
 
 ## Run
 
@@ -64,6 +64,7 @@ sweetwall -r 3                                   # use at most three visible row
 sweetwall -s 12                                  # set tile spacing to 12
 sweetwall -m 24                                  # set the window margin to 24
 sweetwall --radius 10                            # set the tile corner radius to 10
+sweetwall --panel-radius 16                      # set the panel corner radius to 16
 sweetwall -w 320                                 # set thumbnail width to 320
 sweetwall --height 480                           # set thumbnail height to 480
 sweetwall --background "#181825cc"               # set the panel background color
@@ -82,10 +83,6 @@ Run `sweetwall --help` for every option.
 
 > [!IMPORTANT]
 > Command-line options do not change the config file
-
-- `--width` accepts decimal values from 1 to 16384. The same range applies to `--height`.
-- `--ring-width` accepts values from 1 to 4096 and overrides `grid.ring_width`, which defaults to 2 logical pixels.
-- `--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or `#rrggbbaa` colors.
 
 ## Controls
 - Arrows or `h` `j` `k` `l`
@@ -110,15 +107,12 @@ for the full reference.
 | `awww` | `awww img -- <path>` |
 | `auto` | First running backend: sweetbg, then awww |
 
-`auto` requires both the client on `PATH` and a live daemon socket. An explicit
-backend skips detection. For a named awww namespace, use `backend = "awww"`.
-
 Wallpaper paths are passed as arguments, never through a shell.
 
 ## Hooks
 
 Hooks run after a successful apply. `{path}` becomes the absolute wallpaper
-path.
+path
 
 ```toml
 [hooks]
@@ -126,7 +120,7 @@ on_apply = ["matugen image {path}"]
 ```
 
 Hooks run detached and never through a shell. Pipes, globs, variables, and
-shell quoting are not supported.
+shell quoting are not supported
 
 ```sh
 sweetwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
@@ -149,5 +143,4 @@ sweetwall --clear-cache   # remove thumbnails only
 | Logs | `~/.local/state/sweetwall/sweetwall.log` |
 | Thumbnails | `~/.cache/sweetwall/thumbs/` |
 
-`XDG_STATE_HOME` and `XDG_CACHE_HOME` override these base directories. Logs are
-limited to 256 KiB each, the current log and two rotations are kept
+Logs are limited to 256 KiB each, the current log and two rotations are kept

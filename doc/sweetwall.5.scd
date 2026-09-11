@@ -84,6 +84,10 @@ line. Comments are not allowed inside an array.
 	*preview* on it is also the gap between the panel and the screen edge for
 	the non-centered *position* values.
 
+*radius*
+	Panel corner radius in pixels. Defaults to _16_. This is independent of
+	_grid.radius_, which controls the tile corners.
+
 ## [grid]
 
 *columns*
@@ -157,6 +161,7 @@ preview    = true
 position   = "center"
 background = "#1e1e2ecc"
 margin     = 24
+radius     = 16
 
 [grid]
 columns = 5
