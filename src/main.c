@@ -22,6 +22,29 @@ static int clear_cache(void) {
 	return 0;
 }
 
+static bool load_config(const struct sweetwall_cli_options *options,
+	struct sweetwall_config *config, char *err, size_t err_size) {
+	if (options->no_config) {
+		sweetwall_config_defaults(config);
+		sweetwall_log_info(
+			"config", "loading disabled; using defaults");
+		return true;
+	}
+	if (options->config_path_set) {
+		if (sweetwall_config_load_path(
+			    config, options->config_path, err, err_size)) {
+			return true;
+		}
+		sweetwall_log_error("config", "%s", err);
+		return false;
+	}
+	if (!sweetwall_config_load(config, err, err_size)) {
+		// A bad config is a warning, not a crash: run with defaults
+		sweetwall_log_warn("config", "%s; using defaults", err);
+	}
+	return true;
+}
+
 int main(int argc, char *argv[]) {
 	struct sweetwall_cli_options options;
 	char err[256];
@@ -47,19 +70,9 @@ int main(int argc, char *argv[]) {
 
 	sweetwall_log_start(SWEETWALL_VERSION);
 	struct sweetwall_config config;
-	bool config_ok =
-		options.config_path_set
-			? sweetwall_config_load_path(&config,
-				  options.config_path, err, sizeof(err))
-			: sweetwall_config_load(&config, err, sizeof(err));
-	if (!config_ok && options.config_path_set) {
-		sweetwall_log_error("config", "%s", err);
+	if (!load_config(&options, &config, err, sizeof(err))) {
 		sweetwall_log_finish();
 		return 1;
-	}
-	if (!config_ok) {
-		// A bad config is a warning, not a crash: run with defaults
-		sweetwall_log_warn("config", "%s; using defaults", err);
 	}
 	sweetwall_cli_apply(&options, &config);
 	if (options.background_set) {
