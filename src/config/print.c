@@ -72,9 +72,10 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\nspacing = %u\n"
-		"radius = %u\n",
+		"radius = %u\nring_width = %u\n",
 		config->layout.columns, config->visible_rows,
-		config->layout.spacing, config->layout.radius);
+		config->layout.spacing, config->layout.radius,
+		config->ring_width);
 	fprintf(out, "\n[thumbnail]\nwidth = %u\nheight = %u\n",
 		config->layout.tile_width, config->layout.tile_height);
 

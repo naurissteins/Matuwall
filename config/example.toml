@@ -37,6 +37,9 @@ spacing = 16
 # Tile corner radius in pixels.
 radius = 8
 
+# Selection ring width in pixels.
+ring_width = 2
+
 # Maximum rows kept visible. Fewer are used on short outputs.
 visible_rows = 2
 

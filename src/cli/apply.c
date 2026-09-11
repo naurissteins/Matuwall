@@ -13,6 +13,9 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	if (options->ring_set) {
 		config->ring = options->ring;
 	}
+	if (options->ring_width_set) {
+		config->ring_width = options->ring_width;
+	}
 	if (options->spinner_set) {
 		config->spinner = options->spinner;
 	}

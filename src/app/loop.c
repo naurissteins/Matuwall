@@ -99,6 +99,7 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.background = sweetwall_color_argb(app->config.background),
 		.tile = sweetwall_color_argb(app->config.tile),
 		.ring = sweetwall_color_argb(app->config.ring),
+		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,
 		.spinner_alpha = sweetwall_spinner_alpha(sweetwall_now_ms()),
 	};
