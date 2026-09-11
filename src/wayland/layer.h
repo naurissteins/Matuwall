@@ -32,8 +32,8 @@ struct sweetwall_layer {
 };
 
 // Starts bufferless across the selected output so its bounds are known
-bool sweetwall_layer_create(
-	struct sweetwall_layer *layer, const struct sweetwall_registry *reg);
+bool sweetwall_layer_create(struct sweetwall_layer *layer,
+	const struct sweetwall_registry *reg, struct wl_output *output);
 
 // Replace the output probe with the final compact panel geometry
 void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,

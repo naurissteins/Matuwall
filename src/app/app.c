@@ -25,8 +25,8 @@ static bool wait_for_configure(struct sweetwall_app *app) {
 	return true;
 }
 
-bool sweetwall_app_init(
-	struct sweetwall_app *app, const struct sweetwall_config *config) {
+bool sweetwall_app_init(struct sweetwall_app *app,
+	const struct sweetwall_config *config, const char *output_name) {
 	*app = (struct sweetwall_app){
 		.config = *config,
 		.layout = config->layout,
@@ -60,7 +60,8 @@ bool sweetwall_app_init(
 		return false;
 	}
 
-	if (!sweetwall_registry_init(&app->registry, app->display)) {
+	if (!sweetwall_registry_init(
+		    &app->registry, app->display, output_name)) {
 		return false;
 	}
 
@@ -68,8 +69,12 @@ bool sweetwall_app_init(
 		    &sweetwall_app_seat_handler, app)) {
 		return false;
 	}
+	if (!sweetwall_registry_select_output(&app->registry, app->display)) {
+		return false;
+	}
 
-	if (!sweetwall_layer_create(&app->layer, &app->registry)) {
+	if (!sweetwall_layer_create(&app->layer, &app->registry,
+		    app->registry.selected_output)) {
 		sweetwall_log_error(
 			"wayland", "failed to create the layer surface");
 		return false;

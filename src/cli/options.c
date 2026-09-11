@@ -44,6 +44,7 @@ static const struct option long_options[] = {
 	{"margin", required_argument, NULL, 'm'},
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
+	{"output", required_argument, NULL, 'o'},
 	{"position", required_argument, NULL, 'p'},
 	{"print-config", no_argument, NULL, OPTION_PRINT_CONFIG},
 	{"radius", required_argument, NULL, OPTION_RADIUS},
@@ -61,55 +62,6 @@ static const struct option long_options[] = {
 	{"no-preview", no_argument, NULL, OPTION_NO_PREVIEW},
 	{0},
 };
-
-void sweetwall_cli_usage(FILE *out) {
-	fputs("usage: sweetwall [options]\n"
-	      "\n"
-	      "options:\n"
-	      "      --background COLOR\n"
-	      "                     override background: #rrggbb or #rrggbbaa\n"
-	      "  -b, --backend BACKEND\n"
-	      "                     override backend: sweetbg, awww, or auto\n"
-	      "  -c, --columns COLUMNS\n"
-	      "                     override maximum grid columns (1..1024)\n"
-	      "      --config PATH  load an alternate configuration file\n"
-	      "  -d, --directory DIRECTORY\n"
-	      "                     override the wallpaper directory\n"
-	      "      --height HEIGHT\n"
-	      "                     override thumbnail height (1..16384)\n"
-	      "      --hook COMMAND replace/append a temporary on-apply hook\n"
-	      "  -m, --margin MARGIN\n"
-	      "                     override window margin (0..4096)\n"
-	      "      --no-config    use built-in defaults without loading "
-	      "config\n"
-	      "      --no-hooks     disable configured on-apply hooks\n"
-	      "  -p, --position POSITION\n"
-	      "                     override position: center, left, right, "
-	      "top, or bottom\n"
-	      "      --print-config print the resolved config and exit\n"
-	      "      --radius RADIUS\n"
-	      "                     override grid corner radius (0..4096)\n"
-	      "      --ring COLOR\n"
-	      "                     override ring color: #rrggbb or #rrggbbaa\n"
-	      "  -r, --rows ROWS\n"
-	      "                     override maximum visible rows (1..1024)\n"
-	      "  -s, --spacing SPACING\n"
-	      "                     override grid spacing (0..4096)\n"
-	      "      --spinner COLOR\n"
-	      "                     override spinner color: #rrggbb or "
-	      "#rrggbbaa\n"
-	      "      --tile COLOR\n"
-	      "                     override tile color: #rrggbb or #rrggbbaa\n"
-	      "  -w, --width WIDTH\n"
-	      "                     override thumbnail width (1..16384)\n"
-	      "      --preview      enable full-screen live preview\n"
-	      "      --no-preview   disable full-screen live preview\n"
-	      "  -h, --help         show this help and exit\n"
-	      "  -V, --version      show version information and exit\n"
-	      "      --clear-cache  remove cached thumbnails and exit\n"
-	      "      --diagnose     check the current setup and exit\n",
-		out);
-}
 
 static enum parse_result parse_uint_override(const char *name,
 	const char *value, uint32_t min, uint32_t max, uint32_t *out,
@@ -280,6 +232,16 @@ static enum parse_result parse_override(int option, const char *value,
 		options->no_config = true;
 		options->config_path_set = false;
 		return PARSE_CONTINUE;
+	case 'o':
+		if (value[0] == '\0') {
+			snprintf(err, err_size,
+				"invalid output name: expected a non-empty "
+				"name");
+			return PARSE_ERROR;
+		}
+		options->output_name = value;
+		options->output_set = true;
+		return PARSE_CONTINUE;
 	case OPTION_PRINT_CONFIG:
 		options->action = SWEETWALL_CLI_PRINT_CONFIG;
 		return PARSE_CONTINUE;
@@ -348,8 +310,8 @@ bool sweetwall_cli_parse(int argc, char *argv[],
 	opterr = 0;
 	optind = 1;
 	for (;;) {
-		int option = getopt_long(
-			argc, argv, ":b:c:d:m:p:r:s:w:hV", long_options, NULL);
+		int option = getopt_long(argc, argv, ":b:c:d:m:o:p:r:s:w:hV",
+			long_options, NULL);
 		if (option == -1) {
 			break;
 		}

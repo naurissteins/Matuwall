@@ -160,8 +160,8 @@ static uint32_t anchor_for(enum sweetwall_position position) {
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |                            \
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT)
 
-bool sweetwall_layer_create(
-	struct sweetwall_layer *layer, const struct sweetwall_registry *reg) {
+bool sweetwall_layer_create(struct sweetwall_layer *layer,
+	const struct sweetwall_registry *reg, struct wl_output *output) {
 	*layer = (struct sweetwall_layer){
 		.buffer_scale = 1,
 	};
@@ -185,9 +185,9 @@ bool sweetwall_layer_create(
 		}
 	}
 
-	// NULL output lets the compositor place the surface on the active one
+	// NULL keeps the compositor-selected active output behavior
 	layer->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-		reg->layer_shell, layer->wl_surface, NULL,
+		reg->layer_shell, layer->wl_surface, output,
 		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, LAYER_NAMESPACE);
 	if (layer->layer_surface == NULL) {
 		wl_surface_destroy(layer->wl_surface);

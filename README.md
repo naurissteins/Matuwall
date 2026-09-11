@@ -67,6 +67,7 @@ sweetwall --background "#181825cc"    # set the panel background color
 sweetwall --tile "#313244"            # set the tile color
 sweetwall --ring "#f2cdcd"            # set the selection ring color
 sweetwall --spinner "#cdd0e6"         # set the loading spinner color
+sweetwall -o DP-1                     # open explicitly on DP-1
 sweetwall -p left                     # move the panel
 sweetwall --no-preview                # open without the backdrop
 sweetwall --no-hooks                  # apply without running hooks
@@ -78,6 +79,12 @@ config file. `--width` accepts decimal values from 1 to 16384.
 The same range applies to `--height`.
 `--background`, `--tile`, `--ring`, and `--spinner` accept `#rrggbb` or
 `#rrggbbaa` colors.
+
+`-o NAME` or `--output NAME` opens Sweetwall on the named Wayland output, such
+as `DP-1` or `HDMI-A-1`. Without it, the compositor continues to choose the
+active output. An unknown name fails with the available output names and never
+falls back silently. This selection is temporary and is not part of
+`--print-config` output.
 
 `--config PATH` loads an alternate configuration file for one invocation. A
 leading `~` expands to `$HOME`, relative paths use the current directory, and

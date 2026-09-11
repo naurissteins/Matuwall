@@ -70,6 +70,13 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	Clear the runtime _hooks.on_apply_ list at this point in option processing. A
 	later *--hook* starts a new list. The configuration file is not changed.
 
+*-o* _NAME_, *--output* _NAME_
+	Open Sweetwall explicitly on the named Wayland output, such as _DP-1_ or
+	_HDMI-A-1_. Without this option, the compositor chooses the active output. An
+	unknown name is an error and reports the available names; Sweetwall does not
+	fall back to another output. This runtime-only selection is not written to the
+	configuration or included in *--print-config* output.
+
 *-p* _POSITION_, *--position* _POSITION_
 	Temporarily override the configured window position for this invocation.
 	_POSITION_ must be _center_, _left_, _right_, _top_, or _bottom_. The
