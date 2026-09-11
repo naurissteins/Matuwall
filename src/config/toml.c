@@ -3,10 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TOML_LINE_MAX 1024
+#include "config/string.h"
+
+#define TOML_LINE_MAX 32768
 #define TOML_SECTION_MAX 64
 #define TOML_ARRAY_MAX_ITEMS 128
-#define TOML_ARRAY_MAX_TEXT 4096
+#define TOML_ARRAY_MAX_TEXT 65536
 
 // Skip leading blanks and strip trailing blanks/newline in place
 static char *trim(char *s) {
@@ -19,28 +21,6 @@ static char *trim(char *s) {
 		*--end = '\0';
 	}
 	return s;
-}
-
-static bool parse_quoted(
-	const char *value, char *out, size_t out_size, const char **end) {
-	if (value[0] != '"') {
-		return false;
-	}
-	const char *start = value + 1;
-	const char *close = strchr(start, '"');
-	if (close == NULL) {
-		return false;
-	}
-	size_t len = (size_t)(close - start);
-	if (len >= out_size) {
-		return false;
-	}
-	memcpy(out, start, len);
-	out[len] = '\0';
-	if (end != NULL) {
-		*end = close + 1;
-	}
-	return true;
 }
 
 static bool bare_token_ok(const char *after) {
@@ -83,7 +63,9 @@ static bool collect_array_text(char *text, size_t text_size, FILE *fp,
 		for (; scan < len; scan++) {
 			char c = text[scan];
 			if (in_quote) {
-				if (c == '"') {
+				if (c == '\\') {
+					scan++;
+				} else if (c == '"') {
 					in_quote = false;
 				}
 			} else if (c == '"') {
@@ -150,7 +132,8 @@ static bool split_array(char *text, char **items, size_t *count,
 		}
 		char buffer[TOML_LINE_MAX];
 		const char *end = NULL;
-		if (!parse_quoted(p, buffer, sizeof(buffer), &end)) {
+		if (!sweetwall_toml_string_parse(
+			    p, buffer, sizeof(buffer), &end)) {
 			snprintf(err, err_size, "%s:%d: unterminated string",
 				name, line);
 			return false;
@@ -266,8 +249,10 @@ bool sweetwall_toml_parse(FILE *fp, const char *name,
 		bool is_array = false;
 
 		if (*value == '"') {
-			if (!parse_quoted(
-				    value, strbuf, sizeof(strbuf), NULL)) {
+			const char *after;
+			if (!sweetwall_toml_string_parse(
+				    value, strbuf, sizeof(strbuf), &after) ||
+				!bare_token_ok(after)) {
 				snprintf(err, err_size,
 					"%s:%d: value must be a quoted string",
 					name, line);
