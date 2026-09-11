@@ -162,7 +162,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	struct sweetwall_app app;
-	bool ok = sweetwall_app_init(&app, &config) && sweetwall_app_run(&app);
+	const char *output_name =
+		options.output_set ? options.output_name : NULL;
+	bool ok = sweetwall_app_init(&app, &config, output_name) &&
+		  sweetwall_app_run(&app);
 	sweetwall_app_finish(&app);
 	sweetwall_log_info("exit", "status %s", ok ? "success" : "failure");
 	sweetwall_log_finish();

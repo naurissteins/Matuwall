@@ -34,6 +34,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
 		reg->seat = wl_registry_bind(registry, name, &wl_seat_interface,
 			min_u32(version, SEAT_MAX_VERSION));
+	} else if (reg->requested_output_name != NULL &&
+		   strcmp(interface, wl_output_interface.name) == 0) {
+		sweetwall_outputs_bind(&reg->outputs, registry, name, version);
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		reg->layer_shell = wl_registry_bind(registry, name,
 			&zwlr_layer_shell_v1_interface,
@@ -52,9 +55,12 @@ static void handle_global(void *data, struct wl_registry *registry,
 
 static void handle_global_remove(
 	void *data, struct wl_registry *registry, uint32_t name) {
-	(void)data;
+	struct sweetwall_registry *reg = data;
 	(void)registry;
-	(void)name;
+	if (sweetwall_outputs_remove(
+		    &reg->outputs, name, reg->selected_output)) {
+		reg->selected_output = NULL;
+	}
 }
 
 static const struct wl_registry_listener registry_listener = {
@@ -62,23 +68,7 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-bool sweetwall_registry_init(
-	struct sweetwall_registry *reg, struct wl_display *display) {
-	*reg = (struct sweetwall_registry){0};
-
-	reg->registry = wl_display_get_registry(display);
-	if (reg->registry == NULL) {
-		sweetwall_log_error("wayland", "failed to get the registry");
-		return false;
-	}
-
-	wl_registry_add_listener(reg->registry, &registry_listener, reg);
-
-	if (wl_display_roundtrip(display) < 0) {
-		sweetwall_log_error("wayland", "registry roundtrip failed");
-		return false;
-	}
-
+static bool required_globals_available(const struct sweetwall_registry *reg) {
 	bool ok = true;
 	if (reg->compositor == NULL) {
 		sweetwall_log_error(
@@ -96,18 +86,60 @@ bool sweetwall_registry_init(
 			"(zwlr_layer_shell_v1)");
 		ok = false;
 	}
-	// The picker takes exclusive keyboard focus; without a seat there
-	// would be no way to dismiss it
+	// Without a seat there would be no way to dismiss the picker
 	if (reg->seat == NULL) {
 		sweetwall_log_error(
 			"wayland", "compositor does not expose wl_seat");
 		ok = false;
 	}
-
 	return ok;
 }
 
+bool sweetwall_registry_init(struct sweetwall_registry *reg,
+	struct wl_display *display, const char *output_name) {
+	*reg = (struct sweetwall_registry){
+		.requested_output_name = output_name,
+	};
+
+	reg->registry = wl_display_get_registry(display);
+	if (reg->registry == NULL) {
+		sweetwall_log_error("wayland", "failed to get the registry");
+		return false;
+	}
+
+	if (wl_registry_add_listener(reg->registry, &registry_listener, reg) <
+		0) {
+		sweetwall_log_error(
+			"wayland", "failed to listen for registry globals");
+		return false;
+	}
+
+	if (wl_display_roundtrip(display) < 0) {
+		sweetwall_log_error("wayland", "registry roundtrip failed");
+		return false;
+	}
+
+	return required_globals_available(reg);
+}
+
+bool sweetwall_registry_select_output(
+	struct sweetwall_registry *reg, struct wl_display *display) {
+	if (reg->requested_output_name == NULL) {
+		return true;
+	}
+	// Bound globals can now deliver initial events to installed listeners
+	if (wl_display_roundtrip(display) < 0) {
+		sweetwall_log_error(
+			"wayland", "output discovery roundtrip failed");
+		return false;
+	}
+	return sweetwall_outputs_select(&reg->outputs,
+		reg->requested_output_name, &reg->selected_output);
+}
+
 void sweetwall_registry_finish(struct sweetwall_registry *reg) {
+	sweetwall_outputs_finish(&reg->outputs);
+	reg->selected_output = NULL;
 	if (reg->fractional_scale_manager != NULL) {
 		wp_fractional_scale_manager_v1_destroy(
 			reg->fractional_scale_manager);

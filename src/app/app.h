@@ -47,8 +47,8 @@ struct sweetwall_app {
 	bool apply_requested;
 };
 
-bool sweetwall_app_init(
-	struct sweetwall_app *app, const struct sweetwall_config *config);
+bool sweetwall_app_init(struct sweetwall_app *app,
+	const struct sweetwall_config *config, const char *output_name);
 
 bool sweetwall_app_run(struct sweetwall_app *app);
 
