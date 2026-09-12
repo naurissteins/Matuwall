@@ -22,6 +22,10 @@ struct sweetwall_cli_options {
 	struct sweetwall_color background;
 	bool tile_set;
 	struct sweetwall_color tile;
+	bool border_set;
+	struct sweetwall_color border;
+	bool border_width_set;
+	uint32_t border_width;
 	bool ring_set;
 	struct sweetwall_color ring;
 	bool ring_width_set;

@@ -82,6 +82,11 @@ void sweetwall_frame_draw(
 	if (ring_width < 1) {
 		ring_width = 1;
 	}
+	int32_t border_width =
+		to_pixels((int32_t)frame->border_width, frame->scale);
+	if (frame->border_width > 0 && border_width < 1) {
+		border_width = 1;
+	}
 
 	for (size_t i = 0; i < frame->item_count; i++) {
 		struct sweetwall_rect rect =
@@ -126,6 +131,11 @@ void sweetwall_frame_draw(
 					left + tw / 2, top + th / 2, dot,
 					frame->spinner, frame->spinner_alpha);
 			}
+		}
+
+		if (border_width > 0) {
+			sweetwall_draw_rounded_ring(buffer, &clip, left, top,
+				tw, th, radius, border_width, frame->border);
 		}
 
 		if (i == frame->selected) {

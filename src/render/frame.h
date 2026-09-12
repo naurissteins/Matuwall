@@ -28,6 +28,8 @@ struct sweetwall_frame {
 	uint32_t background;
 	uint32_t panel_radius;
 	uint32_t tile;
+	uint32_t border;
+	uint32_t border_width;
 	uint32_t ring;
 	uint32_t ring_width;
 	struct sweetwall_color spinner;

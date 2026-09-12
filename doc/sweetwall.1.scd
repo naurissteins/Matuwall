@@ -31,6 +31,16 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	is used without probing; _auto_ probes when a wallpaper is applied. The
 	configuration file is not changed.
 
+*--border* _COLOR_
+	Temporarily set _colors.border_. _COLOR_ must be _"#rrggbb"_ or
+	_"#rrggbbaa"_. Quote the value in a shell because it starts with _#_. The
+	configuration file is not changed.
+
+*--border-width* _WIDTH_
+	Temporarily set _grid.border_width_. _WIDTH_ must be a decimal integer from
+	0 to 4096. Zero disables thumbnail borders. The configuration file is not
+	changed.
+
 *-c* _COLUMNS_, *--columns* _COLUMNS_
 	Temporarily set the maximum number of grid columns. _COLUMNS_ must be a
 	decimal integer from 1 to 1024. The grid may use fewer columns to fit the

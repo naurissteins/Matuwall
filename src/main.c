@@ -99,6 +99,16 @@ int main(int argc, char *argv[]) {
 			"tile overridden to #%02x%02x%02x%02x", config.tile.r,
 			config.tile.g, config.tile.b, config.tile.a);
 	}
+	if (options.border_set) {
+		sweetwall_log_info("config",
+			"border overridden to #%02x%02x%02x%02x",
+			config.border.r, config.border.g, config.border.b,
+			config.border.a);
+	}
+	if (options.border_width_set) {
+		sweetwall_log_info("config", "border width overridden to %u",
+			config.border_width);
+	}
 	if (options.ring_set) {
 		sweetwall_log_info("config",
 			"ring overridden to #%02x%02x%02x%02x", config.ring.r,

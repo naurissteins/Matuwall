@@ -40,6 +40,9 @@ spacing = 16
 # Tile corner radius in pixels.
 radius = 8
 
+# Thumbnail border width in pixels. Zero disables the border.
+border_width = 0
+
 # Selection ring width in pixels.
 ring_width = 2
 
@@ -55,6 +58,9 @@ height = 400
 [colors]
 # Placeholder tile shown until a thumbnail is ready.
 tile = "#313244ff"
+
+# Border drawn inside every thumbnail.
+border = "#585b70ff"
 
 # Selection ring around the focused tile.
 ring = "#f2cdcdff"
