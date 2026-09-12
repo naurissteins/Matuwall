@@ -140,9 +140,10 @@ void sweetwall_frame_draw(
 
 		if (i == frame->selected) {
 			int32_t inset = ring_gap + ring_width;
+			int32_t ring_radius = radius == 0 ? 0 : radius + inset;
 			sweetwall_draw_rounded_ring(buffer, &clip, left - inset,
 				top - inset, (right - left) + inset * 2,
-				(bottom - top) + inset * 2, radius + inset,
+				(bottom - top) + inset * 2, ring_radius,
 				ring_width, frame->ring);
 		}
 	}
