@@ -33,6 +33,7 @@ struct sweetwall_config {
 	// Fill the output with the selected wallpaper behind the panel
 	bool preview;
 	bool close_on_focus_loss;
+	bool mouse_enabled;
 	// on_apply command templates, run after a successful apply
 	char on_apply[SWEETWALL_MAX_HOOKS][SWEETWALL_HOOK_MAX];
 	size_t on_apply_count;

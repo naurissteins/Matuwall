@@ -23,6 +23,7 @@ Simple, fast and lightweight wallpaper picker for Wayland
 - Full-screen wallpaper previews without applying the selection
 - Configurable grid layout, colors, placement, output and fractional scaling
 - Native `sweetbg` and `awww` backends with automatic detection
+- Keyboard-only by default, with optional mouse controls
 - Safe, detached post-apply hooks for tools such as Matugen and Pywal
 
 ## Install
@@ -94,6 +95,14 @@ Run `sweetwall --help` for every option.
 - `End`, `G` | Last wallpaper |
 - `Enter` | Apply and exit |
 - `Escape` | Cancel and exit |
+
+Mouse controls are disabled by default. Enable hover selection, wheel navigation,
+and left-click apply in the config:
+
+```toml
+[input]
+mouse = true
+```
 
 ## Configure
 

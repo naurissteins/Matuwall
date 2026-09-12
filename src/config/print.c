@@ -72,6 +72,8 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 	print_color(out, "background", config->background);
 	fprintf(out, "margin = %u\nradius = %u\n", config->layout.margin,
 		config->panel_radius);
+	fputs("\n[input]\nmouse = ", out);
+	fputs(config->mouse_enabled ? "true\n" : "false\n", out);
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\nspacing = %u\n"

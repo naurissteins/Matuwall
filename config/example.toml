@@ -34,6 +34,11 @@ margin = 24
 # Panel corner radius in pixels.
 radius = 16
 
+[input]
+# Enable hover selection, wheel navigation, and left-click apply. Disabled by
+# default so Sweetwall is controlled only from the keyboard.
+mouse = false
+
 [grid]
 # Maximum number of tile columns. Fewer are used on narrow outputs.
 columns = 5

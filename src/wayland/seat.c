@@ -202,13 +202,17 @@ static void handle_capabilities(
 	}
 
 	bool has_pointer = (capabilities & WL_SEAT_CAPABILITY_POINTER) != 0;
-	if (has_pointer && seat->pointer.wl_pointer == NULL) {
+	bool wants_pointer = seat->handler.pointer_motion != NULL ||
+			     seat->handler.pointer_button != NULL ||
+			     seat->handler.pointer_scroll != NULL;
+	if (has_pointer && wants_pointer && seat->pointer.wl_pointer == NULL) {
 		struct wl_pointer *wl_pointer = wl_seat_get_pointer(wl_seat);
 		if (wl_pointer != NULL) {
 			sweetwall_pointer_init(&seat->pointer, wl_pointer,
 				&seat->handler, seat->user_data);
 		}
-	} else if (!has_pointer && seat->pointer.wl_pointer != NULL) {
+	} else if ((!has_pointer || !wants_pointer) &&
+		   seat->pointer.wl_pointer != NULL) {
 		sweetwall_pointer_finish(&seat->pointer);
 	}
 }
