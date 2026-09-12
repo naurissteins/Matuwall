@@ -65,8 +65,10 @@ bool sweetwall_app_init(struct sweetwall_app *app,
 		return false;
 	}
 
-	if (!sweetwall_seat_init(&app->seat, app->registry.seat,
-		    &sweetwall_app_seat_handler, app)) {
+	const struct sweetwall_seat_handler *input_handler =
+		sweetwall_app_input_handler(app->config.mouse_enabled);
+	if (!sweetwall_seat_init(
+		    &app->seat, app->registry.seat, input_handler, app)) {
 		return false;
 	}
 	if (!sweetwall_registry_select_output(&app->registry, app->display)) {

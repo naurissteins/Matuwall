@@ -3,7 +3,8 @@
 
 #include "wayland/seat.h"
 
-// Keyboard and pointer policy: what a raw event means for the grid
-extern const struct sweetwall_seat_handler sweetwall_app_seat_handler;
+// Choose keyboard-only or mouse-enabled input policy
+const struct sweetwall_seat_handler *sweetwall_app_input_handler(
+	bool mouse_enabled);
 
 #endif

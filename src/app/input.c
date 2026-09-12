@@ -140,10 +140,20 @@ static void handle_pointer_scroll(void *user_data, int32_t steps) {
 	}
 }
 
-const struct sweetwall_seat_handler sweetwall_app_seat_handler = {
+static const struct sweetwall_seat_handler keyboard_handler = {
+	.key = handle_key,
+	.focus_lost = handle_focus_lost,
+};
+
+static const struct sweetwall_seat_handler mouse_handler = {
 	.key = handle_key,
 	.focus_lost = handle_focus_lost,
 	.pointer_motion = handle_pointer_motion,
 	.pointer_button = handle_pointer_button,
 	.pointer_scroll = handle_pointer_scroll,
 };
+
+const struct sweetwall_seat_handler *sweetwall_app_input_handler(
+	bool mouse_enabled) {
+	return mouse_enabled ? &mouse_handler : &keyboard_handler;
+}

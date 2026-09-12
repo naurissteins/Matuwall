@@ -68,6 +68,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 		.ring_width = 2,
 		.preview = true,
 		.close_on_focus_loss = true,
+		.mouse_enabled = false,
 	};
 
 	const char *home = getenv("HOME");
@@ -243,6 +244,12 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "close_on_focus_loss") == 0) {
 			apply_bool(&cfg->close_on_focus_loss, v, line,
 				"close_on_focus_loss must be true or false");
+			return true;
+		}
+	} else if (strcmp(section, "input") == 0) {
+		if (strcmp(key, "mouse") == 0) {
+			apply_bool(&cfg->mouse_enabled, v, line,
+				"mouse must be true or false");
 			return true;
 		}
 	} else if (strcmp(section, "grid") == 0) {

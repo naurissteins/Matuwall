@@ -191,10 +191,11 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 
 # MOUSE
 
-The keyboard is the primary interface, but the pointer is supported. Moving the
-cursor over a tile selects it, a left click applies that tile (like *Enter*), and
-the scroll wheel moves the selection through the grid. When the preview backdrop
-is on, a left click outside the panel cancels (like *Escape*).
+Mouse interaction is disabled by default. Set _input.mouse_ to _true_ to enable
+it. When enabled, moving the cursor over a tile selects it, a left click applies
+that tile (like *Enter*), and the scroll wheel moves the selection through the
+grid. When the preview backdrop is on, a left click outside the panel cancels
+(like *Escape*).
 
 # BACKENDS
 

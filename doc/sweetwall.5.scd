@@ -93,6 +93,14 @@ line. Comments are not allowed inside an array.
 	Panel corner radius in pixels. Defaults to _16_. This is independent of
 	_grid.radius_, which controls the tile corners.
 
+## [input]
+
+*mouse*
+	Enable mouse interaction. When enabled, moving over a tile selects it, the
+	scroll wheel navigates the grid, and a left click applies the selected tile.
+	With preview enabled, clicking outside the panel cancels. Defaults to _false_,
+	leaving navigation and selection keyboard-only.
+
 ## [grid]
 
 *columns*
@@ -176,6 +184,9 @@ position   = "center"
 background = "#1e1e2ecc"
 margin     = 24
 radius     = 16
+
+[input]
+mouse = false
 
 [grid]
 columns = 5
