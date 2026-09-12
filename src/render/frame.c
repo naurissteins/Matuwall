@@ -111,15 +111,27 @@ void sweetwall_frame_draw(
 
 		const struct sweetwall_thumb *thumb =
 			frame->thumbs != NULL ? &frame->thumbs[i] : NULL;
+		int32_t border_inset = 0;
+		if (border_width > 0 && border_width <= (tw - 1) / 2 &&
+			border_width <= (th - 1) / 2) {
+			border_inset = border_width;
+			sweetwall_draw_rounded_rect(buffer, &clip, left, top,
+				tw, th, radius, frame->border);
+		}
 
 		if (thumb != NULL && thumb->state == SWEETWALL_THUMB_READY &&
 			thumb->pixels != NULL) {
 			sweetwall_draw_image_rounded(buffer, &clip, left, top,
-				tw, th, radius, thumb->pixels, thumb->width,
-				thumb->height);
+				tw, th, radius, border_inset, thumb->pixels,
+				thumb->width, thumb->height);
 		} else {
-			sweetwall_draw_rounded_rect(buffer, &clip, left, top,
-				tw, th, radius, frame->tile);
+			int32_t inner_radius = radius > border_inset
+						       ? radius - border_inset
+						       : 0;
+			sweetwall_draw_rounded_rect(buffer, &clip,
+				left + border_inset, top + border_inset,
+				tw - border_inset * 2, th - border_inset * 2,
+				inner_radius, frame->tile);
 
 			// A dot only while the decode is still in flight
 			bool pending = thumb == NULL ||
@@ -131,11 +143,6 @@ void sweetwall_frame_draw(
 					left + tw / 2, top + th / 2, dot,
 					frame->spinner, frame->spinner_alpha);
 			}
-		}
-
-		if (border_width > 0) {
-			sweetwall_draw_rounded_ring(buffer, &clip, left, top,
-				tw, th, radius, border_width, frame->border);
 		}
 
 		if (i == frame->selected) {

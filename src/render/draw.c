@@ -323,18 +323,29 @@ void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
 
 void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
-	int32_t height, int32_t radius, const uint32_t *src, uint32_t src_w,
-	uint32_t src_h) {
-	if (width <= 0 || height <= 0 || src_w == 0 || src_h == 0) {
+	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
+	uint32_t src_w, uint32_t src_h) {
+	if (width <= 0 || height <= 0 || inset < 0 || inset > (width - 1) / 2 ||
+		inset > (height - 1) / 2 || src == NULL || src_w == 0 ||
+		src_h == 0) {
 		return;
 	}
 
 	radius = clamp_radius(radius, width, height);
+	int32_t inner_radius = radius > inset ? radius - inset : 0;
+	int32_t inner_x = x + inset;
+	int32_t inner_y = y + inset;
+	int32_t inner_width = width - inset * 2;
+	int32_t inner_height = height - inset * 2;
 
-	int32_t top = y < clip->y0 ? clip->y0 : y;
-	int32_t bottom = y + height > clip->y1 ? clip->y1 : y + height;
-	int32_t left = x < clip->x0 ? clip->x0 : x;
-	int32_t right = x + width > clip->x1 ? clip->x1 : x + width;
+	int32_t top = inner_y < clip->y0 ? clip->y0 : inner_y;
+	int32_t bottom = inner_y + inner_height > clip->y1
+				 ? clip->y1
+				 : inner_y + inner_height;
+	int32_t left = inner_x < clip->x0 ? clip->x0 : inner_x;
+	int32_t right = inner_x + inner_width > clip->x1
+				? clip->x1
+				: inner_x + inner_width;
 
 	for (int32_t py = top; py < bottom; py++) {
 		uint32_t sy = (uint32_t)((int64_t)(py - y) * src_h / height);
@@ -345,8 +356,8 @@ void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 		uint32_t *dst_row = buffer->data + (size_t)py * buffer->width;
 
 		for (int32_t px = left; px < right; px++) {
-			uint32_t cov = rect_coverage(
-				px, py, x, y, width, height, radius);
+			uint32_t cov = rect_coverage(px, py, inner_x, inner_y,
+				inner_width, inner_height, inner_radius);
 			if (cov == 0) {
 				continue;
 			}
