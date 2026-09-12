@@ -67,6 +67,11 @@ line. Comments are not allowed inside an array.
 	milliseconds to the first frame. Set it to _false_ for the older
 	panel-sized window with no backdrop.
 
+*close_on_focus_loss*
+	Close Sweetwall when keyboard focus leaves its surface. Defaults to _true_.
+	Set this to _false_ to keep the picker open while focus moves to another
+	output; moving focus back restores keyboard control.
+
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,
 	_"top"_, or _"bottom"_. Defaults to _"center"_. With *preview* on this
@@ -166,6 +171,7 @@ directory = "~/Pictures/Wallpapers"
 
 [window]
 preview    = true
+close_on_focus_loss = true
 position   = "center"
 background = "#1e1e2ecc"
 margin     = 24

@@ -66,6 +66,8 @@ struct sweetwall_cli_options {
 	enum sweetwall_position position;
 	bool preview_set;
 	bool preview;
+	bool close_on_focus_loss_set;
+	bool close_on_focus_loss;
 };
 
 bool sweetwall_cli_parse(int argc, char *argv[],

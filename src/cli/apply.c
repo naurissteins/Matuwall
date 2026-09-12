@@ -70,4 +70,7 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	if (options->preview_set) {
 		config->preview = options->preview;
 	}
+	if (options->close_on_focus_loss_set) {
+		config->close_on_focus_loss = options->close_on_focus_loss;
+	}
 }

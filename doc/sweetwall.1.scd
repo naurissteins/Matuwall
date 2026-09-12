@@ -46,6 +46,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	decimal integer from 1 to 1024. The grid may use fewer columns to fit the
 	selected output. The configuration file is not changed.
 
+*--close-on-focus-loss*
+	Close when keyboard focus leaves Sweetwall for this invocation, overriding
+	_window.close_on_focus_loss_.
+
 *--config* _PATH_
 	Load _PATH_ instead of the standard configuration file. A leading _~_ expands
 	to _$HOME_; a relative path is resolved from the current directory. Other
@@ -75,6 +79,10 @@ sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 	defaults, then apply other command-line overrides. *--config* and
 	*--no-config* are processed left to right, so the last one selects the
 	configuration source.
+
+*--no-close-on-focus-loss*
+	Keep Sweetwall open when keyboard focus leaves for this invocation, overriding
+	_window.close_on_focus_loss_. Moving focus back restores keyboard control.
 
 *--no-hooks*
 	Clear the runtime _hooks.on_apply_ list at this point in option processing. A

@@ -64,6 +64,8 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 
 	fputs("\n\n[window]\npreview = ", out);
 	fputs(config->preview ? "true\n" : "false\n", out);
+	fputs("close_on_focus_loss = ", out);
+	fputs(config->close_on_focus_loss ? "true\n" : "false\n", out);
 	fputs("position = ", out);
 	print_quoted(out, sweetwall_position_name(config->position));
 	fputc('\n', out);

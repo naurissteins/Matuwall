@@ -77,6 +77,7 @@ sweetwall --spinner "#cdd0e6"                    # set the loading spinner color
 sweetwall -o DP-1                                # open explicitly on DP-1
 sweetwall -p left                                # move the panel
 sweetwall --no-preview                           # open without the backdrop
+sweetwall --no-close-on-focus-loss               # stay open when focus moves away
 sweetwall --no-hooks                             # apply without running hooks
 sweetwall --hook 'matugen image {path}'          # replace hooks for one run
 ```
