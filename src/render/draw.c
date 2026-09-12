@@ -169,10 +169,14 @@ void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
 		inner_r = 0.0;
 	}
 
-	int32_t skip_x0 = (int32_t)inner_x + 2;
-	int32_t skip_x1 = (int32_t)(inner_x + inner_w) - 2;
-	int32_t skip_y0 = (int32_t)inner_y + 2;
-	int32_t skip_y1 = (int32_t)(inner_y + inner_h) - 2;
+	int32_t inner_left = (int32_t)inner_x;
+	int32_t inner_right = (int32_t)(inner_x + inner_w);
+	int32_t inner_top = (int32_t)inner_y;
+	int32_t inner_bottom = (int32_t)(inner_y + inner_h);
+	int32_t core_left = (int32_t)(inner_x + inner_r);
+	int32_t core_right = (int32_t)(inner_x + inner_w - inner_r);
+	int32_t core_top = (int32_t)(inner_y + inner_r);
+	int32_t core_bottom = (int32_t)(inner_y + inner_h - inner_r);
 
 	int32_t top = y < clip->y0 ? clip->y0 : y;
 	int32_t bottom = y + height > clip->y1 ? clip->y1 : y + height;
@@ -180,11 +184,17 @@ void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
 	int32_t right = x + width > clip->x1 ? clip->x1 : x + width;
 
 	for (int32_t py = top; py < bottom; py++) {
-		bool banded = py >= skip_y0 && py < skip_y1;
+		int32_t skip_x0 = left;
+		int32_t skip_x1 = left;
+		if (py >= inner_top && py < inner_bottom) {
+			bool core_row = py >= core_top && py < core_bottom;
+			skip_x0 = core_row ? inner_left : core_left;
+			skip_x1 = core_row ? inner_right : core_right;
+		}
 		uint32_t *row = buffer->data + (size_t)py * buffer->width;
 
 		for (int32_t px = left; px < right; px++) {
-			if (banded && px >= skip_x0 && px < skip_x1) {
+			if (px >= skip_x0 && px < skip_x1) {
 				// Jump the interior in one step
 				px = skip_x1 - 1;
 				continue;
