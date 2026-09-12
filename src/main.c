@@ -178,6 +178,11 @@ int main(int argc, char *argv[]) {
 		sweetwall_log_info("config", "preview overridden to %s",
 			config.preview ? "true" : "false");
 	}
+	if (options.close_on_focus_loss_set) {
+		sweetwall_log_info("config",
+			"close on focus loss overridden to %s",
+			config.close_on_focus_loss ? "true" : "false");
+	}
 
 	struct sweetwall_app app;
 	const char *output_name =

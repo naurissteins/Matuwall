@@ -17,6 +17,10 @@ backend = "sweetbg"
 # for a panel-sized window with no backdrop.
 preview = false
 
+# Close when keyboard focus moves away from Sweetwall. Set to false to keep the
+# picker open while using another output.
+close_on_focus_loss = true
+
 # Placement on screen: "center", "left", "right", "top", or "bottom". With
 # preview on, this places the panel inside the full-screen surface.
 position = "center"

@@ -14,9 +14,11 @@ enum {
 	OPTION_BACKGROUND,
 	OPTION_BORDER,
 	OPTION_BORDER_WIDTH,
+	OPTION_CLOSE_ON_FOCUS_LOSS,
 	OPTION_CONFIG,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
+	OPTION_NO_CLOSE_ON_FOCUS_LOSS,
 	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
 	OPTION_PANEL_RADIUS,
@@ -42,12 +44,15 @@ static const struct option long_options[] = {
 	{"backend", required_argument, NULL, 'b'},
 	{"border", required_argument, NULL, OPTION_BORDER},
 	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
+	{"close-on-focus-loss", no_argument, NULL, OPTION_CLOSE_ON_FOCUS_LOSS},
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
 	{"directory", required_argument, NULL, 'd'},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
+	{"no-close-on-focus-loss", no_argument, NULL,
+		OPTION_NO_CLOSE_ON_FOCUS_LOSS},
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"output", required_argument, NULL, 'o'},
@@ -223,6 +228,10 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_BORDER:
 		return parse_color_override("border", value, &options->border,
 			&options->border_set, err, err_size);
+	case OPTION_CLOSE_ON_FOCUS_LOSS:
+		options->close_on_focus_loss_set = true;
+		options->close_on_focus_loss = true;
+		return PARSE_CONTINUE;
 	case 'b':
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
@@ -250,6 +259,10 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_NO_HOOKS:
 		options->hooks_set = true;
 		options->hook_count = 0;
+		return PARSE_CONTINUE;
+	case OPTION_NO_CLOSE_ON_FOCUS_LOSS:
+		options->close_on_focus_loss_set = true;
+		options->close_on_focus_loss = false;
 		return PARSE_CONTINUE;
 	case OPTION_NO_CONFIG:
 		options->no_config = true;

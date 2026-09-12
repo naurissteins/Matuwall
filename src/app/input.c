@@ -82,7 +82,7 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 
 static void handle_focus_lost(void *user_data) {
 	struct sweetwall_app *app = user_data;
-	if (!app->running) {
+	if (!app->running || !app->config.close_on_focus_loss) {
 		return;
 	}
 	sweetwall_log_info("exit", "cancelled after keyboard focus was lost");

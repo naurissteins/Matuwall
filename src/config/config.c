@@ -67,6 +67,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 		.border_width = 0,
 		.ring_width = 2,
 		.preview = true,
+		.close_on_focus_loss = true,
 	};
 
 	const char *home = getenv("HOME");
@@ -237,6 +238,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "preview") == 0) {
 			apply_bool(&cfg->preview, v, line,
 				"preview must be true or false");
+			return true;
+		}
+		if (strcmp(key, "close_on_focus_loss") == 0) {
+			apply_bool(&cfg->close_on_focus_loss, v, line,
+				"close_on_focus_loss must be true or false");
 			return true;
 		}
 	} else if (strcmp(section, "grid") == 0) {
