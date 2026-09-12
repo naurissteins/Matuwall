@@ -53,6 +53,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 		.position = SWEETWALL_POSITION_CENTER,
 		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
 		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
+		.border = {.r = 0x58, .g = 0x5b, .b = 0x70, .a = 0xff},
 		.ring = {.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff},
 		.spinner = {.r = 0xcd, .g = 0xd0, .b = 0xe6, .a = 0xff},
 		.layout = {.columns = 5,
@@ -63,6 +64,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 			.radius = 8},
 		.visible_rows = 2,
 		.panel_radius = 16,
+		.border_width = 0,
 		.ring_width = 2,
 		.preview = true,
 	};
@@ -253,6 +255,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 				"grid radius must be 0..4096", 0, 4096);
 			return true;
 		}
+		if (strcmp(key, "border_width") == 0) {
+			apply_uint(&cfg->border_width, v, line,
+				"border_width must be 0..4096", 0, 4096);
+			return true;
+		}
 		if (strcmp(key, "ring_width") == 0) {
 			apply_uint(&cfg->ring_width, v, line,
 				"ring_width must be 1..4096", 1, 4096);
@@ -278,6 +285,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "tile") == 0) {
 			apply_color(&cfg->tile, v, line,
 				"tile must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+		if (strcmp(key, "border") == 0) {
+			apply_color(&cfg->border, v, line,
+				"border must be \"#rrggbb\" or \"#rrggbbaa\"");
 			return true;
 		}
 		if (strcmp(key, "ring") == 0) {

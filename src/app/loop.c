@@ -99,6 +99,8 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.background = sweetwall_color_argb(app->config.background),
 		.panel_radius = app->config.panel_radius,
 		.tile = sweetwall_color_argb(app->config.tile),
+		.border = sweetwall_color_argb(app->config.border),
+		.border_width = app->config.border_width,
 		.ring = sweetwall_color_argb(app->config.ring),
 		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,

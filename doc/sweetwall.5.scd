@@ -100,6 +100,10 @@ line. Comments are not allowed inside an array.
 *radius*
 	Tile corner radius in pixels. Defaults to _8_.
 
+*border_width*
+	Border width drawn inside every thumbnail in logical pixels. Defaults to _0_,
+	which disables thumbnail borders. Must be an integer from 0 to 4096.
+
 *ring_width*
 	Selection ring width in logical pixels. Defaults to _2_. Must be an integer
 	from 1 to 4096.
@@ -125,6 +129,10 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 *tile*
 	Placeholder shown on a tile until its thumbnail is ready. Defaults to
 	_"#313244ff"_.
+
+*border*
+	Border drawn inside every thumbnail when _grid.border_width_ is nonzero.
+	Defaults to _"#585b70ff"_.
 
 *ring*
 	Selection ring around the focused tile. Defaults to _"#f2cdcdff"_.
@@ -167,12 +175,16 @@ radius     = 16
 columns = 5
 spacing = 16
 radius  = 8
+border_width = 0
 ring_width = 2
 visible_rows = 2
 
 [thumbnail]
 width  = 240
 height = 400
+
+[colors]
+border = "#585b70ff"
 
 [hooks]
 on_apply = [

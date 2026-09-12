@@ -22,11 +22,13 @@ struct sweetwall_config {
 	enum sweetwall_position position;
 	struct sweetwall_color background;
 	struct sweetwall_color tile;
+	struct sweetwall_color border;
 	struct sweetwall_color ring;
 	struct sweetwall_color spinner;
 	struct sweetwall_layout layout;
 	uint32_t visible_rows;
 	uint32_t panel_radius;
+	uint32_t border_width;
 	uint32_t ring_width;
 	// Fill the output with the selected wallpaper behind the panel
 	bool preview;

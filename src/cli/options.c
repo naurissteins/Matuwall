@@ -12,6 +12,8 @@ enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
+	OPTION_BORDER,
+	OPTION_BORDER_WIDTH,
 	OPTION_CONFIG,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
@@ -38,6 +40,8 @@ enum parse_result {
 static const struct option long_options[] = {
 	{"background", required_argument, NULL, OPTION_BACKGROUND},
 	{"backend", required_argument, NULL, 'b'},
+	{"border", required_argument, NULL, OPTION_BORDER},
+	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
 	{"directory", required_argument, NULL, 'd'},
@@ -167,6 +171,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 		return parse_uint_override("columns", value, 1, 1024,
 			&options->columns, &options->columns_set, err,
 			err_size);
+	case OPTION_BORDER_WIDTH:
+		return parse_uint_override("border width", value, 0, 4096,
+			&options->border_width, &options->border_width_set, err,
+			err_size);
 	case OPTION_HEIGHT:
 		return parse_uint_override("height", value, 1, 16384,
 			&options->height, &options->height_set, err, err_size);
@@ -212,6 +220,9 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_color_override("background", value,
 			&options->background, &options->background_set, err,
 			err_size);
+	case OPTION_BORDER:
+		return parse_color_override("border", value, &options->border,
+			&options->border_set, err, err_size);
 	case 'b':
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE

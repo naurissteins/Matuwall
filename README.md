@@ -69,6 +69,8 @@ sweetwall -w 320                                 # set thumbnail width to 320
 sweetwall --height 480                           # set thumbnail height to 480
 sweetwall --background "#181825cc"               # set the panel background color
 sweetwall --tile "#313244"                       # set the tile color
+sweetwall --border "#585b70"                     # set the thumbnail border color
+sweetwall --border-width 1                       # set the thumbnail border width
 sweetwall --ring "#f2cdcd"                       # set the selection ring color
 sweetwall --ring-width 2                         # set the selection ring width
 sweetwall --spinner "#cdd0e6"                    # set the loading spinner color

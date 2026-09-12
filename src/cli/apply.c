@@ -10,6 +10,12 @@ void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
 	if (options->tile_set) {
 		config->tile = options->tile;
 	}
+	if (options->border_set) {
+		config->border = options->border;
+	}
+	if (options->border_width_set) {
+		config->border_width = options->border_width;
+	}
 	if (options->ring_set) {
 		config->ring = options->ring;
 	}
