@@ -127,6 +127,8 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.tile = matuwall_color_argb(app->config.tile),
 		.border = matuwall_color_argb(app->config.border),
 		.border_width = app->config.border_width,
+		.shadow = matuwall_color_argb(app->config.shadow),
+		.shadow_width = app->config.shadow_width,
 		.ring = app->config.ring,
 		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,

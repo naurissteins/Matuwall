@@ -21,7 +21,7 @@ Simple, fast and lightweight wallpaper picker for Wayland
 
 - Asynchronous JPEG, PNG, and WebP thumbnails with a fast on-disk cache
 - Full-screen wallpaper previews without applying the selection
-- Configurable grid layout, colors, placement, output and fractional scaling
+- Configurable grid layout, colors, thumbnail edge shadows, placement, output and fractional scaling
 - Native `sweetbg` and `awww` backends with automatic detection
 - Keyboard-only by default, with optional mouse controls
 - Safe, detached post-apply hooks for tools such as Matugen and Pywal
@@ -68,6 +68,8 @@ matuwall --background "#181825cc"               # set the panel background color
 matuwall --tile "#313244"                       # set the tile color
 matuwall --border "#585b70"                     # set the thumbnail border color
 matuwall --border-width 1                       # set the thumbnail border width
+matuwall --shadow "#00000066"                   # set the thumbnail shadow color
+matuwall --shadow-width 10                      # set the shadow fade distance
 matuwall --ring "#f2cdcd"                       # set the selection ring color
 matuwall --ring-width 0                         # disable the selection ring
 matuwall --spinner "#cdd0e6"                    # set the loading spinner color

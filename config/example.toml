@@ -59,6 +59,9 @@ radius = 8
 # Thumbnail border width in pixels. Zero disables the border.
 border_width = 0
 
+# Soft shadow width outside thumbnail edges. Zero disables the shadow.
+shadow_width = 0
+
 # Selection ring width in pixels. Zero disables the ring.
 ring_width = 2
 
@@ -77,6 +80,9 @@ tile = "#313244ff"
 
 # Border drawn inside every thumbnail.
 border = "#585b70ff"
+
+# Shadow fading outward from thumbnail edges.
+shadow = "#00000066"
 
 # Selection ring around the focused tile.
 ring = "#f2cdcdff"

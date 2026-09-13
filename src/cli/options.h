@@ -26,6 +26,10 @@ struct matuwall_cli_options {
 	struct matuwall_color border;
 	bool border_width_set;
 	uint32_t border_width;
+	bool shadow_set;
+	struct matuwall_color shadow;
+	bool shadow_width_set;
+	uint32_t shadow_width;
 	bool ring_set;
 	struct matuwall_color ring;
 	bool ring_width_set;

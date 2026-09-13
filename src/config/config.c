@@ -54,6 +54,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
 		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
 		.border = {.r = 0x58, .g = 0x5b, .b = 0x70, .a = 0xff},
+		.shadow = {.r = 0x00, .g = 0x00, .b = 0x00, .a = 0x66},
 		.ring = {.r = 0xf2, .g = 0xcd, .b = 0xcd, .a = 0xff},
 		.spinner = {.r = 0xcd, .g = 0xd0, .b = 0xe6, .a = 0xff},
 		.layout = {.columns = 5,
@@ -65,6 +66,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 		.visible_rows = 2,
 		.panel_radius = 16,
 		.border_width = 0,
+		.shadow_width = 0,
 		.ring_width = 2,
 		.navigation_ms = 110,
 		.zoom_percent = 3,
@@ -285,6 +287,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 				"border_width must be 0..4096", 0, 4096);
 			return true;
 		}
+		if (strcmp(key, "shadow_width") == 0) {
+			apply_uint(&cfg->shadow_width, v, line,
+				"shadow_width must be 0..4096", 0, 4096);
+			return true;
+		}
 		if (strcmp(key, "ring_width") == 0) {
 			apply_uint(&cfg->ring_width, v, line,
 				"ring_width must be 0..4096", 0, 4096);
@@ -315,6 +322,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "border") == 0) {
 			apply_color(&cfg->border, v, line,
 				"border must be \"#rrggbb\" or \"#rrggbbaa\"");
+			return true;
+		}
+		if (strcmp(key, "shadow") == 0) {
+			apply_color(&cfg->shadow, v, line,
+				"shadow must be \"#rrggbb\" or \"#rrggbbaa\"");
 			return true;
 		}
 		if (strcmp(key, "ring") == 0) {

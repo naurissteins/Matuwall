@@ -22,12 +22,14 @@ struct matuwall_config {
 	struct matuwall_color background;
 	struct matuwall_color tile;
 	struct matuwall_color border;
+	struct matuwall_color shadow;
 	struct matuwall_color ring;
 	struct matuwall_color spinner;
 	struct matuwall_layout layout;
 	uint32_t visible_rows;
 	uint32_t panel_radius;
 	uint32_t border_width;
+	uint32_t shadow_width;
 	uint32_t ring_width;
 	// Zero disables navigation transitions
 	uint32_t navigation_ms;

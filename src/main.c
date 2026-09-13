@@ -108,6 +108,16 @@ int main(int argc, char *argv[]) {
 		matuwall_log_info("config", "border width overridden to %u",
 			config.border_width);
 	}
+	if (options.shadow_set) {
+		matuwall_log_info("config",
+			"shadow overridden to #%02x%02x%02x%02x",
+			config.shadow.r, config.shadow.g, config.shadow.b,
+			config.shadow.a);
+	}
+	if (options.shadow_width_set) {
+		matuwall_log_info("config", "shadow width overridden to %u",
+			config.shadow_width);
+	}
 	if (options.ring_set) {
 		matuwall_log_info("config",
 			"ring overridden to #%02x%02x%02x%02x", config.ring.r,

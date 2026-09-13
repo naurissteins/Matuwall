@@ -46,6 +46,8 @@ struct matuwall_frame {
 	uint32_t tile;
 	uint32_t border;
 	uint32_t border_width;
+	uint32_t shadow;
+	uint32_t shadow_width;
 	struct matuwall_color ring;
 	uint32_t ring_width;
 	struct matuwall_color spinner;

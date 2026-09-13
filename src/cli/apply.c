@@ -16,6 +16,12 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->border_width_set) {
 		config->border_width = options->border_width;
 	}
+	if (options->shadow_set) {
+		config->shadow = options->shadow;
+	}
+	if (options->shadow_width_set) {
+		config->shadow_width = options->shadow_width;
+	}
 	if (options->ring_set) {
 		config->ring = options->ring;
 	}

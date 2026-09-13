@@ -132,6 +132,12 @@ line. Comments are not allowed inside an array.
 	Border width drawn inside every thumbnail in logical pixels. Defaults to _0_,
 	which disables thumbnail borders. Must be an integer from 0 to 4096.
 
+*shadow_width*
+	Distance in logical pixels over which the thumbnail shadow fades outward.
+	Only the exterior rounded edges are drawn; no shadow fill is rendered beneath
+	the thumbnail. Defaults to _0_, which disables shadows. Must be an integer
+	from 0 to 4096.
+
 *ring_width*
 	Selection ring width in logical pixels. Defaults to _2_. Set to _0_ to disable
 	the ring. Must be an integer from 0 to 4096.
@@ -161,6 +167,10 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 *border*
 	Border drawn inside every thumbnail when _grid.border_width_ is nonzero.
 	Defaults to _"#585b70ff"_.
+
+*shadow*
+	Shadow fading outward from every thumbnail when _grid.shadow_width_ is
+	nonzero. Defaults to _"#00000066"_. Its alpha controls the shadow strength.
 
 *ring*
 	Selection ring around the focused tile. Defaults to _"#f2cdcdff"_.
@@ -212,6 +222,7 @@ columns = 5
 spacing = 16
 radius  = 8
 border_width = 0
+shadow_width = 0
 ring_width = 2
 visible_rows = 2
 
@@ -221,6 +232,7 @@ height = 400
 
 [colors]
 border = "#585b70ff"
+shadow = "#00000066"
 
 [hooks]
 on_apply = [

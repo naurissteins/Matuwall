@@ -79,16 +79,18 @@ bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\nspacing = %u\n"
-		"radius = %u\nborder_width = %u\nring_width = %u\n",
+		"radius = %u\nborder_width = %u\nshadow_width = %u\n"
+		"ring_width = %u\n",
 		config->layout.columns, config->visible_rows,
 		config->layout.spacing, config->layout.radius,
-		config->border_width, config->ring_width);
+		config->border_width, config->shadow_width, config->ring_width);
 	fprintf(out, "\n[thumbnail]\nwidth = %u\nheight = %u\n",
 		config->layout.tile_width, config->layout.tile_height);
 
 	fputs("\n[colors]\n", out);
 	print_color(out, "tile", config->tile);
 	print_color(out, "border", config->border);
+	print_color(out, "shadow", config->shadow);
 	print_color(out, "ring", config->ring);
 	print_color(out, "spinner", config->spinner);
 	fputc('\n', out);

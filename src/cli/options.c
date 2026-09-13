@@ -14,6 +14,8 @@ enum {
 	OPTION_BACKGROUND,
 	OPTION_BORDER,
 	OPTION_BORDER_WIDTH,
+	OPTION_SHADOW,
+	OPTION_SHADOW_WIDTH,
 	OPTION_CLOSE_ON_FOCUS_LOSS,
 	OPTION_CONFIG,
 	OPTION_HEIGHT,
@@ -44,6 +46,8 @@ static const struct option long_options[] = {
 	{"backend", required_argument, NULL, 'b'},
 	{"border", required_argument, NULL, OPTION_BORDER},
 	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
+	{"shadow", required_argument, NULL, OPTION_SHADOW},
+	{"shadow-width", required_argument, NULL, OPTION_SHADOW_WIDTH},
 	{"close-on-focus-loss", no_argument, NULL, OPTION_CLOSE_ON_FOCUS_LOSS},
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
@@ -180,6 +184,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 		return parse_uint_override("border width", value, 0, 4096,
 			&options->border_width, &options->border_width_set, err,
 			err_size);
+	case OPTION_SHADOW_WIDTH:
+		return parse_uint_override("shadow width", value, 0, 4096,
+			&options->shadow_width, &options->shadow_width_set, err,
+			err_size);
 	case OPTION_HEIGHT:
 		return parse_uint_override("height", value, 1, 16384,
 			&options->height, &options->height_set, err, err_size);
@@ -284,6 +292,9 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,
 			&options->ring_set, err, err_size);
+	case OPTION_SHADOW:
+		return parse_color_override("shadow", value, &options->shadow,
+			&options->shadow_set, err, err_size);
 	case OPTION_SPINNER:
 		return parse_color_override("spinner", value, &options->spinner,
 			&options->spinner_set, err, err_size);
