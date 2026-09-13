@@ -32,6 +32,7 @@ struct sweetwall_config {
 	uint32_t ring_width;
 	// Zero disables navigation transitions
 	uint32_t navigation_ms;
+	uint32_t zoom_percent;
 	// Fill the output with the selected wallpaper behind the panel
 	bool preview;
 	bool close_on_focus_loss;

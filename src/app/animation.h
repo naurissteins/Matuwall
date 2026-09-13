@@ -19,10 +19,17 @@ struct sweetwall_animation_ring {
 	uint8_t alpha;
 };
 
+struct sweetwall_animation_focus {
+	size_t index;
+	double scale;
+};
+
 struct sweetwall_animation_sample {
 	double scroll;
 	struct sweetwall_animation_ring rings[2];
 	size_t ring_count;
+	struct sweetwall_animation_focus focuses[2];
+	size_t focus_count;
 	bool active;
 };
 
@@ -40,12 +47,17 @@ struct sweetwall_animation {
 	double to_scroll;
 	struct sweetwall_animation_rect from_ring;
 	struct sweetwall_animation_rect to_ring;
+	double focus_scale;
+	size_t from_focus;
+	size_t to_focus;
+	double from_focus_scale;
+	double to_focus_scale;
 	enum sweetwall_animation_kind kind;
 	bool initialized;
 };
 
-void sweetwall_animation_init(
-	struct sweetwall_animation *animation, uint32_t duration_ms);
+void sweetwall_animation_init(struct sweetwall_animation *animation,
+	uint32_t duration_ms, uint32_t zoom_percent);
 
 void sweetwall_animation_snap(struct sweetwall_animation *animation,
 	const struct sweetwall_layout *layout, size_t selected,

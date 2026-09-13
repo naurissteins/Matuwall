@@ -14,6 +14,18 @@ static struct sweetwall_animation_rect item_rect(
 	};
 }
 
+static struct sweetwall_animation_rect scale_rect(
+	struct sweetwall_animation_rect rect, double scale) {
+	double width = rect.width * scale;
+	double height = rect.height * scale;
+	return (struct sweetwall_animation_rect){
+		.x = rect.x - (width - rect.width) / 2.0,
+		.y = rect.y - (height - rect.height) / 2.0,
+		.width = width,
+		.height = height,
+	};
+}
+
 static double scroll_for(
 	const struct sweetwall_layout *layout, uint32_t first_row) {
 	return (double)first_row *
@@ -71,20 +83,59 @@ static bool adjacent(const struct sweetwall_layout *layout, size_t previous,
 	       (dx == 0 && dy == (int32_t)step_y);
 }
 
-void sweetwall_animation_init(
-	struct sweetwall_animation *animation, uint32_t duration_ms) {
+static void add_focus(
+	struct sweetwall_animation_sample *sample, size_t index, double scale) {
+	if (scale <= 1.0) {
+		return;
+	}
+	for (size_t i = 0; i < sample->focus_count; i++) {
+		if (sample->focuses[i].index != index) {
+			continue;
+		}
+		if (scale > sample->focuses[i].scale) {
+			sample->focuses[i].scale = scale;
+		}
+		return;
+	}
+	if (sample->focus_count < 2) {
+		sample->focuses[sample->focus_count++] =
+			(struct sweetwall_animation_focus){
+				.index = index,
+				.scale = scale,
+			};
+	}
+}
+
+static double focus_at(
+	const struct sweetwall_animation_sample *sample, size_t index) {
+	for (size_t i = 0; i < sample->focus_count; i++) {
+		if (sample->focuses[i].index == index) {
+			return sample->focuses[i].scale;
+		}
+	}
+	return 1.0;
+}
+
+void sweetwall_animation_init(struct sweetwall_animation *animation,
+	uint32_t duration_ms, uint32_t zoom_percent) {
 	*animation = (struct sweetwall_animation){
 		.duration_ms = duration_ms,
+		.focus_scale = 1.0 + (double)zoom_percent / 100.0,
 	};
 }
 
 void sweetwall_animation_snap(struct sweetwall_animation *animation,
 	const struct sweetwall_layout *layout, size_t selected,
 	uint32_t first_row) {
-	animation->from_ring = item_rect(layout, selected);
+	animation->from_ring =
+		scale_rect(item_rect(layout, selected), animation->focus_scale);
 	animation->to_ring = animation->from_ring;
 	animation->from_scroll = scroll_for(layout, first_row);
 	animation->to_scroll = animation->from_scroll;
+	animation->from_focus = selected;
+	animation->to_focus = selected;
+	animation->from_focus_scale = animation->focus_scale;
+	animation->to_focus_scale = animation->focus_scale;
 	animation->kind = SWEETWALL_ANIMATION_NONE;
 	animation->initialized = true;
 }
@@ -113,20 +164,32 @@ void sweetwall_animation_sample(struct sweetwall_animation *animation,
 			.alpha = (uint8_t)lround(fade * 255.0),
 		};
 		sample->ring_count = 2;
-		return;
+	} else {
+		sample->rings[0] = (struct sweetwall_animation_ring){
+			.rect = animation->kind == SWEETWALL_ANIMATION_GLIDE
+					? lerp_rect(animation->from_ring,
+						  animation->to_ring, eased)
+					: animation->to_ring,
+			.alpha = 255,
+		};
+		sample->ring_count = 1;
 	}
 
-	sample->rings[0] = (struct sweetwall_animation_ring){
-		.rect = animation->kind == SWEETWALL_ANIMATION_GLIDE
-				? lerp_rect(animation->from_ring,
-					  animation->to_ring, eased)
-				: animation->to_ring,
-		.alpha = 255,
-	};
-	sample->ring_count = 1;
+	if (sample->active) {
+		add_focus(sample, animation->from_focus,
+			lerp(animation->from_focus_scale, 1.0, eased));
+		add_focus(sample, animation->to_focus,
+			lerp(animation->to_focus_scale, animation->focus_scale,
+				eased));
+	} else {
+		add_focus(sample, animation->to_focus, animation->focus_scale);
+	}
 	if (!sample->active) {
 		animation->from_ring = animation->to_ring;
 		animation->from_scroll = animation->to_scroll;
+		animation->from_focus = animation->to_focus;
+		animation->from_focus_scale = animation->focus_scale;
+		animation->to_focus_scale = animation->focus_scale;
 		animation->kind = SWEETWALL_ANIMATION_NONE;
 	}
 }
@@ -145,12 +208,19 @@ void sweetwall_animation_move(struct sweetwall_animation *animation,
 	struct sweetwall_animation_rect current_ring =
 		current.ring_count == 1 ? current.rings[0].rect
 					: animation->to_ring;
-	struct sweetwall_animation_rect target = item_rect(layout, selected);
+	struct sweetwall_animation_rect target =
+		scale_rect(item_rect(layout, selected), animation->focus_scale);
 	double target_scroll = scroll_for(layout, first_row);
+	double previous_scale = focus_at(&current, previous);
+	double selected_scale = focus_at(&current, selected);
 
 	animation->started_ms = now_ms;
 	animation->to_ring = target;
 	animation->to_scroll = target_scroll;
+	animation->from_focus = previous;
+	animation->to_focus = selected;
+	animation->from_focus_scale = previous_scale;
+	animation->to_focus_scale = selected_scale;
 	if (adjacent(layout, previous, selected)) {
 		animation->from_ring = current_ring;
 		animation->from_scroll = current.scroll;

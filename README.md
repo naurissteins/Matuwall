@@ -73,7 +73,7 @@ sweetwall --tile "#313244"                       # set the tile color
 sweetwall --border "#585b70"                     # set the thumbnail border color
 sweetwall --border-width 1                       # set the thumbnail border width
 sweetwall --ring "#f2cdcd"                       # set the selection ring color
-sweetwall --ring-width 2                         # set the selection ring width
+sweetwall --ring-width 0                         # disable the selection ring
 sweetwall --spinner "#cdd0e6"                    # set the loading spinner color
 sweetwall -o DP-1                                # open explicitly on DP-1
 sweetwall -p left                                # move the panel
@@ -87,6 +87,14 @@ Run `sweetwall --help` for every option.
 
 > [!IMPORTANT]
 > Command-line options do not change the config file
+
+Navigation transition:
+
+```toml
+[animation]
+navigation_ms = 110
+zoom_percent = 3
+```
 
 ## Controls
 - Arrows or `h` `j` `k` `l`

@@ -35,4 +35,9 @@ void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
 	uint32_t src_w, uint32_t src_h);
 
+void sweetwall_draw_image_rounded_bilinear(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
+	uint32_t src_w, uint32_t src_h);
+
 #endif

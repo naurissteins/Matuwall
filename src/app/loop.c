@@ -144,6 +144,13 @@ static bool render_if_needed(struct sweetwall_app *app) {
 				.alpha = visual.rings[i].alpha,
 			};
 		}
+		frame.focus_count = visual.focus_count;
+		for (size_t i = 0; i < visual.focus_count; i++) {
+			frame.focuses[i] = (struct sweetwall_frame_focus){
+				.index = visual.focuses[i].index,
+				.scale = visual.focuses[i].scale,
+			};
+		}
 	}
 	sweetwall_frame_draw(buffer, &frame);
 	if (!sweetwall_layer_commit_frame(&app->layer, visual.active)) {

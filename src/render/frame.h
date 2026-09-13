@@ -18,6 +18,11 @@ struct sweetwall_frame_ring {
 	uint8_t alpha;
 };
 
+struct sweetwall_frame_focus {
+	size_t index;
+	double scale;
+};
+
 struct sweetwall_frame {
 	const struct sweetwall_layout *layout;
 	const struct sweetwall_thumb *thumbs;
@@ -25,6 +30,8 @@ struct sweetwall_frame {
 	double scroll;
 	struct sweetwall_frame_ring rings[2];
 	size_t ring_count;
+	struct sweetwall_frame_focus focuses[2];
+	size_t focus_count;
 	// Panel geometry in logical, surface-local units
 	struct sweetwall_rect panel;
 	// Surface spans the whole output, so the panel floats on a backdrop
