@@ -17,12 +17,12 @@ static int32_t scaled(double logical, double scale) {
 	return (int32_t)lround(logical * scale);
 }
 
-static uint32_t ring_color(struct sweetwall_color color, uint8_t alpha) {
+static uint32_t ring_color(struct matuwall_color color, uint8_t alpha) {
 	color.a = (uint8_t)(((uint32_t)color.a * alpha + 127) / 255);
-	return sweetwall_color_argb(color);
+	return matuwall_color_argb(color);
 }
 
-static int32_t content_overflow(const struct sweetwall_frame *frame) {
+static int32_t content_overflow(const struct matuwall_frame *frame) {
 	double overflow = 0.0;
 	for (size_t i = 0; i < frame->focus_count; i++) {
 		double extra_x = (frame->focuses[i].scale - 1.0) *
@@ -40,9 +40,9 @@ static int32_t content_overflow(const struct sweetwall_frame *frame) {
 	return (int32_t)ceil(overflow);
 }
 
-static struct sweetwall_clip content_clip(
-	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
-	struct sweetwall_clip clip = sweetwall_clip_buffer(buffer);
+static struct matuwall_clip content_clip(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame) {
+	struct matuwall_clip clip = matuwall_clip_buffer(buffer);
 	int32_t inset =
 		(int32_t)frame->layout->margin - content_overflow(frame);
 	if (inset < 0) {
@@ -71,9 +71,9 @@ static struct sweetwall_clip content_clip(
 	return clip;
 }
 
-static void draw_panel(struct sweetwall_buffer *buffer,
-	const struct sweetwall_frame *frame, int32_t radius) {
-	struct sweetwall_clip full = sweetwall_clip_buffer(buffer);
+static void draw_panel(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, int32_t radius) {
+	struct matuwall_clip full = matuwall_clip_buffer(buffer);
 	int32_t left = to_pixels(frame->panel.x, frame->scale);
 	int32_t top = to_pixels(frame->panel.y, frame->scale);
 	int32_t right =
@@ -81,7 +81,7 @@ static void draw_panel(struct sweetwall_buffer *buffer,
 	int32_t bottom =
 		to_pixels(frame->panel.y + frame->panel.height, frame->scale);
 
-	sweetwall_draw_rounded_rect(buffer, &full, left, top, right - left,
+	matuwall_draw_rounded_rect(buffer, &full, left, top, right - left,
 		bottom - top, radius, frame->background);
 }
 
@@ -100,11 +100,10 @@ struct tile_geometry {
 	int32_t border;
 };
 
-static enum tile_position tile_geometry(const struct sweetwall_frame *frame,
-	const struct sweetwall_clip *clip, size_t index, double focus,
+static enum tile_position tile_geometry(const struct matuwall_frame *frame,
+	const struct matuwall_clip *clip, size_t index, double focus,
 	struct tile_geometry *geometry) {
-	struct sweetwall_rect item =
-		sweetwall_layout_item(frame->layout, index);
+	struct matuwall_rect item = matuwall_layout_item(frame->layout, index);
 	double width = item.width * focus;
 	double height = item.height * focus;
 	double x = frame->panel.x + item.x - (width - item.width) / 2.0;
@@ -136,10 +135,10 @@ static enum tile_position tile_geometry(const struct sweetwall_frame *frame,
 	return TILE_VISIBLE;
 }
 
-static void draw_tile(struct sweetwall_buffer *buffer,
-	const struct sweetwall_frame *frame, const struct sweetwall_clip *clip,
+static void draw_tile(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	size_t index, const struct tile_geometry *geometry, bool bilinear) {
-	const struct sweetwall_thumb *thumb =
+	const struct matuwall_thumb *thumb =
 		frame->thumbs != NULL ? &frame->thumbs[index] : NULL;
 	int32_t border = geometry->border;
 	if (border > (geometry->width - 1) / 2 ||
@@ -147,19 +146,19 @@ static void draw_tile(struct sweetwall_buffer *buffer,
 		border = 0;
 	}
 	if (border > 0) {
-		sweetwall_draw_rounded_rect(buffer, clip, geometry->left,
+		matuwall_draw_rounded_rect(buffer, clip, geometry->left,
 			geometry->top, geometry->width, geometry->height,
 			geometry->radius, frame->border);
 	}
 
-	if (thumb != NULL && thumb->state == SWEETWALL_THUMB_READY &&
+	if (thumb != NULL && thumb->state == MATUWALL_THUMB_READY &&
 		thumb->pixels != NULL) {
-		void (*draw)(struct sweetwall_buffer *,
-			const struct sweetwall_clip *, int32_t, int32_t,
-			int32_t, int32_t, int32_t, int32_t, const uint32_t *,
-			uint32_t, uint32_t) =
-			bilinear ? sweetwall_draw_image_rounded_bilinear
-				 : sweetwall_draw_image_rounded;
+		void (*draw)(struct matuwall_buffer *,
+			const struct matuwall_clip *, int32_t, int32_t, int32_t,
+			int32_t, int32_t, int32_t, const uint32_t *, uint32_t,
+			uint32_t) =
+			bilinear ? matuwall_draw_image_rounded_bilinear
+				 : matuwall_draw_image_rounded;
 		draw(buffer, clip, geometry->left, geometry->top,
 			geometry->width, geometry->height, geometry->radius,
 			border, thumb->pixels, thumb->width, thumb->height);
@@ -168,15 +167,15 @@ static void draw_tile(struct sweetwall_buffer *buffer,
 
 	int32_t inner_radius =
 		geometry->radius > border ? geometry->radius - border : 0;
-	sweetwall_draw_rounded_rect(buffer, clip, geometry->left + border,
+	matuwall_draw_rounded_rect(buffer, clip, geometry->left + border,
 		geometry->top + border, geometry->width - border * 2,
 		geometry->height - border * 2, inner_radius, frame->tile);
-	bool pending = thumb == NULL || thumb->state == SWEETWALL_THUMB_PENDING;
+	bool pending = thumb == NULL || thumb->state == MATUWALL_THUMB_PENDING;
 	if (pending) {
 		int32_t shorter = geometry->width < geometry->height
 					  ? geometry->width
 					  : geometry->height;
-		sweetwall_spinner_draw(buffer, clip,
+		matuwall_spinner_draw(buffer, clip,
 			geometry->left + geometry->width / 2,
 			geometry->top + geometry->height / 2,
 			shorter / SPINNER_DIVISOR, frame->spinner,
@@ -184,7 +183,7 @@ static void draw_tile(struct sweetwall_buffer *buffer,
 	}
 }
 
-static bool focused(const struct sweetwall_frame *frame, size_t index) {
+static bool focused(const struct matuwall_frame *frame, size_t index) {
 	for (size_t i = 0; i < frame->focus_count; i++) {
 		if (frame->focuses[i].index == index) {
 			return true;
@@ -193,9 +192,9 @@ static bool focused(const struct sweetwall_frame *frame, size_t index) {
 	return false;
 }
 
-static void draw_ring(struct sweetwall_buffer *buffer,
-	const struct sweetwall_frame *frame, const struct sweetwall_clip *clip,
-	const struct sweetwall_frame_ring *ring, int32_t gap, int32_t width) {
+static void draw_ring(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	const struct matuwall_frame_ring *ring, int32_t gap, int32_t width) {
 	if (ring->alpha == 0) {
 		return;
 	}
@@ -213,26 +212,26 @@ static void draw_ring(struct sweetwall_buffer *buffer,
 			       : 1.0;
 	int32_t radius = scaled(frame->layout->radius * focus, frame->scale);
 	int32_t ring_radius = radius == 0 ? 0 : radius + inset;
-	sweetwall_draw_rounded_ring(buffer, clip, left - inset, top - inset,
+	matuwall_draw_rounded_ring(buffer, clip, left - inset, top - inset,
 		(right - left) + inset * 2, (bottom - top) + inset * 2,
 		ring_radius, width, ring_color(frame->ring, ring->alpha));
 }
 
-void sweetwall_frame_draw(
-	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
+void matuwall_frame_draw(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame) {
 	int32_t panel_radius =
 		to_pixels((int32_t)frame->panel_radius, frame->scale);
 
 	if (frame->backdrop && frame->preview != NULL) {
-		sweetwall_draw_image_cover(buffer, frame->preview,
+		matuwall_draw_image_cover(buffer, frame->preview,
 			frame->preview_width, frame->preview_height);
 	} else {
 		// Let the real desktop show outside the rounded panel
-		sweetwall_draw_clear(buffer, 0);
+		matuwall_draw_clear(buffer, 0);
 	}
 	draw_panel(buffer, frame, panel_radius);
 
-	struct sweetwall_clip clip = content_clip(buffer, frame);
+	struct matuwall_clip clip = content_clip(buffer, frame);
 
 	int32_t ring_gap = to_pixels(RING_GAP, frame->scale);
 	int32_t ring_width =

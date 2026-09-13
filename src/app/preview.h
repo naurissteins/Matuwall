@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_APP_PREVIEW_H
-#define SWEETWALL_APP_PREVIEW_H
+#ifndef MATUWALL_APP_PREVIEW_H
+#define MATUWALL_APP_PREVIEW_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -8,12 +8,12 @@
 #include "thumb/decode.h"
 #include "thumb/worker.h"
 
-struct sweetwall_app;
+struct matuwall_app;
 
 // Output-sized backdrop for the current selection. Only one image is held at
 // a time; it is the largest allocation in the process
-struct sweetwall_preview {
-	struct sweetwall_image image;
+struct matuwall_preview {
+	struct matuwall_image image;
 	size_t shown;
 	size_t wanted;
 	size_t in_flight;
@@ -24,19 +24,19 @@ struct sweetwall_preview {
 	bool enabled;
 };
 
-void sweetwall_app_preview_init(struct sweetwall_app *app);
+void matuwall_app_preview_init(struct matuwall_app *app);
 
-void sweetwall_app_preview_select(
-	struct sweetwall_app *app, size_t index, int64_t now_ms);
+void matuwall_app_preview_select(
+	struct matuwall_app *app, size_t index, int64_t now_ms);
 
-int sweetwall_app_preview_timeout(
-	const struct sweetwall_app *app, int64_t now_ms);
+int matuwall_app_preview_timeout(
+	const struct matuwall_app *app, int64_t now_ms);
 
-void sweetwall_app_preview_tick(struct sweetwall_app *app, int64_t now_ms);
+void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms);
 
-void sweetwall_app_preview_result(
-	struct sweetwall_app *app, const struct sweetwall_thumb_result *result);
+void matuwall_app_preview_result(
+	struct matuwall_app *app, const struct matuwall_thumb_result *result);
 
-void sweetwall_app_preview_finish(struct sweetwall_app *app);
+void matuwall_app_preview_finish(struct matuwall_app *app);
 
 #endif

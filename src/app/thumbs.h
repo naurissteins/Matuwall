@@ -1,14 +1,14 @@
-#ifndef SWEETWALL_APP_THUMBS_H
-#define SWEETWALL_APP_THUMBS_H
+#ifndef MATUWALL_APP_THUMBS_H
+#define MATUWALL_APP_THUMBS_H
 
-struct sweetwall_app;
+struct matuwall_app;
 
-void sweetwall_app_thumbs_start(struct sweetwall_app *app);
+void matuwall_app_thumbs_start(struct matuwall_app *app);
 
-void sweetwall_app_thumbs_prioritize_visible(struct sweetwall_app *app);
+void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app);
 
-void sweetwall_app_thumbs_drain(struct sweetwall_app *app);
+void matuwall_app_thumbs_drain(struct matuwall_app *app);
 
-void sweetwall_app_thumbs_finish(struct sweetwall_app *app);
+void matuwall_app_thumbs_finish(struct matuwall_app *app);
 
 #endif

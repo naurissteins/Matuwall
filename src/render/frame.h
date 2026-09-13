@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_RENDER_FRAME_H
-#define SWEETWALL_RENDER_FRAME_H
+#ifndef MATUWALL_RENDER_FRAME_H
+#define MATUWALL_RENDER_FRAME_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,7 +10,7 @@
 #include "thumb/worker.h"
 #include "wayland/shm.h"
 
-struct sweetwall_frame_ring {
+struct matuwall_frame_ring {
 	double x;
 	double y;
 	double width;
@@ -18,22 +18,22 @@ struct sweetwall_frame_ring {
 	uint8_t alpha;
 };
 
-struct sweetwall_frame_focus {
+struct matuwall_frame_focus {
 	size_t index;
 	double scale;
 };
 
-struct sweetwall_frame {
-	const struct sweetwall_layout *layout;
-	const struct sweetwall_thumb *thumbs;
+struct matuwall_frame {
+	const struct matuwall_layout *layout;
+	const struct matuwall_thumb *thumbs;
 	size_t item_count;
 	double scroll;
-	struct sweetwall_frame_ring rings[2];
+	struct matuwall_frame_ring rings[2];
 	size_t ring_count;
-	struct sweetwall_frame_focus focuses[2];
+	struct matuwall_frame_focus focuses[2];
 	size_t focus_count;
 	// Panel geometry in logical, surface-local units
-	struct sweetwall_rect panel;
+	struct matuwall_rect panel;
 	// Surface spans the whole output, so the panel floats on a backdrop
 	bool backdrop;
 	// Wallpaper filling the backdrop; NULL leaves the desktop showing
@@ -46,13 +46,13 @@ struct sweetwall_frame {
 	uint32_t tile;
 	uint32_t border;
 	uint32_t border_width;
-	struct sweetwall_color ring;
+	struct matuwall_color ring;
 	uint32_t ring_width;
-	struct sweetwall_color spinner;
+	struct matuwall_color spinner;
 	uint8_t spinner_alpha;
 };
 
-void sweetwall_frame_draw(
-	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame);
+void matuwall_frame_draw(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame);
 
 #endif

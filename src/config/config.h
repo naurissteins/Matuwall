@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_CONFIG_CONFIG_H
-#define SWEETWALL_CONFIG_CONFIG_H
+#ifndef MATUWALL_CONFIG_CONFIG_H
+#define MATUWALL_CONFIG_CONFIG_H
 
 #include <limits.h>
 #include <stdbool.h>
@@ -9,23 +9,22 @@
 #include "grid/layout.h"
 #include "render/color.h"
 
-const char *sweetwall_position_name(enum sweetwall_position position);
-bool sweetwall_position_from_name(
-	const char *name, enum sweetwall_position *out);
+const char *matuwall_position_name(enum matuwall_position position);
+bool matuwall_position_from_name(const char *name, enum matuwall_position *out);
 
-#define SWEETWALL_MAX_HOOKS 16
-#define SWEETWALL_HOOK_MAX 512
+#define MATUWALL_MAX_HOOKS 16
+#define MATUWALL_HOOK_MAX 512
 
-struct sweetwall_config {
+struct matuwall_config {
 	char directory[PATH_MAX];
 	char backend[32];
-	enum sweetwall_position position;
-	struct sweetwall_color background;
-	struct sweetwall_color tile;
-	struct sweetwall_color border;
-	struct sweetwall_color ring;
-	struct sweetwall_color spinner;
-	struct sweetwall_layout layout;
+	enum matuwall_position position;
+	struct matuwall_color background;
+	struct matuwall_color tile;
+	struct matuwall_color border;
+	struct matuwall_color ring;
+	struct matuwall_color spinner;
+	struct matuwall_layout layout;
 	uint32_t visible_rows;
 	uint32_t panel_radius;
 	uint32_t border_width;
@@ -38,19 +37,19 @@ struct sweetwall_config {
 	bool close_on_focus_loss;
 	bool mouse_enabled;
 	// on_apply command templates, run after a successful apply
-	char on_apply[SWEETWALL_MAX_HOOKS][SWEETWALL_HOOK_MAX];
+	char on_apply[MATUWALL_MAX_HOOKS][MATUWALL_HOOK_MAX];
 	size_t on_apply_count;
 };
 
-void sweetwall_config_defaults(struct sweetwall_config *cfg);
-bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size);
+void matuwall_config_defaults(struct matuwall_config *cfg);
+bool matuwall_config_expand_path(const char *in, char *out, size_t out_size);
 
-bool sweetwall_config_load(
-	struct sweetwall_config *cfg, char *err, size_t err_size);
-bool sweetwall_config_load_path(struct sweetwall_config *cfg, const char *path,
+bool matuwall_config_load(
+	struct matuwall_config *cfg, char *err, size_t err_size);
+bool matuwall_config_load_path(struct matuwall_config *cfg, const char *path,
 	char *err, size_t err_size);
-size_t sweetwall_config_warning_count(void);
+size_t matuwall_config_warning_count(void);
 
-bool sweetwall_config_path(char *out, size_t out_size);
+bool matuwall_config_path(char *out, size_t out_size);
 
 #endif

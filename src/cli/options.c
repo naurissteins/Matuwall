@@ -95,8 +95,8 @@ static enum parse_result parse_uint_override(const char *name,
 }
 
 static bool parse_backend(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!sweetwall_backend_name_valid(value)) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	if (!matuwall_backend_name_valid(value)) {
 		snprintf(err, err_size,
 			"invalid backend '%s': expected sweetbg, awww, or auto",
 			value);
@@ -108,9 +108,9 @@ static bool parse_backend(const char *value,
 }
 
 static enum parse_result parse_color_override(const char *name,
-	const char *value, struct sweetwall_color *out, bool *is_set, char *err,
+	const char *value, struct matuwall_color *out, bool *is_set, char *err,
 	size_t err_size) {
-	if (!sweetwall_color_parse(value, out)) {
+	if (!matuwall_color_parse(value, out)) {
 		snprintf(err, err_size,
 			"invalid %s '%s': expected #rrggbb or #rrggbbaa", name,
 			value);
@@ -122,7 +122,7 @@ static enum parse_result parse_color_override(const char *name,
 
 static bool parse_path_override(const char *name, const char *value, char *out,
 	size_t out_size, bool *is_set, char *err, size_t err_size) {
-	if (!sweetwall_config_expand_path(value, out, out_size)) {
+	if (!matuwall_config_expand_path(value, out, out_size)) {
 		snprintf(err, err_size,
 			"invalid %s '%s': path is empty, too long, or "
 			"HOME is unset",
@@ -134,22 +134,22 @@ static bool parse_path_override(const char *name, const char *value, char *out,
 }
 
 static enum parse_result parse_hook(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	size_t length = strlen(value);
-	if (length == 0 || length >= SWEETWALL_HOOK_MAX) {
+	if (length == 0 || length >= MATUWALL_HOOK_MAX) {
 		snprintf(err, err_size,
 			"invalid hook: command must contain 1 to %d bytes",
-			SWEETWALL_HOOK_MAX - 1);
+			MATUWALL_HOOK_MAX - 1);
 		return PARSE_ERROR;
 	}
 	if (!options->hooks_set) {
 		options->hooks_set = true;
 		options->hook_count = 0;
 	}
-	if (options->hook_count >= SWEETWALL_MAX_HOOKS) {
+	if (options->hook_count >= MATUWALL_MAX_HOOKS) {
 		snprintf(err, err_size,
 			"too many --hook options: maximum is %d",
-			SWEETWALL_MAX_HOOKS);
+			MATUWALL_MAX_HOOKS);
 		return PARSE_ERROR;
 	}
 	options->hooks[options->hook_count++] = value;
@@ -157,8 +157,8 @@ static enum parse_result parse_hook(const char *value,
 }
 
 static bool parse_position(const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	if (!sweetwall_position_from_name(value, &options->position)) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	if (!matuwall_position_from_name(value, &options->position)) {
 		snprintf(err, err_size,
 			"invalid position '%s': expected center, left, right, "
 			"top, or bottom",
@@ -170,7 +170,7 @@ static bool parse_position(const char *value,
 }
 
 static enum parse_result parse_numeric_override(int option, const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
 	case 'c':
 		return parse_uint_override("columns", value, 1, 1024,
@@ -213,7 +213,7 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 }
 
 static enum parse_result parse_override(int option, const char *value,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	enum parse_result result =
 		parse_numeric_override(option, value, options, err, err_size);
 	if (result != PARSE_UNHANDLED) {
@@ -279,7 +279,7 @@ static enum parse_result parse_override(int option, const char *value,
 		options->output_set = true;
 		return PARSE_CONTINUE;
 	case OPTION_PRINT_CONFIG:
-		options->action = SWEETWALL_CLI_PRINT_CONFIG;
+		options->action = MATUWALL_CLI_PRINT_CONFIG;
 		return PARSE_CONTINUE;
 	case OPTION_RING:
 		return parse_color_override("ring", value, &options->ring,
@@ -304,13 +304,13 @@ static enum parse_result parse_override(int option, const char *value,
 }
 
 static enum parse_result parse_control(int option, const char *token,
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
 	case 'h':
-		options->action = SWEETWALL_CLI_HELP;
+		options->action = MATUWALL_CLI_HELP;
 		return PARSE_DONE;
 	case 'V':
-		options->action = SWEETWALL_CLI_VERSION;
+		options->action = MATUWALL_CLI_VERSION;
 		return PARSE_DONE;
 	case OPTION_CLEAR_CACHE:
 		snprintf(err, err_size, "--clear-cache must be used alone");
@@ -330,16 +330,16 @@ static enum parse_result parse_control(int option, const char *token,
 	}
 }
 
-bool sweetwall_cli_parse(int argc, char *argv[],
-	struct sweetwall_cli_options *options, char *err, size_t err_size) {
-	*options = (struct sweetwall_cli_options){0};
+bool matuwall_cli_parse(int argc, char *argv[],
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	*options = (struct matuwall_cli_options){0};
 
 	if (argc == 2 && strcmp(argv[1], "--clear-cache") == 0) {
-		options->action = SWEETWALL_CLI_CLEAR_CACHE;
+		options->action = MATUWALL_CLI_CLEAR_CACHE;
 		return true;
 	}
 	if (argc == 2 && strcmp(argv[1], "--diagnose") == 0) {
-		options->action = SWEETWALL_CLI_DIAGNOSE;
+		options->action = MATUWALL_CLI_DIAGNOSE;
 		return true;
 	}
 

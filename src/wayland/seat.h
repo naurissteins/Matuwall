@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_WAYLAND_SEAT_H
-#define SWEETWALL_WAYLAND_SEAT_H
+#ifndef MATUWALL_WAYLAND_SEAT_H
+#define MATUWALL_WAYLAND_SEAT_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,7 +10,7 @@
 struct wl_seat;
 struct wl_keyboard;
 
-struct sweetwall_seat_handler {
+struct matuwall_seat_handler {
 	void (*key)(void *user_data, xkb_keysym_t sym);
 	void (*focus_lost)(void *user_data);
 	// Pointer coordinates are surface-local logical pixels
@@ -21,10 +21,10 @@ struct sweetwall_seat_handler {
 	void (*pointer_scroll)(void *user_data, int32_t steps);
 };
 
-struct sweetwall_seat {
+struct matuwall_seat {
 	struct wl_seat *wl_seat;
 	struct wl_keyboard *keyboard;
-	struct sweetwall_pointer pointer;
+	struct matuwall_pointer pointer;
 
 	struct xkb_context *context;
 	struct xkb_keymap *keymap;
@@ -36,17 +36,17 @@ struct sweetwall_seat {
 	xkb_keysym_t repeat_sym;
 	int64_t repeat_at_ms;
 
-	struct sweetwall_seat_handler handler;
+	struct matuwall_seat_handler handler;
 	void *user_data;
 };
 
-bool sweetwall_seat_init(struct sweetwall_seat *seat, struct wl_seat *wl_seat,
-	const struct sweetwall_seat_handler *handler, void *user_data);
+bool matuwall_seat_init(struct matuwall_seat *seat, struct wl_seat *wl_seat,
+	const struct matuwall_seat_handler *handler, void *user_data);
 
-int sweetwall_seat_repeat_timeout(const struct sweetwall_seat *seat);
+int matuwall_seat_repeat_timeout(const struct matuwall_seat *seat);
 
-void sweetwall_seat_dispatch_repeat(struct sweetwall_seat *seat);
+void matuwall_seat_dispatch_repeat(struct matuwall_seat *seat);
 
-void sweetwall_seat_finish(struct sweetwall_seat *seat);
+void matuwall_seat_finish(struct matuwall_seat *seat);
 
 #endif

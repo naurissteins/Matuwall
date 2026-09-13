@@ -1,6 +1,6 @@
-# Sweetwall configuration
-# Place this file at $XDG_CONFIG_HOME/sweetwall/config.toml
-# (or ~/.config/sweetwall/config.toml). Every key is optional, and the values
+# Matuwall configuration
+# Place this file at $XDG_CONFIG_HOME/matuwall/config.toml
+# (or ~/.config/matuwall/config.toml). Every key is optional, and the values
 # below are the defaults. A missing file runs with these same defaults.
 
 [general]
@@ -17,7 +17,7 @@ backend = "sweetbg"
 # for a panel-sized window with no backdrop.
 preview = false
 
-# Close when keyboard focus moves away from Sweetwall. Set to false to keep the
+# Close when keyboard focus moves away from Matuwall. Set to false to keep the
 # picker open while using another output.
 close_on_focus_loss = true
 
@@ -36,7 +36,7 @@ radius = 16
 
 [input]
 # Enable hover selection, wheel navigation, and left-click apply. Disabled by
-# default so Sweetwall is controlled only from the keyboard.
+# default so Matuwall is controlled only from the keyboard.
 mouse = false
 
 [animation]

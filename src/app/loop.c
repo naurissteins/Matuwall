@@ -30,7 +30,7 @@ static void handle_signal(int signum) {
 	interrupted = 1;
 }
 
-bool sweetwall_app_loop_install_signals(void) {
+bool matuwall_app_loop_install_signals(void) {
 	struct sigaction action = {
 		.sa_handler = handle_signal,
 	};
@@ -48,58 +48,58 @@ bool sweetwall_app_loop_install_signals(void) {
 // --- frames ---
 
 static bool same_layout(
-	const struct sweetwall_layout *a, const struct sweetwall_layout *b) {
+	const struct matuwall_layout *a, const struct matuwall_layout *b) {
 	return a->columns == b->columns && a->spacing == b->spacing &&
 	       a->margin == b->margin && a->tile_width == b->tile_width &&
 	       a->tile_height == b->tile_height && a->radius == b->radius;
 }
 
 static bool same_rect(
-	const struct sweetwall_rect *a, const struct sweetwall_rect *b) {
+	const struct matuwall_rect *a, const struct matuwall_rect *b) {
 	return a->x == b->x && a->y == b->y && a->width == b->width &&
 	       a->height == b->height;
 }
 
 // The panel is the whole surface unless a backdrop is drawn around it
-static void refresh_panel(struct sweetwall_app *app) {
-	struct sweetwall_layout old_layout = app->layout;
-	struct sweetwall_rect old_panel = app->panel;
+static void refresh_panel(struct matuwall_app *app) {
+	struct matuwall_layout old_layout = app->layout;
+	struct matuwall_rect old_panel = app->panel;
 	uint32_t old_first_row = app->grid.first_row;
 	if (app->config.preview) {
 		app->output_width = app->layer.width;
 		app->output_height = app->layer.height;
 	}
-	sweetwall_layout_adapt(&app->config.layout, app->config.visible_rows,
+	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
 		app->output_width, app->output_height, &app->layout,
 		&app->visible_rows);
-	app->panel = sweetwall_layout_panel(&app->layout, app->scan.count,
+	app->panel = matuwall_layout_panel(&app->layout, app->scan.count,
 		app->visible_rows, app->config.position, app->layer.width,
 		app->layer.height);
-	sweetwall_grid_reveal(
+	matuwall_grid_reveal(
 		&app->grid, &app->layout, (uint32_t)app->panel.height);
 	if (!same_layout(&old_layout, &app->layout) ||
 		!same_rect(&old_panel, &app->panel) ||
 		old_first_row != app->grid.first_row) {
-		sweetwall_animation_snap(&app->animation, &app->layout,
+		matuwall_animation_snap(&app->animation, &app->layout,
 			app->grid.selected, app->grid.first_row);
 	}
-	sweetwall_app_thumbs_prioritize_visible(app);
+	matuwall_app_thumbs_prioritize_visible(app);
 }
 
 // Draw only when something actually changed
-static bool render_if_needed(struct sweetwall_app *app) {
+static bool render_if_needed(struct matuwall_app *app) {
 	if (!app->layer.needs_repaint || !app->layer.configured) {
 		return true;
 	}
 
-	struct sweetwall_buffer *buffer;
-	enum sweetwall_buffer_acquire acquired = sweetwall_layer_begin_frame(
+	struct matuwall_buffer *buffer;
+	enum matuwall_buffer_acquire acquired = matuwall_layer_begin_frame(
 		&app->layer, app->registry.shm, &buffer);
-	if (acquired == SWEETWALL_BUFFER_BUSY) {
+	if (acquired == MATUWALL_BUFFER_BUSY) {
 		return true;
 	}
-	if (acquired == SWEETWALL_BUFFER_FAILED) {
-		sweetwall_log_error(
+	if (acquired == MATUWALL_BUFFER_FAILED) {
+		matuwall_log_error(
 			"render", "failed to acquire a frame buffer");
 		return false;
 	}
@@ -108,11 +108,10 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
 
-	struct sweetwall_animation_sample visual;
-	sweetwall_animation_sample(
-		&app->animation, sweetwall_now_ms(), &visual);
+	struct matuwall_animation_sample visual;
+	matuwall_animation_sample(&app->animation, matuwall_now_ms(), &visual);
 
-	struct sweetwall_frame frame = {
+	struct matuwall_frame frame = {
 		.layout = &app->layout,
 		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
@@ -123,20 +122,20 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.preview_width = app->preview.image.width,
 		.preview_height = app->preview.image.height,
 		.scale = scale,
-		.background = sweetwall_color_argb(app->config.background),
+		.background = matuwall_color_argb(app->config.background),
 		.panel_radius = app->config.panel_radius,
-		.tile = sweetwall_color_argb(app->config.tile),
-		.border = sweetwall_color_argb(app->config.border),
+		.tile = matuwall_color_argb(app->config.tile),
+		.border = matuwall_color_argb(app->config.border),
 		.border_width = app->config.border_width,
 		.ring = app->config.ring,
 		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,
-		.spinner_alpha = sweetwall_spinner_alpha(sweetwall_now_ms()),
+		.spinner_alpha = matuwall_spinner_alpha(matuwall_now_ms()),
 	};
 	if (app->scan.count > 0) {
 		frame.ring_count = visual.ring_count;
 		for (size_t i = 0; i < visual.ring_count; i++) {
-			frame.rings[i] = (struct sweetwall_frame_ring){
+			frame.rings[i] = (struct matuwall_frame_ring){
 				.x = visual.rings[i].rect.x,
 				.y = visual.rings[i].rect.y,
 				.width = visual.rings[i].rect.width,
@@ -146,40 +145,39 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		}
 		frame.focus_count = visual.focus_count;
 		for (size_t i = 0; i < visual.focus_count; i++) {
-			frame.focuses[i] = (struct sweetwall_frame_focus){
+			frame.focuses[i] = (struct matuwall_frame_focus){
 				.index = visual.focuses[i].index,
 				.scale = visual.focuses[i].scale,
 			};
 		}
 	}
-	sweetwall_frame_draw(buffer, &frame);
-	if (!sweetwall_layer_commit_frame(&app->layer, visual.active)) {
-		sweetwall_log_error("render", "failed to commit a frame");
+	matuwall_frame_draw(buffer, &frame);
+	if (!matuwall_layer_commit_frame(&app->layer, visual.active)) {
+		matuwall_log_error("render", "failed to commit a frame");
 		return false;
 	}
 	return true;
 }
 
-static void restore_selection(struct sweetwall_app *app) {
+static void restore_selection(struct matuwall_app *app) {
 	char path[PATH_MAX];
-	if (!sweetwall_selection_load(path, sizeof(path))) {
+	if (!matuwall_selection_load(path, sizeof(path))) {
 		return;
 	}
 	for (size_t i = 0; i < app->scan.count; i++) {
 		if (strcmp(path, app->scan.paths[i]) != 0) {
 			continue;
 		}
-		if (sweetwall_grid_select(&app->grid, &app->layout,
+		if (matuwall_grid_select(&app->grid, &app->layout,
 			    (uint32_t)app->panel.height, i)) {
-			sweetwall_animation_snap(&app->animation, &app->layout,
+			matuwall_animation_snap(&app->animation, &app->layout,
 				app->grid.selected, app->grid.first_row);
 			app->layer.needs_repaint = true;
 		}
-		sweetwall_log_info("state", "restored selection %s", path);
+		matuwall_log_info("state", "restored selection %s", path);
 		return;
 	}
-	sweetwall_log_info(
-		"state", "remembered wallpaper is no longer present");
+	matuwall_log_info("state", "remembered wallpaper is no longer present");
 }
 
 // --- event loop ---
@@ -192,7 +190,7 @@ static int sooner(int timeout, int candidate) {
 	return timeout < 0 || candidate < timeout ? candidate : timeout;
 }
 
-static bool pump_events(struct sweetwall_app *app) {
+static bool pump_events(struct matuwall_app *app) {
 	while (wl_display_prepare_read(app->display) != 0) {
 		if (wl_display_dispatch_pending(app->display) < 0) {
 			return false;
@@ -206,24 +204,24 @@ static bool pump_events(struct sweetwall_app *app) {
 
 	struct pollfd pfd[3] = {
 		{.fd = wl_display_get_fd(app->display), .events = POLLIN},
-		{.fd = sweetwall_instance_fd(&app->instance), .events = POLLIN},
+		{.fd = matuwall_instance_fd(&app->instance), .events = POLLIN},
 	};
 	nfds_t nfds = 2;
 	nfds_t worker_index = 0;
 	if (app->workers != NULL) {
 		worker_index = nfds;
-		pfd[worker_index].fd = sweetwall_worker_pool_fd(app->workers);
+		pfd[worker_index].fd = matuwall_worker_pool_fd(app->workers);
 		pfd[worker_index].events = POLLIN;
 		nfds++;
 	}
 
-	int timeout = sweetwall_seat_repeat_timeout(&app->seat);
+	int timeout = matuwall_seat_repeat_timeout(&app->seat);
 	// Pulse the loading dot while any thumbnail is still pending
 	if (app->pending > 0) {
-		timeout = sooner(timeout, SWEETWALL_SPINNER_INTERVAL_MS);
+		timeout = sooner(timeout, MATUWALL_SPINNER_INTERVAL_MS);
 	}
-	timeout = sooner(timeout,
-		sweetwall_app_preview_timeout(app, sweetwall_now_ms()));
+	timeout = sooner(
+		timeout, matuwall_app_preview_timeout(app, matuwall_now_ms()));
 
 	if (poll(pfd, nfds, timeout) < 0) {
 		wl_display_cancel_read(app->display);
@@ -233,12 +231,12 @@ static bool pump_events(struct sweetwall_app *app) {
 
 	if ((pfd[0].revents & (POLLERR | POLLHUP)) != 0) {
 		wl_display_cancel_read(app->display);
-		sweetwall_log_error("wayland", "compositor disconnected");
+		matuwall_log_error("wayland", "compositor disconnected");
 		return false;
 	}
 	if ((pfd[1].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
 		wl_display_cancel_read(app->display);
-		sweetwall_log_error("instance", "runtime socket failed");
+		matuwall_log_error("instance", "runtime socket failed");
 		return false;
 	}
 
@@ -258,65 +256,65 @@ static bool pump_events(struct sweetwall_app *app) {
 
 	if ((pfd[1].revents & POLLIN) != 0) {
 		bool replace_requested;
-		if (!sweetwall_instance_dispatch(
+		if (!matuwall_instance_dispatch(
 			    &app->instance, &replace_requested)) {
 			return false;
 		}
 		if (replace_requested) {
-			sweetwall_log_info(
-				"exit", "replaced by a newer sweetwall launch");
+			matuwall_log_info(
+				"exit", "replaced by a newer matuwall launch");
 			app->running = false;
 		}
 	}
 	if (worker_index > 0 && (pfd[worker_index].revents & POLLIN) != 0) {
-		sweetwall_app_thumbs_drain(app);
+		matuwall_app_thumbs_drain(app);
 	}
 
-	sweetwall_seat_dispatch_repeat(&app->seat);
-	sweetwall_app_preview_tick(app, sweetwall_now_ms());
+	matuwall_seat_dispatch_repeat(&app->seat);
+	matuwall_app_preview_tick(app, matuwall_now_ms());
 	// Keep the pulse advancing while tiles are still loading
 	if (app->pending > 0) {
 		app->layer.needs_repaint = true;
 	}
-	sweetwall_layer_collect_idle(&app->layer);
+	matuwall_layer_collect_idle(&app->layer);
 	return true;
 }
 
 // --- apply ---
 
 // Hand the selected wallpaper to the backend; runs off the input path on exit
-static bool apply_selection(struct sweetwall_app *app) {
+static bool apply_selection(struct matuwall_app *app) {
 	const char *path = app->scan.paths[app->grid.selected];
-	const struct sweetwall_backend *backend =
-		sweetwall_backend_select(app->config.backend);
+	const struct matuwall_backend *backend =
+		matuwall_backend_select(app->config.backend);
 	if (backend == NULL) {
 		if (strcmp(app->config.backend, "auto") == 0) {
-			sweetwall_log_error("backend",
+			matuwall_log_error("backend",
 				"no running wallpaper backend found");
 		} else {
-			sweetwall_log_error("backend", "unknown backend '%s'",
+			matuwall_log_error("backend", "unknown backend '%s'",
 				app->config.backend);
 		}
 		return false;
 	}
 	if (strcmp(app->config.backend, "auto") != 0) {
-		sweetwall_log_info("backend", "selected configured backend %s",
+		matuwall_log_info("backend", "selected configured backend %s",
 			backend->name);
 	}
 	if (!backend->apply(path)) {
-		sweetwall_log_error("backend",
+		matuwall_log_error("backend",
 			"%s failed to apply the wallpaper", backend->name);
 		return false;
 	}
-	if (!sweetwall_selection_save(path)) {
-		sweetwall_log_warn("state", "could not remember the selection");
+	if (!matuwall_selection_save(path)) {
+		matuwall_log_warn("state", "could not remember the selection");
 	}
-	sweetwall_log_info("apply", "applied %s with %s", path, backend->name);
-	sweetwall_hooks_run(&app->config, path);
+	matuwall_log_info("apply", "applied %s with %s", path, backend->name);
+	matuwall_hooks_run(&app->config, path);
 	return true;
 }
 
-bool sweetwall_app_run(struct sweetwall_app *app) {
+bool matuwall_app_run(struct matuwall_app *app) {
 	// The configured surface size is only known now, and every later
 	// configure refreshes this again from pump_events
 	refresh_panel(app);
@@ -326,16 +324,15 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 	if (!render_if_needed(app)) {
 		return false;
 	}
-	if (!sweetwall_log_activate()) {
-		sweetwall_log_warn("logging", "persistent log is unavailable");
+	if (!matuwall_log_activate()) {
+		matuwall_log_warn("logging", "persistent log is unavailable");
 	}
 
 	// Persistent state stays off the first-frame path
 	restore_selection(app);
-	sweetwall_app_thumbs_start(app);
-	sweetwall_app_preview_init(app);
-	sweetwall_app_preview_select(
-		app, app->grid.selected, sweetwall_now_ms());
+	matuwall_app_thumbs_start(app);
+	matuwall_app_preview_init(app);
+	matuwall_app_preview_select(app, app->grid.selected, matuwall_now_ms());
 
 	while (app->running && !app->layer.closed && interrupted == 0) {
 		if (!pump_events(app)) {
@@ -349,9 +346,9 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 		}
 	}
 	if (interrupted != 0) {
-		sweetwall_log_info("exit", "stopped by signal");
+		matuwall_log_info("exit", "stopped by signal");
 	} else if (app->layer.closed) {
-		sweetwall_log_warn("exit", "surface closed by compositor");
+		matuwall_log_warn("exit", "surface closed by compositor");
 	}
 
 	// Enter requested an apply: do it now, off the input path, on the way

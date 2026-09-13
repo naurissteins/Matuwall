@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-void sweetwall_cli_usage(FILE *out) {
-	fputs("usage: sweetwall [options]\n"
+void matuwall_cli_usage(FILE *out) {
+	fputs("usage: matuwall [options]\n"
 	      "\n"
 	      "options:\n"
 	      "      --background COLOR\n"

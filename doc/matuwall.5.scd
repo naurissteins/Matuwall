@@ -1,17 +1,17 @@
-sweetwall(5)
+matuwall(5)
 
 # NAME
 
-sweetwall - configuration file for the sweetwall wallpaper picker
+matuwall - configuration file for the matuwall wallpaper picker
 
 # DESCRIPTION
 
-*sweetwall*(1) reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
-_~/.config/sweetwall/config.toml_. The file is read once at startup. There is
+*matuwall*(1) reads _$XDG_CONFIG_HOME/matuwall/config.toml_, falling back to
+_~/.config/matuwall/config.toml_. The file is read once at startup. There is
 no hot reload.
 
-A missing file runs with built-in defaults, so sweetwall works with no config
-at all. A syntax error is reported with its path and line number, and sweetwall
+A missing file runs with built-in defaults, so matuwall works with no config
+at all. A syntax error is reported with its path and line number, and matuwall
 continues with defaults rather than failing to start. A recognized key with an
 out-of-range or wrong-typed value is warned about and the default for that key
 is kept; the rest of the file still applies. An unknown key or unknown section
@@ -68,10 +68,10 @@ line. Comments are not allowed inside an array.
 	panel-sized window with no backdrop.
 
 *close_on_focus_loss*
-	Close Sweetwall when keyboard focus leaves its surface. Defaults to _true_.
+	Close Matuwall when keyboard focus leaves its surface. Defaults to _true_.
 	Set this to _false_ to keep the picker open while focus moves to another
 	output; moving focus back restores keyboard control. Starting another
-	Sweetwall invocation still replaces the open picker.
+	Matuwall invocation still replaces the open picker.
 
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,
@@ -119,7 +119,7 @@ line. Comments are not allowed inside an array.
 ## [grid]
 
 *columns*
-	Maximum number of tile columns. Sweetwall uses fewer when the selected
+	Maximum number of tile columns. Matuwall uses fewer when the selected
 	output is too narrow for the configured grid. Defaults to _5_.
 
 *spacing*
@@ -137,10 +137,10 @@ line. Comments are not allowed inside an array.
 	the ring. Must be an integer from 0 to 4096.
 
 *visible_rows*
-	Maximum rows kept visible before the grid scrolls. Sweetwall uses fewer when
+	Maximum rows kept visible before the grid scrolls. Matuwall uses fewer when
 	the selected output is too short for the configured grid. Defaults to _2_.
 
-Sweetwall keeps the configured tile size, spacing, and margin while fitting the
+Matuwall keeps the configured tile size, spacing, and margin while fitting the
 grid, and always displays at least one tile.
 
 ## [thumbnail]
@@ -231,4 +231,4 @@ on_apply = [
 
 # SEE ALSO
 
-*sweetwall*(1)
+*matuwall*(1)

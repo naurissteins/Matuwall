@@ -35,7 +35,7 @@ static bool has_supported_extension(const char *name) {
 	return false;
 }
 
-static bool push_path(struct sweetwall_dirscan *scan, char *path) {
+static bool push_path(struct matuwall_dirscan *scan, char *path) {
 	if (scan->count == scan->capacity) {
 		size_t capacity = scan->capacity == 0 ? INITIAL_CAPACITY
 						      : scan->capacity * 2;
@@ -71,12 +71,12 @@ static int compare_paths(const void *a, const void *b) {
 	return strcmp(*lhs, *rhs);
 }
 
-bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
-	*scan = (struct sweetwall_dirscan){0};
+bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir) {
+	*scan = (struct matuwall_dirscan){0};
 
 	DIR *handle = opendir(dir);
 	if (handle == NULL) {
-		sweetwall_log_error("wallpapers", "cannot open %s: %s", dir,
+		matuwall_log_error("wallpapers", "cannot open %s: %s", dir,
 			strerror(errno));
 		return false;
 	}
@@ -101,7 +101,7 @@ bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
 		if (path == NULL || !push_path(scan, path)) {
 			free(path);
 			closedir(handle);
-			sweetwall_dirscan_finish(scan);
+			matuwall_dirscan_finish(scan);
 			return false;
 		}
 	}
@@ -109,7 +109,7 @@ bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
 	closedir(handle);
 
 	if (scan->truncated) {
-		sweetwall_log_warn("wallpapers",
+		matuwall_log_warn("wallpapers",
 			"%s holds more than %d images; showing the first %d",
 			dir, MAX_ITEMS, MAX_ITEMS);
 	}
@@ -121,10 +121,10 @@ bool sweetwall_dirscan_run(struct sweetwall_dirscan *scan, const char *dir) {
 	return true;
 }
 
-void sweetwall_dirscan_finish(struct sweetwall_dirscan *scan) {
+void matuwall_dirscan_finish(struct matuwall_dirscan *scan) {
 	for (size_t i = 0; i < scan->count; i++) {
 		free(scan->paths[i]);
 	}
 	free((void *)scan->paths);
-	*scan = (struct sweetwall_dirscan){0};
+	*scan = (struct matuwall_dirscan){0};
 }

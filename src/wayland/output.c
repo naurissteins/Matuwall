@@ -8,12 +8,12 @@
 
 #define OUTPUT_MAX_VERSION 4
 
-struct sweetwall_output_entry {
-	struct sweetwall_outputs *owner;
+struct matuwall_output_entry {
+	struct matuwall_outputs *owner;
 	struct wl_output *proxy;
 	uint32_t global_name;
 	char *name;
-	struct sweetwall_output_entry *next;
+	struct matuwall_output_entry *next;
 };
 
 static void handle_geometry(void *data, struct wl_output *output, int32_t x,
@@ -56,7 +56,7 @@ static void handle_scale(void *data, struct wl_output *output, int32_t factor) {
 static void handle_name(
 	void *data, struct wl_output *output, const char *name) {
 	(void)output;
-	struct sweetwall_output_entry *entry = data;
+	struct matuwall_output_entry *entry = data;
 	char *copy = name == NULL ? NULL : strdup(name);
 	if (copy == NULL) {
 		entry->owner->failed = true;
@@ -82,7 +82,7 @@ static const struct wl_output_listener output_listener = {
 	.description = handle_description,
 };
 
-static void destroy_entry(struct sweetwall_output_entry *entry) {
+static void destroy_entry(struct matuwall_output_entry *entry) {
 	if (wl_output_get_version(entry->proxy) >=
 		WL_OUTPUT_RELEASE_SINCE_VERSION) {
 		wl_output_release(entry->proxy);
@@ -93,14 +93,14 @@ static void destroy_entry(struct sweetwall_output_entry *entry) {
 	free(entry);
 }
 
-void sweetwall_outputs_bind(struct sweetwall_outputs *outputs,
+void matuwall_outputs_bind(struct matuwall_outputs *outputs,
 	struct wl_registry *registry, uint32_t global_name, uint32_t version) {
 	outputs->advertised = true;
 	if (version >= WL_OUTPUT_NAME_SINCE_VERSION) {
 		outputs->name_supported = true;
 	}
 
-	struct sweetwall_output_entry *entry = calloc(1, sizeof(*entry));
+	struct matuwall_output_entry *entry = calloc(1, sizeof(*entry));
 	if (entry == NULL) {
 		outputs->failed = true;
 		return;
@@ -125,9 +125,9 @@ void sweetwall_outputs_bind(struct sweetwall_outputs *outputs,
 	outputs->head = entry;
 }
 
-bool sweetwall_outputs_remove(struct sweetwall_outputs *outputs,
+bool matuwall_outputs_remove(struct matuwall_outputs *outputs,
 	uint32_t global_name, const struct wl_output *selected) {
-	struct sweetwall_output_entry **link = &outputs->head;
+	struct matuwall_output_entry **link = &outputs->head;
 	while (*link != NULL && (*link)->global_name != global_name) {
 		link = &(*link)->next;
 	}
@@ -135,7 +135,7 @@ bool sweetwall_outputs_remove(struct sweetwall_outputs *outputs,
 		return false;
 	}
 
-	struct sweetwall_output_entry *entry = *link;
+	struct matuwall_output_entry *entry = *link;
 	*link = entry->next;
 	bool removed_selected = entry->proxy == selected;
 	destroy_entry(entry);
@@ -143,12 +143,12 @@ bool sweetwall_outputs_remove(struct sweetwall_outputs *outputs,
 }
 
 static void report_missing(
-	const struct sweetwall_outputs *outputs, const char *requested) {
+	const struct matuwall_outputs *outputs, const char *requested) {
 	char names[512] = {0};
 	size_t used = 0;
 	bool has_name = false;
 	bool truncated = false;
-	for (const struct sweetwall_output_entry *entry = outputs->head;
+	for (const struct matuwall_output_entry *entry = outputs->head;
 		entry != NULL; entry = entry->next) {
 		if (entry->name == NULL) {
 			continue;
@@ -164,37 +164,37 @@ static void report_missing(
 	}
 
 	if (!outputs->advertised) {
-		sweetwall_log_error("output",
+		matuwall_log_error("output",
 			"output '%s' not found; no outputs were advertised",
 			requested);
 	} else if (!outputs->name_supported) {
-		sweetwall_log_error("output",
+		matuwall_log_error("output",
 			"cannot select '%s': compositor lacks wl_output.name",
 			requested);
 	} else if (!has_name) {
-		sweetwall_log_error("output",
+		matuwall_log_error("output",
 			"output '%s' not found; no named outputs were "
 			"advertised",
 			requested);
 	} else {
-		sweetwall_log_error("output",
+		matuwall_log_error("output",
 			"output '%s' not found (available: %s%s)", requested,
 			names, truncated ? "..." : "");
 	}
 }
 
-bool sweetwall_outputs_select(struct sweetwall_outputs *outputs,
-	const char *name, struct wl_output **selected) {
+bool matuwall_outputs_select(struct matuwall_outputs *outputs, const char *name,
+	struct wl_output **selected) {
 	if (outputs->failed) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"output", "failed to discover Wayland outputs");
 		return false;
 	}
-	for (struct sweetwall_output_entry *entry = outputs->head;
-		entry != NULL; entry = entry->next) {
+	for (struct matuwall_output_entry *entry = outputs->head; entry != NULL;
+		entry = entry->next) {
 		if (entry->name != NULL && strcmp(entry->name, name) == 0) {
 			*selected = entry->proxy;
-			sweetwall_log_info("output", "selected %s", name);
+			matuwall_log_info("output", "selected %s", name);
 			return true;
 		}
 	}
@@ -202,11 +202,11 @@ bool sweetwall_outputs_select(struct sweetwall_outputs *outputs,
 	return false;
 }
 
-void sweetwall_outputs_finish(struct sweetwall_outputs *outputs) {
+void matuwall_outputs_finish(struct matuwall_outputs *outputs) {
 	while (outputs->head != NULL) {
-		struct sweetwall_output_entry *entry = outputs->head;
+		struct matuwall_output_entry *entry = outputs->head;
 		outputs->head = entry->next;
 		destroy_entry(entry);
 	}
-	*outputs = (struct sweetwall_outputs){0};
+	*outputs = (struct matuwall_outputs){0};
 }

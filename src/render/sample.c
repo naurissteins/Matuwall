@@ -46,7 +46,7 @@ static uint32_t lerp_pixel(uint32_t from, uint32_t to, uint32_t fraction) {
 	return a << 24 | r << 16 | g << 8 | b;
 }
 
-bool sweetwall_bilinear_sampler_init(struct sweetwall_bilinear_sampler *sampler,
+bool matuwall_bilinear_sampler_init(struct matuwall_bilinear_sampler *sampler,
 	const uint32_t *pixels, uint32_t width, uint32_t height,
 	uint32_t target_width, uint32_t target_height) {
 	if (sampler == NULL || pixels == NULL || width == 0 || height == 0 ||
@@ -55,7 +55,7 @@ bool sweetwall_bilinear_sampler_init(struct sweetwall_bilinear_sampler *sampler,
 	}
 	int64_t step_x = ((int64_t)width << SAMPLE_SHIFT) / target_width;
 	int64_t step_y = ((int64_t)height << SAMPLE_SHIFT) / target_height;
-	*sampler = (struct sweetwall_bilinear_sampler){
+	*sampler = (struct matuwall_bilinear_sampler){
 		.pixels = pixels,
 		.width = width,
 		.height = height,
@@ -67,8 +67,8 @@ bool sweetwall_bilinear_sampler_init(struct sweetwall_bilinear_sampler *sampler,
 	return true;
 }
 
-uint32_t sweetwall_bilinear_sample(
-	const struct sweetwall_bilinear_sampler *sampler, uint32_t x,
+uint32_t matuwall_bilinear_sample(
+	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
 	uint32_t y) {
 	struct sample_axis sx =
 		sample_axis(sampler->start_x + (int64_t)x * sampler->step_x,

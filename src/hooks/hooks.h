@@ -1,8 +1,8 @@
-#ifndef SWEETWALL_HOOKS_HOOKS_H
-#define SWEETWALL_HOOKS_HOOKS_H
+#ifndef MATUWALL_HOOKS_HOOKS_H
+#define MATUWALL_HOOKS_HOOKS_H
 
 #include "config/config.h"
 
-void sweetwall_hooks_run(const struct sweetwall_config *cfg, const char *path);
+void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path);
 
 #endif

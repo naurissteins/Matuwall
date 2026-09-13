@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_WAYLAND_SHM_H
-#define SWEETWALL_WAYLAND_SHM_H
+#ifndef MATUWALL_WAYLAND_SHM_H
+#define MATUWALL_WAYLAND_SHM_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -8,7 +8,7 @@
 struct wl_buffer;
 struct wl_shm;
 
-struct sweetwall_buffer {
+struct matuwall_buffer {
 	struct wl_buffer *wl_buffer;
 	uint32_t *data;
 	size_t size;
@@ -18,38 +18,38 @@ struct sweetwall_buffer {
 	bool released;
 	// Untouched since mmap, so every pixel is still zero
 	bool fresh;
-	struct sweetwall_buffer *next;
+	struct matuwall_buffer *next;
 };
 
-enum sweetwall_buffer_acquire {
-	SWEETWALL_BUFFER_READY,
-	SWEETWALL_BUFFER_BUSY,
-	SWEETWALL_BUFFER_FAILED,
+enum matuwall_buffer_acquire {
+	MATUWALL_BUFFER_READY,
+	MATUWALL_BUFFER_BUSY,
+	MATUWALL_BUFFER_FAILED,
 };
 
-struct sweetwall_buffer_pool {
-	struct sweetwall_buffer *buffers;
-	struct sweetwall_buffer *drawing;
+struct matuwall_buffer_pool {
+	struct matuwall_buffer *buffers;
+	struct matuwall_buffer *drawing;
 };
 
-bool sweetwall_buffer_create(struct sweetwall_buffer *buffer,
-	struct wl_shm *shm, uint32_t width, uint32_t height);
+bool matuwall_buffer_create(struct matuwall_buffer *buffer, struct wl_shm *shm,
+	uint32_t width, uint32_t height);
 
 // Fill every pixel with one premultiplied ARGB8888 color
-void sweetwall_buffer_fill(struct sweetwall_buffer *buffer, uint32_t color);
+void matuwall_buffer_fill(struct matuwall_buffer *buffer, uint32_t color);
 
 // Unmap the pixels and destroy the wl_buffer. Idempotent
-void sweetwall_buffer_destroy(struct sweetwall_buffer *buffer);
+void matuwall_buffer_destroy(struct matuwall_buffer *buffer);
 
-enum sweetwall_buffer_acquire sweetwall_buffer_pool_acquire(
-	struct sweetwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
-	uint32_t height, struct sweetwall_buffer **buffer);
+enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
+	struct matuwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
+	uint32_t height, struct matuwall_buffer **buffer);
 
-void sweetwall_buffer_pool_submitted(struct sweetwall_buffer_pool *pool);
+void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool);
 
-void sweetwall_buffer_pool_collect_idle(
-	struct sweetwall_buffer_pool *pool, uint32_t width, uint32_t height);
+void matuwall_buffer_pool_collect_idle(
+	struct matuwall_buffer_pool *pool, uint32_t width, uint32_t height);
 
-void sweetwall_buffer_pool_destroy(struct sweetwall_buffer_pool *pool);
+void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool);
 
 #endif

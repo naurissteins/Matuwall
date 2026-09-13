@@ -13,44 +13,44 @@
 // Config loads before workers; this describes only the latest load
 static size_t warning_count;
 
-const char *sweetwall_position_name(enum sweetwall_position position) {
+const char *matuwall_position_name(enum matuwall_position position) {
 	switch (position) {
-	case SWEETWALL_POSITION_LEFT:
+	case MATUWALL_POSITION_LEFT:
 		return "left";
-	case SWEETWALL_POSITION_RIGHT:
+	case MATUWALL_POSITION_RIGHT:
 		return "right";
-	case SWEETWALL_POSITION_TOP:
+	case MATUWALL_POSITION_TOP:
 		return "top";
-	case SWEETWALL_POSITION_BOTTOM:
+	case MATUWALL_POSITION_BOTTOM:
 		return "bottom";
-	case SWEETWALL_POSITION_CENTER:
+	case MATUWALL_POSITION_CENTER:
 		break;
 	}
 	return "center";
 }
 
-bool sweetwall_position_from_name(
-	const char *name, enum sweetwall_position *out) {
+bool matuwall_position_from_name(
+	const char *name, enum matuwall_position *out) {
 	if (strcmp(name, "center") == 0) {
-		*out = SWEETWALL_POSITION_CENTER;
+		*out = MATUWALL_POSITION_CENTER;
 	} else if (strcmp(name, "left") == 0) {
-		*out = SWEETWALL_POSITION_LEFT;
+		*out = MATUWALL_POSITION_LEFT;
 	} else if (strcmp(name, "right") == 0) {
-		*out = SWEETWALL_POSITION_RIGHT;
+		*out = MATUWALL_POSITION_RIGHT;
 	} else if (strcmp(name, "top") == 0) {
-		*out = SWEETWALL_POSITION_TOP;
+		*out = MATUWALL_POSITION_TOP;
 	} else if (strcmp(name, "bottom") == 0) {
-		*out = SWEETWALL_POSITION_BOTTOM;
+		*out = MATUWALL_POSITION_BOTTOM;
 	} else {
 		return false;
 	}
 	return true;
 }
 
-void sweetwall_config_defaults(struct sweetwall_config *cfg) {
-	*cfg = (struct sweetwall_config){
+void matuwall_config_defaults(struct matuwall_config *cfg) {
+	*cfg = (struct matuwall_config){
 		.backend = "sweetbg",
-		.position = SWEETWALL_POSITION_CENTER,
+		.position = MATUWALL_POSITION_CENTER,
 		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
 		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
 		.border = {.r = 0x58, .g = 0x5b, .b = 0x70, .a = 0xff},
@@ -81,7 +81,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 }
 
 // Expand a leading ~ to $HOME; other paths are copied verbatim
-bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size) {
+bool matuwall_config_expand_path(const char *in, char *out, size_t out_size) {
 	int n;
 	if (in[0] == '~' && (in[1] == '/' || in[1] == '\0')) {
 		const char *home = getenv("HOME");
@@ -99,18 +99,17 @@ bool sweetwall_config_expand_path(const char *in, char *out, size_t out_size) {
 
 static void warn(int line, const char *detail) {
 	warning_count++;
-	sweetwall_log_warn(
-		"config", "line %d: %s; using default", line, detail);
+	matuwall_log_warn("config", "line %d: %s; using default", line, detail);
 }
 
 static void apply_string(char *dst, size_t size,
-	const struct sweetwall_toml_value *v, int line, const char *what) {
-	if (v->type != SWEETWALL_TOML_STRING) {
+	const struct matuwall_toml_value *v, int line, const char *what) {
+	if (v->type != MATUWALL_TOML_STRING) {
 		warn(line, what);
 		return;
 	}
 	char tmp[PATH_MAX];
-	if (!sweetwall_config_expand_path(v->string, tmp, sizeof(tmp)) ||
+	if (!matuwall_config_expand_path(v->string, tmp, sizeof(tmp)) ||
 		strlen(tmp) >= size) {
 		warn(line, what);
 		return;
@@ -120,8 +119,8 @@ static void apply_string(char *dst, size_t size,
 
 // A bare name (no path expansion), e.g. the backend identifier
 static void apply_name(char *dst, size_t size,
-	const struct sweetwall_toml_value *v, int line, const char *what) {
-	if (v->type != SWEETWALL_TOML_STRING || v->string[0] == '\0' ||
+	const struct matuwall_toml_value *v, int line, const char *what) {
+	if (v->type != MATUWALL_TOML_STRING || v->string[0] == '\0' ||
 		strlen(v->string) >= size) {
 		warn(line, what);
 		return;
@@ -129,17 +128,17 @@ static void apply_name(char *dst, size_t size,
 	memcpy(dst, v->string, strlen(v->string) + 1);
 }
 
-static void apply_color(struct sweetwall_color *dst,
-	const struct sweetwall_toml_value *v, int line, const char *what) {
-	if (v->type != SWEETWALL_TOML_STRING ||
-		!sweetwall_color_parse(v->string, dst)) {
+static void apply_color(struct matuwall_color *dst,
+	const struct matuwall_toml_value *v, int line, const char *what) {
+	if (v->type != MATUWALL_TOML_STRING ||
+		!matuwall_color_parse(v->string, dst)) {
 		warn(line, what);
 	}
 }
 
-static void apply_uint(uint32_t *dst, const struct sweetwall_toml_value *v,
+static void apply_uint(uint32_t *dst, const struct matuwall_toml_value *v,
 	int line, const char *what, int64_t lo, int64_t hi) {
-	if (v->type != SWEETWALL_TOML_INTEGER || v->integer < lo ||
+	if (v->type != MATUWALL_TOML_INTEGER || v->integer < lo ||
 		v->integer > hi) {
 		warn(line, what);
 		return;
@@ -147,38 +146,38 @@ static void apply_uint(uint32_t *dst, const struct sweetwall_toml_value *v,
 	*dst = (uint32_t)v->integer;
 }
 
-static void apply_bool(bool *dst, const struct sweetwall_toml_value *v,
-	int line, const char *what) {
-	if (v->type != SWEETWALL_TOML_BOOLEAN) {
+static void apply_bool(bool *dst, const struct matuwall_toml_value *v, int line,
+	const char *what) {
+	if (v->type != MATUWALL_TOML_BOOLEAN) {
 		warn(line, what);
 		return;
 	}
 	*dst = v->boolean;
 }
 
-static void apply_position(enum sweetwall_position *dst,
-	const struct sweetwall_toml_value *v, int line) {
-	if (v->type != SWEETWALL_TOML_STRING ||
-		!sweetwall_position_from_name(v->string, dst)) {
+static void apply_position(enum matuwall_position *dst,
+	const struct matuwall_toml_value *v, int line) {
+	if (v->type != MATUWALL_TOML_STRING ||
+		!matuwall_position_from_name(v->string, dst)) {
 		warn(line, "position must be \"center\", \"left\", \"right\", "
 			   "\"top\", or \"bottom\"");
 	}
 }
 
-static void apply_hooks(struct sweetwall_config *cfg,
-	const struct sweetwall_toml_value *v, int line) {
-	if (v->type != SWEETWALL_TOML_ARRAY) {
+static void apply_hooks(struct matuwall_config *cfg,
+	const struct matuwall_toml_value *v, int line) {
+	if (v->type != MATUWALL_TOML_ARRAY) {
 		warn(line, "on_apply must be an array of command strings");
 		return;
 	}
 	cfg->on_apply_count = 0;
 	for (size_t i = 0; i < v->item_count; i++) {
-		if (cfg->on_apply_count >= SWEETWALL_MAX_HOOKS) {
+		if (cfg->on_apply_count >= MATUWALL_MAX_HOOKS) {
 			warn(line, "too many on_apply hooks; extra ignored");
 			return;
 		}
 		const char *cmd = v->items[i];
-		if (strlen(cmd) >= SWEETWALL_HOOK_MAX) {
+		if (strlen(cmd) >= MATUWALL_HOOK_MAX) {
 			warn(line, "on_apply command too long; skipped");
 			continue;
 		}
@@ -201,9 +200,9 @@ static bool unknown(const char *section, const char *key, int line, char *err,
 }
 
 static bool apply(void *user_data, const char *section, const char *key,
-	const struct sweetwall_toml_value *v, int line, char *err,
+	const struct matuwall_toml_value *v, int line, char *err,
 	size_t err_size) {
-	struct sweetwall_config *cfg = user_data;
+	struct matuwall_config *cfg = user_data;
 
 	if (strcmp(section, "general") == 0) {
 		if (strcmp(key, "directory") == 0) {
@@ -344,31 +343,30 @@ static bool apply(void *user_data, const char *section, const char *key,
 
 // --- loading ---
 
-bool sweetwall_config_path(char *out, size_t out_size) {
+bool matuwall_config_path(char *out, size_t out_size) {
 	const char *xdg = getenv("XDG_CONFIG_HOME");
 	if (xdg != NULL && xdg[0] != '\0') {
-		int n = snprintf(
-			out, out_size, "%s/sweetwall/config.toml", xdg);
+		int n = snprintf(out, out_size, "%s/matuwall/config.toml", xdg);
 		return n > 0 && (size_t)n < out_size;
 	}
 	const char *home = getenv("HOME");
 	if (home != NULL && home[0] != '\0') {
-		int n = snprintf(out, out_size,
-			"%s/.config/sweetwall/config.toml", home);
+		int n = snprintf(
+			out, out_size, "%s/.config/matuwall/config.toml", home);
 		return n > 0 && (size_t)n < out_size;
 	}
 	return false;
 }
 
-static bool load_path(struct sweetwall_config *cfg, const char *path,
+static bool load_path(struct matuwall_config *cfg, const char *path,
 	bool missing_ok, char *err, size_t err_size) {
 	warning_count = 0;
-	sweetwall_config_defaults(cfg);
+	matuwall_config_defaults(cfg);
 
 	FILE *fp = fopen(path, "r");
 	if (fp == NULL) {
 		if (missing_ok && errno == ENOENT) {
-			sweetwall_log_info(
+			matuwall_log_info(
 				"config", "%s not found; using defaults", path);
 			return true;
 		}
@@ -376,32 +374,32 @@ static bool load_path(struct sweetwall_config *cfg, const char *path,
 		return false;
 	}
 
-	bool ok = sweetwall_toml_parse(fp, path, apply, cfg, err, err_size);
+	bool ok = matuwall_toml_parse(fp, path, apply, cfg, err, err_size);
 	fclose(fp);
 	if (!ok) {
-		sweetwall_config_defaults(cfg);
+		matuwall_config_defaults(cfg);
 	} else {
-		sweetwall_log_info("config", "loaded %s", path);
+		matuwall_log_info("config", "loaded %s", path);
 	}
 	return ok;
 }
 
-bool sweetwall_config_load(
-	struct sweetwall_config *cfg, char *err, size_t err_size) {
+bool matuwall_config_load(
+	struct matuwall_config *cfg, char *err, size_t err_size) {
 	char path[PATH_MAX];
-	if (!sweetwall_config_path(path, sizeof(path))) {
+	if (!matuwall_config_path(path, sizeof(path))) {
 		warning_count = 0;
-		sweetwall_config_defaults(cfg);
+		matuwall_config_defaults(cfg);
 		return true;
 	}
 	return load_path(cfg, path, true, err, err_size);
 }
 
-bool sweetwall_config_load_path(struct sweetwall_config *cfg, const char *path,
+bool matuwall_config_load_path(struct matuwall_config *cfg, const char *path,
 	char *err, size_t err_size) {
 	return load_path(cfg, path, false, err, err_size);
 }
 
-size_t sweetwall_config_warning_count(void) {
+size_t matuwall_config_warning_count(void) {
 	return warning_count;
 }

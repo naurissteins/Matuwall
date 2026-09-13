@@ -32,7 +32,7 @@ struct diagnose_report {
 };
 
 struct backend_probe {
-	const struct sweetwall_backend *backend;
+	const struct matuwall_backend *backend;
 	bool client;
 	bool ready;
 };
@@ -148,10 +148,10 @@ static void report_directory(
 }
 
 static void report_configuration(
-	struct diagnose_report *report, struct sweetwall_config *config) {
+	struct diagnose_report *report, struct matuwall_config *config) {
 	puts("\nConfiguration");
 	char path[PATH_MAX];
-	bool have_path = sweetwall_config_path(path, sizeof(path));
+	bool have_path = matuwall_config_path(path, sizeof(path));
 	struct stat info;
 	if (!have_path) {
 		report_line(report, DIAG_WARN, "config",
@@ -177,12 +177,12 @@ static void report_configuration(
 
 	char error[256] = {0};
 	fflush(stdout);
-	if (!sweetwall_config_load(config, error, sizeof(error))) {
+	if (!matuwall_config_load(config, error, sizeof(error))) {
 		char shown[sizeof(error)];
 		report_line(report, DIAG_WARN, "config load", "%s; defaults",
 			clean(error, shown, sizeof(shown)));
 	}
-	size_t warnings = sweetwall_config_warning_count();
+	size_t warnings = matuwall_config_warning_count();
 	if (warnings > 0) {
 		report_line(report, DIAG_WARN, "config values",
 			"%zu invalid value%s used defaults", warnings,
@@ -200,17 +200,17 @@ static void report_configuration(
 }
 
 static void report_backends(
-	struct diagnose_report *report, const struct sweetwall_config *config) {
+	struct diagnose_report *report, const struct matuwall_config *config) {
 	puts("\nBackends");
 	struct backend_probe probes[] = {
-		{.backend = &sweetwall_backend_sweetbg},
-		{.backend = &sweetwall_backend_awww},
+		{.backend = &matuwall_backend_sweetbg},
+		{.backend = &matuwall_backend_awww},
 	};
 	const struct backend_probe *configured = NULL;
 	const struct backend_probe *automatic = NULL;
 	for (size_t i = 0; i < sizeof(probes) / sizeof(probes[0]); i++) {
 		probes[i].client =
-			sweetwall_backend_available(probes[i].backend->name);
+			matuwall_backend_available(probes[i].backend->name);
 		probes[i].ready =
 			probes[i].client && probes[i].backend->detect();
 		const char *detail =
@@ -275,11 +275,11 @@ static bool command_available(const char *command) {
 	if (strchr(command, '/') != NULL) {
 		return access(command, X_OK) == 0;
 	}
-	return sweetwall_backend_available(command);
+	return matuwall_backend_available(command);
 }
 
 static void report_hooks(
-	struct diagnose_report *report, const struct sweetwall_config *config) {
+	struct diagnose_report *report, const struct matuwall_config *config) {
 	puts("\nHooks");
 	if (config->on_apply_count == 0) {
 		report_line(report, DIAG_INFO, "on_apply", "none configured");
@@ -337,7 +337,7 @@ static void report_file(struct diagnose_report *report, const char *subject,
 static void report_paths(struct diagnose_report *report) {
 	puts("\nState and cache");
 	char path[PATH_MAX];
-	if (sweetwall_cache_dir(path, sizeof(path))) {
+	if (matuwall_cache_dir(path, sizeof(path))) {
 		report_file(report, "thumbnail cache", path, true,
 			R_OK | W_OK | X_OK);
 	} else {
@@ -346,13 +346,13 @@ static void report_paths(struct diagnose_report *report) {
 	}
 
 	char state_path[PATH_MAX];
-	if (sweetwall_selection_path(state_path, sizeof(state_path))) {
+	if (matuwall_selection_path(state_path, sizeof(state_path))) {
 		struct stat state_info;
 		bool state_regular = lstat(state_path, &state_info) == 0 &&
 				     S_ISREG(state_info.st_mode);
 		report_file(report, "selection state", state_path, false, R_OK);
 		char selected[PATH_MAX];
-		if (sweetwall_selection_load(selected, sizeof(selected))) {
+		if (matuwall_selection_load(selected, sizeof(selected))) {
 			char shown[PATH_MAX];
 			report_line(report, DIAG_INFO, "last selection", "%s",
 				clean(selected, shown, sizeof(shown)));
@@ -365,7 +365,7 @@ static void report_paths(struct diagnose_report *report) {
 			"path is unresolved");
 	}
 
-	if (sweetwall_log_path(path, sizeof(path))) {
+	if (matuwall_log_path(path, sizeof(path))) {
 		report_file(report, "diagnostic log", path, false, R_OK | W_OK);
 	} else {
 		report_line(report, DIAG_WARN, "diagnostic log",
@@ -373,11 +373,11 @@ static void report_paths(struct diagnose_report *report) {
 	}
 }
 
-int sweetwall_diagnose_run(void) {
+int matuwall_diagnose_run(void) {
 	struct diagnose_report report = {0};
-	printf("sweetwall %s diagnostics\n", SWEETWALL_VERSION);
+	printf("matuwall %s diagnostics\n", MATUWALL_VERSION);
 	report_environment(&report);
-	struct sweetwall_config config;
+	struct matuwall_config config;
 	report_configuration(&report, &config);
 	report_backends(&report, &config);
 	report_hooks(&report, &config);

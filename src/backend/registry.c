@@ -14,12 +14,12 @@
 #include "util/log.h"
 
 // Probe order for backend = "auto"
-static const struct sweetwall_backend *const backends[] = {
-	&sweetwall_backend_sweetbg,
-	&sweetwall_backend_awww,
+static const struct matuwall_backend *const backends[] = {
+	&matuwall_backend_sweetbg,
+	&matuwall_backend_awww,
 };
 
-static const struct sweetwall_backend *backend_by_name(const char *name) {
+static const struct matuwall_backend *backend_by_name(const char *name) {
 	size_t count = sizeof(backends) / sizeof(backends[0]);
 	for (size_t i = 0; i < count; i++) {
 		if (strcmp(backends[i]->name, name) == 0) {
@@ -29,12 +29,12 @@ static const struct sweetwall_backend *backend_by_name(const char *name) {
 	return NULL;
 }
 
-bool sweetwall_backend_name_valid(const char *name) {
+bool matuwall_backend_name_valid(const char *name) {
 	return name != NULL &&
 	       (strcmp(name, "auto") == 0 || backend_by_name(name) != NULL);
 }
 
-const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
+const struct matuwall_backend *matuwall_backend_select(const char *name) {
 	if (name != NULL && name[0] != '\0' && strcmp(name, "auto") != 0) {
 		return backend_by_name(name);
 	}
@@ -43,7 +43,7 @@ const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
 	size_t count = sizeof(backends) / sizeof(backends[0]);
 	for (size_t i = 0; i < count; i++) {
 		if (backends[i]->detect()) {
-			sweetwall_log_info("backend", "auto selected %s",
+			matuwall_log_info("backend", "auto selected %s",
 				backends[i]->name);
 			return backends[i];
 		}
@@ -51,7 +51,7 @@ const struct sweetwall_backend *sweetwall_backend_select(const char *name) {
 	return NULL;
 }
 
-bool sweetwall_backend_available(const char *file) {
+bool matuwall_backend_available(const char *file) {
 	const char *path = getenv("PATH");
 	if (path == NULL || file == NULL) {
 		return false;
@@ -79,7 +79,7 @@ bool sweetwall_backend_available(const char *file) {
 	return false;
 }
 
-bool sweetwall_backend_socket_ready(const char *leaf) {
+bool matuwall_backend_socket_ready(const char *leaf) {
 	if (leaf == NULL || leaf[0] == '\0') {
 		return false;
 	}
@@ -105,10 +105,10 @@ bool sweetwall_backend_socket_ready(const char *leaf) {
 	return stat(path, &st) == 0 && S_ISSOCK(st.st_mode);
 }
 
-bool sweetwall_backend_run(const char *file, char *const argv[]) {
+bool matuwall_backend_run(const char *file, char *const argv[]) {
 	int exec_error[2];
 	if (pipe2(exec_error, O_CLOEXEC) != 0) {
-		sweetwall_log_error("backend", "cannot create exec pipe: %s",
+		matuwall_log_error("backend", "cannot create exec pipe: %s",
 			strerror(errno));
 		return false;
 	}
@@ -116,7 +116,7 @@ bool sweetwall_backend_run(const char *file, char *const argv[]) {
 	if (pid < 0) {
 		close(exec_error[0]);
 		close(exec_error[1]);
-		sweetwall_log_error(
+		matuwall_log_error(
 			"backend", "cannot fork %s: %s", file, strerror(errno));
 		return false;
 	}
@@ -134,7 +134,7 @@ bool sweetwall_backend_run(const char *file, char *const argv[]) {
 	while (waitpid(pid, &status, 0) < 0) {
 		if (errno != EINTR) {
 			close(exec_error[0]);
-			sweetwall_log_error("backend", "wait for %s failed: %s",
+			matuwall_log_error("backend", "wait for %s failed: %s",
 				file, strerror(errno));
 			return false;
 		}
@@ -148,22 +148,22 @@ bool sweetwall_backend_run(const char *file, char *const argv[]) {
 	int read_error = errno;
 	close(exec_error[0]);
 	if (count < 0) {
-		sweetwall_log_error("backend", "cannot inspect %s startup: %s",
+		matuwall_log_error("backend", "cannot inspect %s startup: %s",
 			file, strerror(read_error));
 		return false;
 	}
 	if (count == (ssize_t)sizeof(saved)) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"backend", "cannot run %s: %s", file, strerror(saved));
 		return false;
 	}
 	if (WIFSIGNALED(status)) {
-		sweetwall_log_error("backend", "%s terminated by signal %d",
+		matuwall_log_error("backend", "%s terminated by signal %d",
 			file, WTERMSIG(status));
 		return false;
 	}
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-		sweetwall_log_error("backend", "%s exited with status %d", file,
+		matuwall_log_error("backend", "%s exited with status %d", file,
 			WIFEXITED(status) ? WEXITSTATUS(status) : -1);
 		return false;
 	}

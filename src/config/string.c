@@ -92,7 +92,7 @@ static bool parse_escape(
 	}
 }
 
-bool sweetwall_toml_string_parse(
+bool matuwall_toml_string_parse(
 	const char *value, char *out, size_t out_size, const char **end) {
 	if (value[0] != '"') {
 		return false;

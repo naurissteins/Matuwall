@@ -26,7 +26,7 @@ static void cover_crop(uint32_t src_w, uint32_t src_h, uint32_t out_w,
 	}
 }
 
-static uint32_t average_box(const struct sweetwall_image *src, uint32_t sx0,
+static uint32_t average_box(const struct matuwall_image *src, uint32_t sx0,
 	uint32_t sx1, uint32_t sy0, uint32_t sy1) {
 	uint64_t b = 0;
 	uint64_t g = 0;
@@ -47,9 +47,9 @@ static uint32_t average_box(const struct sweetwall_image *src, uint32_t sx0,
 	return 0xff000000u | rr << 16 | gr << 8 | br;
 }
 
-bool sweetwall_scale_cover(const struct sweetwall_image *src, uint32_t out_w,
-	uint32_t out_h, struct sweetwall_image *out) {
-	*out = (struct sweetwall_image){0};
+bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
+	uint32_t out_h, struct matuwall_image *out) {
+	*out = (struct matuwall_image){0};
 	if (src->pixels == NULL || out_w == 0 || out_h == 0) {
 		return false;
 	}

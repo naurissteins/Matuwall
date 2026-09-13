@@ -37,21 +37,21 @@ static uint64_t fnv1a(uint64_t hash, const void *data, size_t len) {
 	return hash;
 }
 
-bool sweetwall_cache_dir(char *out, size_t out_size) {
+bool matuwall_cache_dir(char *out, size_t out_size) {
 	const char *xdg = getenv("XDG_CACHE_HOME");
 	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/sweetwall/thumbs",
+		return (size_t)snprintf(out, out_size, "%s/matuwall/thumbs",
 			       xdg) < out_size;
 	}
 	const char *home = getenv("HOME");
 	if (home == NULL) {
 		return false;
 	}
-	return (size_t)snprintf(out, out_size, "%s/.cache/sweetwall/thumbs",
+	return (size_t)snprintf(out, out_size, "%s/.cache/matuwall/thumbs",
 		       home) < out_size;
 }
 
-bool sweetwall_cache_key(const char *source_path, uint32_t target_w,
+bool matuwall_cache_key(const char *source_path, uint32_t target_w,
 	uint32_t target_h, char *out, size_t out_size) {
 	struct stat info;
 	if (stat(source_path, &info) != 0) {
@@ -66,7 +66,7 @@ bool sweetwall_cache_key(const char *source_path, uint32_t target_w,
 	hash = fnv1a(hash, &target_h, sizeof(target_h));
 
 	char dir[512];
-	if (!sweetwall_cache_dir(dir, sizeof(dir))) {
+	if (!matuwall_cache_dir(dir, sizeof(dir))) {
 		return false;
 	}
 	return (size_t)snprintf(out, out_size, "%s/%016llx", dir,
@@ -80,7 +80,7 @@ static bool header_ok(const struct cache_header *h, off_t file_size) {
 		h->format != CACHE_FORMAT_ARGB8888) {
 		return false;
 	}
-	if (!sweetwall_image_dimensions_ok(h->width, h->height)) {
+	if (!matuwall_image_dimensions_ok(h->width, h->height)) {
 		return false;
 	}
 	if (h->stride != h->width * sizeof(uint32_t)) {
@@ -90,8 +90,8 @@ static bool header_ok(const struct cache_header *h, off_t file_size) {
 	return file_size >= 0 && (uint64_t)file_size == expected;
 }
 
-bool sweetwall_cache_read(const char *key, struct sweetwall_image *img) {
-	*img = (struct sweetwall_image){0};
+bool matuwall_cache_read(const char *key, struct matuwall_image *img) {
+	*img = (struct matuwall_image){0};
 
 	FILE *fp = fopen(key, "rb");
 	if (fp == NULL) {
@@ -141,7 +141,7 @@ bool sweetwall_cache_read(const char *key, struct sweetwall_image *img) {
 
 static bool make_cache_dir(void) {
 	char dir[512];
-	if (!sweetwall_cache_dir(dir, sizeof(dir))) {
+	if (!matuwall_cache_dir(dir, sizeof(dir))) {
 		return false;
 	}
 
@@ -158,7 +158,7 @@ static bool make_cache_dir(void) {
 	return mkdir(dir, 0755) == 0 || errno == EEXIST;
 }
 
-void sweetwall_cache_write(const char *key, const struct sweetwall_image *img) {
+void matuwall_cache_write(const char *key, const struct matuwall_image *img) {
 	if (!make_cache_dir()) {
 		return;
 	}
@@ -200,10 +200,10 @@ void sweetwall_cache_write(const char *key, const struct sweetwall_image *img) {
 
 // --- maintenance ---
 
-bool sweetwall_cache_clear(size_t *removed, char *err, size_t err_size) {
+bool matuwall_cache_clear(size_t *removed, char *err, size_t err_size) {
 	*removed = 0;
 	char path[512];
-	if (!sweetwall_cache_dir(path, sizeof(path))) {
+	if (!matuwall_cache_dir(path, sizeof(path))) {
 		snprintf(err, err_size, "cannot resolve the cache directory");
 		return false;
 	}

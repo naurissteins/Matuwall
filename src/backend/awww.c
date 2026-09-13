@@ -29,19 +29,19 @@ static bool awww_socket_ready(void) {
 	if (n < 0 || (size_t)n >= sizeof(leaf)) {
 		return false;
 	}
-	return sweetwall_backend_socket_ready(leaf);
+	return matuwall_backend_socket_ready(leaf);
 }
 
 // Both halves matter: the client binary applies, the socket proves the daemon
 // is up. A default-namespace daemon only; -n namespaces are not probed
 static bool awww_detect(void) {
-	if (!sweetwall_backend_available("awww")) {
-		sweetwall_log_info(
+	if (!matuwall_backend_available("awww")) {
+		matuwall_log_info(
 			"backend", "awww skipped: client not found on PATH");
 		return false;
 	}
 	if (!awww_socket_ready()) {
-		sweetwall_log_info("backend",
+		matuwall_log_info("backend",
 			"awww skipped: default daemon socket is missing");
 		return false;
 	}
@@ -52,10 +52,10 @@ static bool awww_apply(const char *path) {
 	// `--` keeps a path that starts with '-' from parsing as a flag; the
 	// client canonicalizes the path itself before telling the daemon
 	char *const argv[] = {"awww", "img", "--", (char *)path, NULL};
-	return sweetwall_backend_run("awww", argv);
+	return matuwall_backend_run("awww", argv);
 }
 
-const struct sweetwall_backend sweetwall_backend_awww = {
+const struct matuwall_backend matuwall_backend_awww = {
 	.name = "awww",
 	.detect = awww_detect,
 	.apply = awww_apply,

@@ -21,4 +21,4 @@ valgrind \
 	--show-leak-kinds=definite,possible \
 	--track-origins=yes \
 	--error-exitcode=125 \
-	./build-valgrind/sweetwall -V
+	./build-valgrind/matuwall -V

@@ -23,18 +23,18 @@ struct selection_header {
 static bool state_dir(char *out, size_t out_size) {
 	const char *xdg = getenv("XDG_STATE_HOME");
 	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/sweetwall", xdg) <
+		return (size_t)snprintf(out, out_size, "%s/matuwall", xdg) <
 		       out_size;
 	}
 	const char *home = getenv("HOME");
 	if (home == NULL) {
 		return false;
 	}
-	return (size_t)snprintf(out, out_size, "%s/.local/state/sweetwall",
+	return (size_t)snprintf(out, out_size, "%s/.local/state/matuwall",
 		       home) < out_size;
 }
 
-bool sweetwall_selection_path(char *path, size_t path_size) {
+bool matuwall_selection_path(char *path, size_t path_size) {
 	char dir[PATH_MAX];
 	if (!state_dir(dir, sizeof(dir))) {
 		return false;
@@ -106,7 +106,7 @@ static bool write_all(int fd, const void *data, size_t size) {
 	return true;
 }
 
-bool sweetwall_selection_load(char *path, size_t path_size) {
+bool matuwall_selection_load(char *path, size_t path_size) {
 	if (path_size == 0) {
 		return false;
 	}
@@ -165,7 +165,7 @@ static int open_temporary(int dir_fd, char *name, size_t name_size) {
 	return -1;
 }
 
-bool sweetwall_selection_save(const char *path) {
+bool matuwall_selection_save(const char *path) {
 	size_t path_length = strlen(path);
 	if (path_length == 0 || path_length > UINT32_MAX) {
 		return false;

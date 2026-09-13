@@ -49,15 +49,15 @@ static int32_t clamp_radius(int32_t radius, int32_t width, int32_t height) {
 	return radius < 0 ? 0 : radius;
 }
 
-struct sweetwall_clip sweetwall_clip_buffer(
-	const struct sweetwall_buffer *buffer) {
-	return (struct sweetwall_clip){
+struct matuwall_clip matuwall_clip_buffer(
+	const struct matuwall_buffer *buffer) {
+	return (struct matuwall_clip){
 		.x1 = (int32_t)buffer->width,
 		.y1 = (int32_t)buffer->height,
 	};
 }
 
-void sweetwall_draw_clear(struct sweetwall_buffer *buffer, uint32_t color) {
+void matuwall_draw_clear(struct matuwall_buffer *buffer, uint32_t color) {
 	// A fresh mapping is already zero; writing it just faults in every
 	// page, which on a full-output surface dominates the first frame
 	if (color == 0 && buffer->fresh) {
@@ -69,8 +69,8 @@ void sweetwall_draw_clear(struct sweetwall_buffer *buffer, uint32_t color) {
 	}
 }
 
-static void blend_span(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t y, int32_t x0, int32_t x1,
+static void blend_span(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t y, int32_t x0, int32_t x1,
 	uint32_t color) {
 	if (y < clip->y0 || y >= clip->y1) {
 		return;
@@ -111,8 +111,8 @@ static uint32_t corner_coverage(
 	return (uint32_t)(coverage * COVERAGE_MAX + 0.5);
 }
 
-static void blend_corner_row(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t y, int32_t x0, int32_t x1,
+static void blend_corner_row(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t y, int32_t x0, int32_t x1,
 	double cx, double cy, double radius, uint32_t color) {
 	if (y < clip->y0 || y >= clip->y1) {
 		return;
@@ -151,8 +151,8 @@ static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
 	return (uint32_t)(coverage * COVERAGE_MAX + 0.5);
 }
 
-void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+void matuwall_draw_rounded_ring(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t thickness, uint32_t color) {
 	if (width <= 0 || height <= 0 || thickness <= 0) {
 		return;
@@ -217,8 +217,8 @@ void sweetwall_draw_rounded_ring(struct sweetwall_buffer *buffer,
 	}
 }
 
-void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, uint32_t color) {
 	if (width <= 0 || height <= 0) {
 		return;
@@ -267,7 +267,7 @@ void sweetwall_draw_rounded_rect(struct sweetwall_buffer *buffer,
 // Fixed-point source stepping keeps the full-screen blit off the divider
 #define COVER_SHIFT 16
 
-void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
+void matuwall_draw_image_cover(struct matuwall_buffer *buffer,
 	const uint32_t *src, uint32_t src_w, uint32_t src_h) {
 	if (src == NULL || src_w == 0 || src_h == 0 || buffer->width == 0 ||
 		buffer->height == 0) {
@@ -323,8 +323,8 @@ void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
 	}
 }
 
-static void draw_image_rounded(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+static void draw_image_rounded(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
 	uint32_t src_w, uint32_t src_h, bool bilinear) {
 	if (width <= 0 || height <= 0 || inset < 0 || inset > (width - 1) / 2 ||
@@ -348,8 +348,8 @@ static void draw_image_rounded(struct sweetwall_buffer *buffer,
 	int32_t right = inner_x + inner_width > clip->x1
 				? clip->x1
 				: inner_x + inner_width;
-	struct sweetwall_bilinear_sampler sampler;
-	if (bilinear && !sweetwall_bilinear_sampler_init(&sampler, src, src_w,
+	struct matuwall_bilinear_sampler sampler;
+	if (bilinear && !matuwall_bilinear_sampler_init(&sampler, src, src_w,
 				src_h, (uint32_t)width, (uint32_t)height)) {
 		return;
 	}
@@ -374,7 +374,7 @@ static void draw_image_rounded(struct sweetwall_buffer *buffer,
 			}
 			uint32_t pixel;
 			if (bilinear) {
-				pixel = sweetwall_bilinear_sample(&sampler,
+				pixel = matuwall_bilinear_sample(&sampler,
 					(uint32_t)(px - x), (uint32_t)(py - y));
 			} else {
 				uint32_t sx = (uint32_t)((int64_t)(px - x) *
@@ -389,16 +389,16 @@ static void draw_image_rounded(struct sweetwall_buffer *buffer,
 	}
 }
 
-void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+void matuwall_draw_image_rounded(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
 	uint32_t src_w, uint32_t src_h) {
 	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
 		src, src_w, src_h, false);
 }
 
-void sweetwall_draw_image_rounded_bilinear(struct sweetwall_buffer *buffer,
-	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+void matuwall_draw_image_rounded_bilinear(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
 	uint32_t src_w, uint32_t src_h) {
 	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,

@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_WAYLAND_LAYER_H
-#define SWEETWALL_WAYLAND_LAYER_H
+#ifndef MATUWALL_WAYLAND_LAYER_H
+#define MATUWALL_WAYLAND_LAYER_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -13,7 +13,7 @@ struct wl_callback;
 struct wp_viewport;
 struct wp_fractional_scale_v1;
 
-struct sweetwall_layer {
+struct matuwall_layer {
 	struct wl_surface *wl_surface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct wp_viewport *viewport;
@@ -29,30 +29,30 @@ struct sweetwall_layer {
 	bool closed;
 
 	struct wl_callback *frame_callback;
-	struct sweetwall_buffer_pool buffer_pool;
+	struct matuwall_buffer_pool buffer_pool;
 };
 
 // Starts bufferless across the selected output so its bounds are known
-bool sweetwall_layer_create(struct sweetwall_layer *layer,
-	const struct sweetwall_registry *reg, struct wl_output *output);
+bool matuwall_layer_create(struct matuwall_layer *layer,
+	const struct matuwall_registry *reg, struct wl_output *output);
 
 // Replace the output probe with the final compact panel geometry
-void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
-	uint32_t height, enum sweetwall_position position);
+void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
+	uint32_t height, enum matuwall_position position);
 
-void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
+void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);
 
-enum sweetwall_buffer_acquire sweetwall_layer_begin_frame(
-	struct sweetwall_layer *layer, struct wl_shm *shm,
-	struct sweetwall_buffer **buffer);
+enum matuwall_buffer_acquire matuwall_layer_begin_frame(
+	struct matuwall_layer *layer, struct wl_shm *shm,
+	struct matuwall_buffer **buffer);
 
-bool sweetwall_layer_commit_frame(
-	struct sweetwall_layer *layer, bool continue_frames);
+bool matuwall_layer_commit_frame(
+	struct matuwall_layer *layer, bool continue_frames);
 
 // Release surplus buffers once no repaint is waiting
-void sweetwall_layer_collect_idle(struct sweetwall_layer *layer);
+void matuwall_layer_collect_idle(struct matuwall_layer *layer);
 
-void sweetwall_layer_destroy(struct sweetwall_layer *layer);
+void matuwall_layer_destroy(struct matuwall_layer *layer);
 
 #endif

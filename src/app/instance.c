@@ -38,13 +38,13 @@ static uint64_t display_hash(void) {
 static bool runtime_dir(char *path, size_t path_size) {
 	const char *runtime = getenv("XDG_RUNTIME_DIR");
 	if (runtime == NULL || runtime[0] != '/') {
-		sweetwall_log_error("instance",
+		matuwall_log_error("instance",
 			"XDG_RUNTIME_DIR must name an absolute directory");
 		return false;
 	}
-	int length = snprintf(path, path_size, "%s/sweetwall", runtime);
+	int length = snprintf(path, path_size, "%s/matuwall", runtime);
 	if (length <= 0 || (size_t)length >= path_size) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "runtime directory path is too long");
 		return false;
 	}
@@ -57,21 +57,21 @@ static int open_runtime_dir(void) {
 		return -1;
 	}
 	if (mkdir(path, 0700) != 0 && errno != EEXIST) {
-		sweetwall_log_error("instance", "cannot create %s: %s", path,
+		matuwall_log_error("instance", "cannot create %s: %s", path,
 			strerror(errno));
 		return -1;
 	}
 
 	int fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
 	if (fd < 0) {
-		sweetwall_log_error("instance", "cannot open %s: %s", path,
+		matuwall_log_error("instance", "cannot open %s: %s", path,
 			strerror(errno));
 		return -1;
 	}
 	struct stat info;
 	if (fstat(fd, &info) != 0 || !S_ISDIR(info.st_mode) ||
 		info.st_uid != getuid() || fchmod(fd, 0700) != 0) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "%s is not a private user directory", path);
 		close(fd);
 		return -1;
@@ -175,26 +175,26 @@ static bool remove_stale_socket(const char *path) {
 		return errno == ENOENT;
 	}
 	if (!S_ISSOCK(info.st_mode) || info.st_uid != getuid()) {
-		sweetwall_log_error("instance",
+		matuwall_log_error("instance",
 			"refusing to replace unsafe runtime path %s", path);
 		return false;
 	}
 	if (unlink(path) != 0) {
-		sweetwall_log_error("instance",
-			"cannot remove stale socket: %s", strerror(errno));
+		matuwall_log_error("instance", "cannot remove stale socket: %s",
+			strerror(errno));
 		return false;
 	}
 	return true;
 }
 
-static bool listen_for_replacement(struct sweetwall_instance *instance) {
+static bool listen_for_replacement(struct matuwall_instance *instance) {
 	if (!remove_stale_socket(instance->socket_path)) {
 		return false;
 	}
 	struct sockaddr_un address;
 	socklen_t size;
 	if (!socket_address(instance->socket_path, &address, &size)) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "runtime socket path is too long");
 		return false;
 	}
@@ -203,14 +203,14 @@ static bool listen_for_replacement(struct sweetwall_instance *instance) {
 	if (instance->socket_fd < 0 ||
 		bind(instance->socket_fd, (const struct sockaddr *)&address,
 			size) != 0) {
-		sweetwall_log_error("instance",
-			"cannot bind runtime socket: %s", strerror(errno));
+		matuwall_log_error("instance", "cannot bind runtime socket: %s",
+			strerror(errno));
 		return false;
 	}
 	instance->owns_socket_path = true;
 	if (chmod(instance->socket_path, 0600) != 0 ||
 		listen(instance->socket_fd, 8) != 0) {
-		sweetwall_log_error("instance",
+		matuwall_log_error("instance",
 			"cannot listen on runtime socket: %s", strerror(errno));
 		return false;
 	}
@@ -218,7 +218,7 @@ static bool listen_for_replacement(struct sweetwall_instance *instance) {
 }
 
 static bool build_socket_path(
-	struct sweetwall_instance *instance, uint64_t hash) {
+	struct matuwall_instance *instance, uint64_t hash) {
 	char socket_leaf[64];
 	if (!make_leaf(socket_leaf, sizeof(socket_leaf), "sock", hash)) {
 		return false;
@@ -233,13 +233,13 @@ static bool build_socket_path(
 	       (size_t)path_length < sizeof(instance->socket_path);
 }
 
-static bool wait_for_lease(struct sweetwall_instance *instance) {
-	int64_t deadline = sweetwall_now_ms() + INSTANCE_WAIT_MS;
+static bool wait_for_lease(struct matuwall_instance *instance) {
+	int64_t deadline = matuwall_now_ms() + INSTANCE_WAIT_MS;
 	bool replacement_requested = false;
 	for (;;) {
 		int locked = try_lock(instance->lock_fd);
 		if (locked < 0) {
-			sweetwall_log_error("instance",
+			matuwall_log_error("instance",
 				"cannot acquire instance lock: %s",
 				strerror(errno));
 			return false;
@@ -250,28 +250,28 @@ static bool wait_for_lease(struct sweetwall_instance *instance) {
 		if (request_replace(instance->socket_path)) {
 			replacement_requested = true;
 		}
-		if (sweetwall_now_ms() >= deadline) {
-			sweetwall_log_error("instance",
+		if (matuwall_now_ms() >= deadline) {
+			matuwall_log_error("instance",
 				"the existing picker did not close within %u "
 				"ms",
 				INSTANCE_WAIT_MS);
 			return false;
 		}
 		if (poll(NULL, 0, INSTANCE_RETRY_MS) < 0 && errno != EINTR) {
-			sweetwall_log_error("instance",
+			matuwall_log_error("instance",
 				"cannot wait for the existing picker");
 			return false;
 		}
 	}
 
 	if (replacement_requested) {
-		sweetwall_log_info("instance", "replaced the previous picker");
+		matuwall_log_info("instance", "replaced the previous picker");
 	}
 	return true;
 }
 
-bool sweetwall_instance_init(struct sweetwall_instance *instance) {
-	*instance = (struct sweetwall_instance){
+bool matuwall_instance_init(struct matuwall_instance *instance) {
+	*instance = (struct matuwall_instance){
 		.lock_fd = -1,
 		.socket_fd = -1,
 	};
@@ -282,20 +282,20 @@ bool sweetwall_instance_init(struct sweetwall_instance *instance) {
 		return false;
 	}
 	if (!build_socket_path(instance, hash)) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "runtime socket path is too long");
 		close(dir_fd);
 		return false;
 	}
 	instance->lock_fd = open_lock(dir_fd, hash);
 	if (instance->lock_fd < 0) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "cannot open the runtime instance lock");
 		close(dir_fd);
 		return false;
 	}
 	if (close(dir_fd) != 0) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"instance", "cannot close the runtime directory");
 		return false;
 	}
@@ -303,12 +303,12 @@ bool sweetwall_instance_init(struct sweetwall_instance *instance) {
 	return wait_for_lease(instance) && listen_for_replacement(instance);
 }
 
-int sweetwall_instance_fd(const struct sweetwall_instance *instance) {
+int matuwall_instance_fd(const struct matuwall_instance *instance) {
 	return instance->socket_fd;
 }
 
-bool sweetwall_instance_dispatch(
-	struct sweetwall_instance *instance, bool *replace_requested) {
+bool matuwall_instance_dispatch(
+	struct matuwall_instance *instance, bool *replace_requested) {
 	*replace_requested = false;
 	for (;;) {
 		int fd = accept(instance->socket_fd, NULL, NULL);
@@ -319,36 +319,36 @@ bool sweetwall_instance_dispatch(
 			return true;
 		}
 		if (fd < 0) {
-			sweetwall_log_error("instance",
+			matuwall_log_error("instance",
 				"cannot accept a replacement request");
 			return false;
 		}
 		*replace_requested = true;
 		if (close(fd) != 0) {
-			sweetwall_log_warn("instance",
+			matuwall_log_warn("instance",
 				"cannot close a replacement connection");
 		}
 	}
 }
 
-void sweetwall_instance_finish(struct sweetwall_instance *instance) {
+void matuwall_instance_finish(struct matuwall_instance *instance) {
 	if (instance->socket_fd >= 0) {
 		if (close(instance->socket_fd) != 0) {
-			sweetwall_log_warn(
+			matuwall_log_warn(
 				"instance", "cannot close runtime socket");
 		}
 		instance->socket_fd = -1;
 	}
 	if (instance->owns_socket_path) {
 		if (unlink(instance->socket_path) != 0 && errno != ENOENT) {
-			sweetwall_log_warn(
+			matuwall_log_warn(
 				"instance", "cannot remove runtime socket");
 		}
 		instance->owns_socket_path = false;
 	}
 	if (instance->lock_fd >= 0) {
 		if (close(instance->lock_fd) != 0) {
-			sweetwall_log_warn(
+			matuwall_log_warn(
 				"instance", "cannot release instance lock");
 		}
 		instance->lock_fd = -1;
