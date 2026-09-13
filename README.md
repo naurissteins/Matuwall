@@ -13,7 +13,7 @@ Simple, fast and lightweight wallpaper picker for Wayland
 
 
 > [!IMPORTANT]
-> Matuwall is a ground-up C rewrite of the original GTK application
+> Matuwall is a C rewrite of the original GTK and Python application
 
 ---
 
