@@ -31,12 +31,20 @@ bool sweetwall_app_init(struct sweetwall_app *app,
 		.config = *config,
 		.layout = config->layout,
 		.visible_rows = config->visible_rows,
+		.instance =
+			{
+				.lock_fd = -1,
+				.socket_fd = -1,
+			},
 		.running = true,
 	};
 
 	if (!sweetwall_app_loop_install_signals()) {
 		sweetwall_log_error(
 			"startup", "failed to install signal handlers");
+		return false;
+	}
+	if (!sweetwall_instance_init(&app->instance)) {
 		return false;
 	}
 
@@ -110,9 +118,6 @@ bool sweetwall_app_init(struct sweetwall_app *app,
 }
 
 void sweetwall_app_finish(struct sweetwall_app *app) {
-	sweetwall_app_thumbs_finish(app);
-	sweetwall_app_preview_finish(app);
-
 	sweetwall_layer_destroy(&app->layer);
 	sweetwall_seat_finish(&app->seat);
 	sweetwall_registry_finish(&app->registry);
@@ -120,6 +125,10 @@ void sweetwall_app_finish(struct sweetwall_app *app) {
 		wl_display_disconnect(app->display);
 		app->display = NULL;
 	}
+	sweetwall_instance_finish(&app->instance);
+
+	sweetwall_app_thumbs_finish(app);
+	sweetwall_app_preview_finish(app);
 	sweetwall_dirscan_finish(&app->scan);
 	app->running = false;
 }

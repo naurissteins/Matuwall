@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+#include "app/instance.h"
 #include "app/preview.h"
 #include "config/config.h"
 #include "grid/navigate.h"
@@ -19,6 +20,7 @@ struct sweetwall_app {
 	struct sweetwall_registry registry;
 	struct sweetwall_layer layer;
 	struct sweetwall_seat seat;
+	struct sweetwall_instance instance;
 
 	struct sweetwall_config config;
 	// Effective grid after fitting the configured maxima to the output
