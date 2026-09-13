@@ -136,7 +136,7 @@ struct sweetwall_rect sweetwall_layout_panel(
 }
 
 size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
-	const struct sweetwall_rect *panel, uint32_t first_row, size_t count,
+	const struct sweetwall_rect *panel, int32_t scroll, size_t count,
 	int32_t x, int32_t y) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
 	int32_t stride_x = (int32_t)(layout->tile_width + layout->spacing);
@@ -149,8 +149,7 @@ size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
 
 	// Translate the on-screen point into unscrolled content space
 	int32_t cx = x - panel->x - (int32_t)layout->margin;
-	int32_t cy = y - panel->y - (int32_t)layout->margin +
-		     (int32_t)first_row * stride_y;
+	int32_t cy = y - panel->y - (int32_t)layout->margin + scroll;
 	if (cx < 0 || cy < 0) {
 		return SIZE_MAX;
 	}

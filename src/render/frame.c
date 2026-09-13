@@ -13,6 +13,15 @@ static int32_t to_pixels(int32_t logical, double scale) {
 	return (int32_t)lround((double)logical * scale);
 }
 
+static int32_t scaled(double logical, double scale) {
+	return (int32_t)lround(logical * scale);
+}
+
+static uint32_t ring_color(struct sweetwall_color color, uint8_t alpha) {
+	color.a = (uint8_t)(((uint32_t)color.a * alpha + 127) / 255);
+	return sweetwall_color_argb(color);
+}
+
 static struct sweetwall_clip content_clip(
 	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
 	struct sweetwall_clip clip = sweetwall_clip_buffer(buffer);
@@ -58,6 +67,28 @@ static void draw_panel(struct sweetwall_buffer *buffer,
 		bottom - top, radius, frame->background);
 }
 
+static void draw_ring(struct sweetwall_buffer *buffer,
+	const struct sweetwall_frame *frame, const struct sweetwall_clip *clip,
+	const struct sweetwall_frame_ring *ring, int32_t radius, int32_t gap,
+	int32_t width) {
+	if (ring->alpha == 0) {
+		return;
+	}
+	int32_t left = scaled(frame->panel.x + ring->x, frame->scale);
+	int32_t top =
+		scaled(frame->panel.y + ring->y - frame->scroll, frame->scale);
+	int32_t right =
+		scaled(frame->panel.x + ring->x + ring->width, frame->scale);
+	int32_t bottom =
+		scaled(frame->panel.y + ring->y + ring->height - frame->scroll,
+			frame->scale);
+	int32_t inset = gap + width;
+	int32_t ring_radius = radius == 0 ? 0 : radius + inset;
+	sweetwall_draw_rounded_ring(buffer, clip, left - inset, top - inset,
+		(right - left) + inset * 2, (bottom - top) + inset * 2,
+		ring_radius, width, ring_color(frame->ring, ring->alpha));
+}
+
 void sweetwall_frame_draw(
 	struct sweetwall_buffer *buffer, const struct sweetwall_frame *frame) {
 	int32_t radius =
@@ -92,14 +123,17 @@ void sweetwall_frame_draw(
 		struct sweetwall_rect rect =
 			sweetwall_layout_item(frame->layout, i);
 		rect.x += frame->panel.x;
-		rect.y += frame->panel.y - frame->scroll;
+		rect.y += frame->panel.y;
 
-		int32_t top = to_pixels(rect.y, frame->scale);
+		int32_t top =
+			scaled((double)rect.y - frame->scroll, frame->scale);
 		if (top >= clip.y1) {
 			break;
 		}
 
-		int32_t bottom = to_pixels(rect.y + rect.height, frame->scale);
+		int32_t bottom =
+			scaled((double)rect.y + rect.height - frame->scroll,
+				frame->scale);
 		if (bottom <= clip.y0) {
 			continue;
 		}
@@ -144,14 +178,10 @@ void sweetwall_frame_draw(
 					frame->spinner, frame->spinner_alpha);
 			}
 		}
+	}
 
-		if (i == frame->selected) {
-			int32_t inset = ring_gap + ring_width;
-			int32_t ring_radius = radius == 0 ? 0 : radius + inset;
-			sweetwall_draw_rounded_ring(buffer, &clip, left - inset,
-				top - inset, (right - left) + inset * 2,
-				(bottom - top) + inset * 2, ring_radius,
-				ring_width, frame->ring);
-		}
+	for (size_t i = 0; i < frame->ring_count; i++) {
+		draw_ring(buffer, frame, &clip, &frame->rings[i], radius,
+			ring_gap, ring_width);
 	}
 }

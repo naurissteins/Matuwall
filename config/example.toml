@@ -39,6 +39,10 @@ radius = 16
 # default so Sweetwall is controlled only from the keyboard.
 mouse = false
 
+[animation]
+# Duration of navigation transitions in milliseconds. Zero disables them.
+navigation_ms = 110
+
 [grid]
 # Maximum number of tile columns. Fewer are used on narrow outputs.
 columns = 5

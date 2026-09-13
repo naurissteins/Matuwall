@@ -52,6 +52,7 @@ executable(
 	'sweetwall',
 	'src/main.c',
 	'src/app/app.c',
+	'src/app/animation.c',
 	'src/app/input.c',
 	'src/app/instance.c',
 	'src/app/loop.c',

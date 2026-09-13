@@ -51,7 +51,7 @@ struct sweetwall_rect sweetwall_layout_panel(
 	uint32_t surface_height);
 
 size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
-	const struct sweetwall_rect *panel, uint32_t first_row, size_t count,
+	const struct sweetwall_rect *panel, int32_t scroll, size_t count,
 	int32_t x, int32_t y);
 
 #endif

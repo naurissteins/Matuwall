@@ -66,6 +66,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 		.panel_radius = 16,
 		.border_width = 0,
 		.ring_width = 2,
+		.navigation_ms = 110,
 		.preview = true,
 		.close_on_focus_loss = true,
 		.mouse_enabled = false,
@@ -250,6 +251,12 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "mouse") == 0) {
 			apply_bool(&cfg->mouse_enabled, v, line,
 				"mouse must be true or false");
+			return true;
+		}
+	} else if (strcmp(section, "animation") == 0) {
+		if (strcmp(key, "navigation_ms") == 0) {
+			apply_uint(&cfg->navigation_ms, v, line,
+				"navigation_ms must be 0..1000", 0, 1000);
 			return true;
 		}
 	} else if (strcmp(section, "grid") == 0) {

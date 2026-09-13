@@ -1,6 +1,5 @@
 #include "wayland/layer.h"
 
-#include <stdlib.h>
 #include <wayland-client.h>
 
 #include "fractional-scale-v1-client-protocol.h"
@@ -11,42 +10,33 @@
 // fractional-scale-v1 reports scale in 120ths of the logical size
 #define FRACTIONAL_SCALE_DENOM 120
 
-// --- buffer lifetime ---
+// --- frame pacing ---
 
-static void free_buffer(struct sweetwall_buffer *buffer) {
-	if (buffer == NULL) {
+void sweetwall_layer_collect_idle(struct sweetwall_layer *layer) {
+	if (layer->needs_repaint || layer->frame_callback != NULL ||
+		layer->buffer_pool.drawing != NULL || !layer->configured) {
 		return;
 	}
-	sweetwall_buffer_destroy(buffer);
-	free(buffer);
+
+	uint32_t width;
+	uint32_t height;
+	sweetwall_layer_buffer_size(layer, &width, &height);
+	sweetwall_buffer_pool_collect_idle(&layer->buffer_pool, width, height);
 }
 
-static void collect_retired(struct sweetwall_layer *layer) {
-	struct sweetwall_buffer **cursor = &layer->retired;
-	while (*cursor != NULL) {
-		struct sweetwall_buffer *buffer = *cursor;
-		if (!buffer->released) {
-			cursor = &buffer->next;
-			continue;
-		}
-		*cursor = buffer->next;
-		free_buffer(buffer);
-	}
+static void handle_frame_done(
+	void *data, struct wl_callback *callback, uint32_t time) {
+	struct sweetwall_layer *layer = data;
+	(void)time;
+
+	wl_callback_destroy(callback);
+	layer->frame_callback = NULL;
+	layer->needs_repaint = true;
 }
 
-static void retire_current(struct sweetwall_layer *layer) {
-	collect_retired(layer);
-	if (layer->buffer == NULL) {
-		return;
-	}
-	if (layer->buffer->released) {
-		free_buffer(layer->buffer);
-	} else {
-		layer->buffer->next = layer->retired;
-		layer->retired = layer->buffer;
-	}
-	layer->buffer = NULL;
-}
+static const struct wl_callback_listener frame_listener = {
+	.done = handle_frame_done,
+};
 
 // --- protocol listeners ---
 
@@ -238,7 +228,17 @@ void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
 	*pixel_height = layer->height * (uint32_t)scale;
 }
 
-static void present(struct sweetwall_layer *layer) {
+static bool present(struct sweetwall_layer *layer, bool continue_frames) {
+	struct sweetwall_buffer *buffer = layer->buffer_pool.drawing;
+	if (continue_frames && layer->frame_callback == NULL) {
+		layer->frame_callback = wl_surface_frame(layer->wl_surface);
+		if (layer->frame_callback == NULL) {
+			return false;
+		}
+		wl_callback_add_listener(
+			layer->frame_callback, &frame_listener, layer);
+	}
+
 	if (layer->viewport != NULL && layer->fractional_scale > 0) {
 		// The viewport maps the scaled buffer back to the logical size
 		wl_surface_set_buffer_scale(layer->wl_surface, 1);
@@ -250,54 +250,51 @@ static void present(struct sweetwall_layer *layer) {
 		wl_surface_set_buffer_scale(layer->wl_surface, scale);
 	}
 
-	wl_surface_attach(layer->wl_surface, layer->buffer->wl_buffer, 0, 0);
+	wl_surface_attach(layer->wl_surface, buffer->wl_buffer, 0, 0);
 	wl_surface_damage_buffer(layer->wl_surface, 0, 0,
-		(int32_t)layer->buffer->width, (int32_t)layer->buffer->height);
+		(int32_t)buffer->width, (int32_t)buffer->height);
 	wl_surface_commit(layer->wl_surface);
 
-	layer->buffer->released = false;
-	layer->buffer->fresh = false;
+	sweetwall_buffer_pool_submitted(&layer->buffer_pool);
 	layer->needs_repaint = false;
+	sweetwall_layer_collect_idle(layer);
+	return true;
 }
 
-struct sweetwall_buffer *sweetwall_layer_begin_frame(
-	struct sweetwall_layer *layer, struct wl_shm *shm) {
+enum sweetwall_buffer_acquire sweetwall_layer_begin_frame(
+	struct sweetwall_layer *layer, struct wl_shm *shm,
+	struct sweetwall_buffer **out) {
+	*out = NULL;
 	if (!layer->configured || layer->wl_surface == NULL) {
-		return NULL;
+		return SWEETWALL_BUFFER_FAILED;
+	}
+	// A requested callback is the compositor's permission for the next
+	// frame
+	if (layer->frame_callback != NULL) {
+		return SWEETWALL_BUFFER_BUSY;
 	}
 
 	uint32_t pixel_width;
 	uint32_t pixel_height;
 	sweetwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
 
-	// Reuse the buffer when the geometry matches and nobody else holds it
-	bool reusable = layer->buffer != NULL && layer->buffer->released &&
-			layer->buffer->width == pixel_width &&
-			layer->buffer->height == pixel_height;
-	if (reusable) {
-		return layer->buffer;
-	}
-
-	struct sweetwall_buffer *buffer = calloc(1, sizeof(*buffer));
-	if (buffer == NULL) {
-		return NULL;
-	}
-	if (!sweetwall_buffer_create(buffer, shm, pixel_width, pixel_height)) {
-		free(buffer);
-		return NULL;
-	}
-	retire_current(layer);
-	layer->buffer = buffer;
-	return layer->buffer;
+	return sweetwall_buffer_pool_acquire(
+		&layer->buffer_pool, shm, pixel_width, pixel_height, out);
 }
 
-void sweetwall_layer_commit_frame(struct sweetwall_layer *layer) {
-	if (layer->buffer != NULL) {
-		present(layer);
+bool sweetwall_layer_commit_frame(
+	struct sweetwall_layer *layer, bool continue_frames) {
+	if (layer->buffer_pool.drawing == NULL) {
+		return false;
 	}
+	return present(layer, continue_frames);
 }
 
 void sweetwall_layer_destroy(struct sweetwall_layer *layer) {
+	if (layer->frame_callback != NULL) {
+		wl_callback_destroy(layer->frame_callback);
+		layer->frame_callback = NULL;
+	}
 	if (layer->fractional != NULL) {
 		wp_fractional_scale_v1_destroy(layer->fractional);
 		layer->fractional = NULL;
@@ -315,13 +312,7 @@ void sweetwall_layer_destroy(struct sweetwall_layer *layer) {
 		layer->wl_surface = NULL;
 	}
 
-	// Free pixels only after the surface stops referencing them
-	free_buffer(layer->buffer);
-	layer->buffer = NULL;
-	while (layer->retired != NULL) {
-		struct sweetwall_buffer *buffer = layer->retired;
-		layer->retired = buffer->next;
-		free_buffer(buffer);
-	}
+	// The surface no longer references client-side buffer objects
+	sweetwall_buffer_pool_destroy(&layer->buffer_pool);
 	layer->configured = false;
 }

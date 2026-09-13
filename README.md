@@ -96,14 +96,6 @@ Run `sweetwall --help` for every option.
 - `Enter` | Apply and exit |
 - `Escape` | Cancel and exit |
 
-Mouse controls are disabled by default. Enable hover selection, wheel navigation,
-and left-click apply in the config:
-
-```toml
-[input]
-mouse = true
-```
-
 ## Configure
 
 Config file is optional. It is read from `~/.config/sweetwall/config.toml` or `$XDG_CONFIG_HOME/sweetwall/config.toml`.
