@@ -153,14 +153,17 @@ static bool pump_events(struct sweetwall_app *app) {
 		return false;
 	}
 
-	struct pollfd pfd[2] = {
+	struct pollfd pfd[3] = {
 		{.fd = wl_display_get_fd(app->display), .events = POLLIN},
+		{.fd = sweetwall_instance_fd(&app->instance), .events = POLLIN},
 	};
-	nfds_t nfds = 1;
+	nfds_t nfds = 2;
+	nfds_t worker_index = 0;
 	if (app->workers != NULL) {
-		pfd[1].fd = sweetwall_worker_pool_fd(app->workers);
-		pfd[1].events = POLLIN;
-		nfds = 2;
+		worker_index = nfds;
+		pfd[worker_index].fd = sweetwall_worker_pool_fd(app->workers);
+		pfd[worker_index].events = POLLIN;
+		nfds++;
 	}
 
 	int timeout = sweetwall_seat_repeat_timeout(&app->seat);
@@ -182,6 +185,11 @@ static bool pump_events(struct sweetwall_app *app) {
 		sweetwall_log_error("wayland", "compositor disconnected");
 		return false;
 	}
+	if ((pfd[1].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+		wl_display_cancel_read(app->display);
+		sweetwall_log_error("instance", "runtime socket failed");
+		return false;
+	}
 
 	// The prepare_read must be matched by exactly one read or cancel
 	if ((pfd[0].revents & POLLIN) != 0) {
@@ -197,7 +205,19 @@ static bool pump_events(struct sweetwall_app *app) {
 	// A configure may have resized the surface under the panel
 	refresh_panel(app);
 
-	if (nfds == 2 && (pfd[1].revents & POLLIN) != 0) {
+	if ((pfd[1].revents & POLLIN) != 0) {
+		bool replace_requested;
+		if (!sweetwall_instance_dispatch(
+			    &app->instance, &replace_requested)) {
+			return false;
+		}
+		if (replace_requested) {
+			sweetwall_log_info(
+				"exit", "replaced by a newer sweetwall launch");
+			app->running = false;
+		}
+	}
+	if (worker_index > 0 && (pfd[worker_index].revents & POLLIN) != 0) {
 		sweetwall_app_thumbs_drain(app);
 	}
 
@@ -268,6 +288,9 @@ bool sweetwall_app_run(struct sweetwall_app *app) {
 	while (app->running && !app->layer.closed && interrupted == 0) {
 		if (!pump_events(app)) {
 			return false;
+		}
+		if (!app->running) {
+			break;
 		}
 		if (!render_if_needed(app)) {
 			return false;

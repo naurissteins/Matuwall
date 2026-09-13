@@ -70,7 +70,8 @@ line. Comments are not allowed inside an array.
 *close_on_focus_loss*
 	Close Sweetwall when keyboard focus leaves its surface. Defaults to _true_.
 	Set this to _false_ to keep the picker open while focus moves to another
-	output; moving focus back restores keyboard control.
+	output; moving focus back restores keyboard control. Starting another
+	Sweetwall invocation still replaces the open picker.
 
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,

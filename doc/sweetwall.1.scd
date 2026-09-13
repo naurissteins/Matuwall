@@ -18,6 +18,10 @@ moving the selection looks like the wallpaper changed. The preview is drawn by
 sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
 *Escape* leaves the real wallpaper untouched. See _preview_ in *sweetwall*(5).
 
+Only one picker can be open on a Wayland display. Starting *sweetwall* again
+cancels the existing picker without applying its selection, then opens the new
+invocation with its requested options.
+
 # OPTIONS
 
 *--background* _COLOR_
