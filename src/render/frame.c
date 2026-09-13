@@ -34,10 +34,14 @@ static int32_t content_overflow(const struct matuwall_frame *frame) {
 			overflow = extra;
 		}
 	}
+	double edge = (frame->shadow >> 24) > 0 ? frame->shadow_width : 0;
 	if (frame->ring_width > 0 && frame->ring.a > 0) {
-		overflow += RING_GAP + frame->ring_width;
+		double ring = RING_GAP + frame->ring_width;
+		if (ring > edge) {
+			edge = ring;
+		}
 	}
-	return (int32_t)ceil(overflow);
+	return (int32_t)ceil(overflow + edge);
 }
 
 static struct matuwall_clip content_clip(
@@ -183,6 +187,18 @@ static void draw_tile(struct matuwall_buffer *buffer,
 	}
 }
 
+static void draw_shadow(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	const struct tile_geometry *geometry, double focus) {
+	int32_t width = scaled(frame->shadow_width * focus, frame->scale);
+	if (frame->shadow_width > 0 && width < 1) {
+		width = 1;
+	}
+	matuwall_draw_rounded_shadow(buffer, clip, geometry->left,
+		geometry->top, geometry->width, geometry->height,
+		geometry->radius, width, frame->shadow);
+}
+
 static bool focused(const struct matuwall_frame *frame, size_t index) {
 	for (size_t i = 0; i < frame->focus_count; i++) {
 		if (frame->focuses[i].index == index) {
@@ -190,6 +206,45 @@ static bool focused(const struct matuwall_frame *frame, size_t index) {
 		}
 	}
 	return false;
+}
+
+static void draw_tile_pass(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	bool shadows) {
+	for (size_t i = 0; i < frame->item_count; i++) {
+		struct tile_geometry geometry;
+		enum tile_position position =
+			tile_geometry(frame, clip, i, 1.0, &geometry);
+		if (position == TILE_BELOW) {
+			break;
+		}
+		if (position == TILE_ABOVE || focused(frame, i)) {
+			continue;
+		}
+		if (shadows) {
+			draw_shadow(buffer, frame, clip, &geometry, 1.0);
+		} else {
+			draw_tile(buffer, frame, clip, i, &geometry, false);
+		}
+	}
+
+	for (size_t i = 0; i < frame->focus_count; i++) {
+		size_t index = frame->focuses[i].index;
+		if (index >= frame->item_count) {
+			continue;
+		}
+		double focus = frame->focuses[i].scale;
+		struct tile_geometry geometry;
+		if (tile_geometry(frame, clip, index, focus, &geometry) !=
+			TILE_VISIBLE) {
+			continue;
+		}
+		if (shadows) {
+			draw_shadow(buffer, frame, clip, &geometry, focus);
+		} else {
+			draw_tile(buffer, frame, clip, index, &geometry, true);
+		}
+	}
 }
 
 static void draw_ring(struct matuwall_buffer *buffer,
@@ -240,31 +295,10 @@ void matuwall_frame_draw(
 		ring_width = 1;
 	}
 
-	for (size_t i = 0; i < frame->item_count; i++) {
-		struct tile_geometry geometry;
-		enum tile_position position =
-			tile_geometry(frame, &clip, i, 1.0, &geometry);
-		if (position == TILE_BELOW) {
-			break;
-		}
-		if (position == TILE_ABOVE || focused(frame, i)) {
-			continue;
-		}
-		draw_tile(buffer, frame, &clip, i, &geometry, false);
+	if (frame->shadow_width > 0 && (frame->shadow >> 24) > 0) {
+		draw_tile_pass(buffer, frame, &clip, true);
 	}
-
-	for (size_t i = 0; i < frame->focus_count; i++) {
-		if (frame->focuses[i].index >= frame->item_count) {
-			continue;
-		}
-		struct tile_geometry geometry;
-		if (tile_geometry(frame, &clip, frame->focuses[i].index,
-			    frame->focuses[i].scale,
-			    &geometry) == TILE_VISIBLE) {
-			draw_tile(buffer, frame, &clip, frame->focuses[i].index,
-				&geometry, true);
-		}
-	}
+	draw_tile_pass(buffer, frame, &clip, false);
 
 	if (ring_width > 0 && frame->ring.a > 0) {
 		for (size_t i = 0; i < frame->ring_count; i++) {

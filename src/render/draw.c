@@ -127,7 +127,7 @@ static void blend_corner_row(struct matuwall_buffer *buffer,
 	}
 }
 
-static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
+static double rounded_rect_distance(int32_t px, int32_t py, double x, double y,
 	double width, double height, double radius) {
 	double half_w = width / 2.0;
 	double half_h = height / 2.0;
@@ -139,8 +139,14 @@ static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
 	if (inside > 0.0) {
 		inside = 0.0;
 	}
-	double distance = sqrt(outside_x * outside_x + outside_y * outside_y) +
-			  inside - radius;
+	return sqrt(outside_x * outside_x + outside_y * outside_y) + inside -
+	       radius;
+}
+
+static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
+	double width, double height, double radius) {
+	double distance =
+		rounded_rect_distance(px, py, x, y, width, height, radius);
 	double coverage = 0.5 - distance;
 	if (coverage <= 0.0) {
 		return 0;
@@ -149,6 +155,55 @@ static uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
 		return COVERAGE_MAX;
 	}
 	return (uint32_t)(coverage * COVERAGE_MAX + 0.5);
+}
+
+void matuwall_draw_rounded_shadow(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t shadow_width, uint32_t color) {
+	if (width <= 0 || height <= 0 || shadow_width <= 0 ||
+		(color >> 24) == 0) {
+		return;
+	}
+	radius = clamp_radius(radius, width, height);
+
+	int32_t left =
+		x - shadow_width < clip->x0 ? clip->x0 : x - shadow_width;
+	int32_t right = x + width + shadow_width > clip->x1
+				? clip->x1
+				: x + width + shadow_width;
+	int32_t top = y - shadow_width < clip->y0 ? clip->y0 : y - shadow_width;
+	int32_t bottom = y + height + shadow_width > clip->y1
+				 ? clip->y1
+				 : y + height + shadow_width;
+
+	for (int32_t py = top; py < bottom; py++) {
+		int32_t skip_x0 = left;
+		int32_t skip_x1 = left;
+		if (py >= y && py < y + height) {
+			bool middle =
+				py >= y + radius && py < y + height - radius;
+			skip_x0 = middle ? x : x + radius;
+			skip_x1 = middle ? x + width : x + width - radius;
+		}
+		uint32_t *row = buffer->data + (size_t)py * buffer->width;
+
+		for (int32_t px = left; px < right; px++) {
+			if (px >= skip_x0 && px < skip_x1) {
+				px = skip_x1 - 1;
+				continue;
+			}
+			double distance = rounded_rect_distance(
+				px, py, x, y, width, height, radius);
+			if (distance < 0.0 || distance >= shadow_width) {
+				continue;
+			}
+			double strength = 1.0 - distance / shadow_width;
+			uint32_t coverage =
+				(uint32_t)(strength * strength * COVERAGE_MAX +
+					   0.5);
+			row[px] = blend(row[px], color, coverage);
+		}
+	}
 }
 
 void matuwall_draw_rounded_ring(struct matuwall_buffer *buffer,
