@@ -67,6 +67,7 @@ void sweetwall_config_defaults(struct sweetwall_config *cfg) {
 		.border_width = 0,
 		.ring_width = 2,
 		.navigation_ms = 110,
+		.zoom_percent = 3,
 		.preview = true,
 		.close_on_focus_loss = true,
 		.mouse_enabled = false,
@@ -259,6 +260,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 				"navigation_ms must be 0..1000", 0, 1000);
 			return true;
 		}
+		if (strcmp(key, "zoom_percent") == 0) {
+			apply_uint(&cfg->zoom_percent, v, line,
+				"zoom_percent must be 0..10", 0, 10);
+			return true;
+		}
 	} else if (strcmp(section, "grid") == 0) {
 		if (strcmp(key, "columns") == 0) {
 			apply_uint(&cfg->layout.columns, v, line,
@@ -282,7 +288,7 @@ static bool apply(void *user_data, const char *section, const char *key,
 		}
 		if (strcmp(key, "ring_width") == 0) {
 			apply_uint(&cfg->ring_width, v, line,
-				"ring_width must be 1..4096", 1, 4096);
+				"ring_width must be 0..4096", 0, 4096);
 			return true;
 		}
 		if (strcmp(key, "visible_rows") == 0) {

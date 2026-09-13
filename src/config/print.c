@@ -74,8 +74,8 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 		config->panel_radius);
 	fputs("\n[input]\nmouse = ", out);
 	fputs(config->mouse_enabled ? "true\n" : "false\n", out);
-	fprintf(out, "\n[animation]\nnavigation_ms = %u\n",
-		config->navigation_ms);
+	fprintf(out, "\n[animation]\nnavigation_ms = %u\nzoom_percent = %u\n",
+		config->navigation_ms, config->zoom_percent);
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\nspacing = %u\n"

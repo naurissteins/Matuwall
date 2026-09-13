@@ -194,7 +194,7 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 		return parse_uint_override("tile radius", value, 0, 4096,
 			&options->radius, &options->radius_set, err, err_size);
 	case OPTION_RING_WIDTH:
-		return parse_uint_override("ring width", value, 1, 4096,
+		return parse_uint_override("ring width", value, 0, 4096,
 			&options->ring_width, &options->ring_width_set, err,
 			err_size);
 	case 'r':

@@ -110,6 +110,12 @@ line. Comments are not allowed inside an array.
 	crossfade the selection ring. Defaults to _110_. Set to _0_ to disable
 	navigation animation. Must be an integer from 0 to 1000.
 
+*zoom_percent*
+	Amount the selected thumbnail grows, as a percentage of its configured size.
+	The previous thumbnail shrinks while the new selection grows on the navigation
+	timeline. Defaults to _3_. Set to _0_ to disable focus scaling. Must be an
+	integer from 0 to 10.
+
 ## [grid]
 
 *columns*
@@ -127,8 +133,8 @@ line. Comments are not allowed inside an array.
 	which disables thumbnail borders. Must be an integer from 0 to 4096.
 
 *ring_width*
-	Selection ring width in logical pixels. Defaults to _2_. Must be an integer
-	from 1 to 4096.
+	Selection ring width in logical pixels. Defaults to _2_. Set to _0_ to disable
+	the ring. Must be an integer from 0 to 4096.
 
 *visible_rows*
 	Maximum rows kept visible before the grid scrolls. Sweetwall uses fewer when
@@ -199,6 +205,7 @@ mouse = false
 
 [animation]
 navigation_ms = 110
+zoom_percent = 3
 
 [grid]
 columns = 5

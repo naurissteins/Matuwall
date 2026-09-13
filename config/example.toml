@@ -43,6 +43,9 @@ mouse = false
 # Duration of navigation transitions in milliseconds. Zero disables them.
 navigation_ms = 110
 
+# Selected-thumbnail enlargement in percent. Zero disables it.
+zoom_percent = 3
+
 [grid]
 # Maximum number of tile columns. Fewer are used on narrow outputs.
 columns = 5
@@ -56,7 +59,7 @@ radius = 8
 # Thumbnail border width in pixels. Zero disables the border.
 border_width = 0
 
-# Selection ring width in pixels.
+# Selection ring width in pixels. Zero disables the ring.
 ring_width = 2
 
 # Maximum rows kept visible. Fewer are used on short outputs.

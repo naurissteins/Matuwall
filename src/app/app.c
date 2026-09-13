@@ -38,7 +38,8 @@ bool sweetwall_app_init(struct sweetwall_app *app,
 			},
 		.running = true,
 	};
-	sweetwall_animation_init(&app->animation, app->config.navigation_ms);
+	sweetwall_animation_init(&app->animation, app->config.navigation_ms,
+		app->config.zoom_percent);
 
 	if (!sweetwall_app_loop_install_signals()) {
 		sweetwall_log_error(

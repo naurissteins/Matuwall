@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "render/sample.h"
+
 #define COVERAGE_MAX 255
 
 static inline uint32_t div255(uint32_t value) {
@@ -321,10 +323,10 @@ void sweetwall_draw_image_cover(struct sweetwall_buffer *buffer,
 	}
 }
 
-void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
+static void draw_image_rounded(struct sweetwall_buffer *buffer,
 	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h) {
+	uint32_t src_w, uint32_t src_h, bool bilinear) {
 	if (width <= 0 || height <= 0 || inset < 0 || inset > (width - 1) / 2 ||
 		inset > (height - 1) / 2 || src == NULL || src_w == 0 ||
 		src_h == 0) {
@@ -346,13 +348,22 @@ void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 	int32_t right = inner_x + inner_width > clip->x1
 				? clip->x1
 				: inner_x + inner_width;
+	struct sweetwall_bilinear_sampler sampler;
+	if (bilinear && !sweetwall_bilinear_sampler_init(&sampler, src, src_w,
+				src_h, (uint32_t)width, (uint32_t)height)) {
+		return;
+	}
 
 	for (int32_t py = top; py < bottom; py++) {
-		uint32_t sy = (uint32_t)((int64_t)(py - y) * src_h / height);
-		if (sy >= src_h) {
-			sy = src_h - 1;
+		const uint32_t *src_row = NULL;
+		if (!bilinear) {
+			uint32_t sy =
+				(uint32_t)((int64_t)(py - y) * src_h / height);
+			if (sy >= src_h) {
+				sy = src_h - 1;
+			}
+			src_row = src + (size_t)sy * src_w;
 		}
-		const uint32_t *src_row = src + (size_t)sy * src_w;
 		uint32_t *dst_row = buffer->data + (size_t)py * buffer->width;
 
 		for (int32_t px = left; px < right; px++) {
@@ -361,12 +372,35 @@ void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
 			if (cov == 0) {
 				continue;
 			}
-			uint32_t sx =
-				(uint32_t)((int64_t)(px - x) * src_w / width);
-			if (sx >= src_w) {
-				sx = src_w - 1;
+			uint32_t pixel;
+			if (bilinear) {
+				pixel = sweetwall_bilinear_sample(&sampler,
+					(uint32_t)(px - x), (uint32_t)(py - y));
+			} else {
+				uint32_t sx = (uint32_t)((int64_t)(px - x) *
+							 src_w / width);
+				if (sx >= src_w) {
+					sx = src_w - 1;
+				}
+				pixel = src_row[sx];
 			}
-			dst_row[px] = blend(dst_row[px], src_row[sx], cov);
+			dst_row[px] = blend(dst_row[px], pixel, cov);
 		}
 	}
+}
+
+void sweetwall_draw_image_rounded(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
+	uint32_t src_w, uint32_t src_h) {
+	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
+		src, src_w, src_h, false);
+}
+
+void sweetwall_draw_image_rounded_bilinear(struct sweetwall_buffer *buffer,
+	const struct sweetwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
+	uint32_t src_w, uint32_t src_h) {
+	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
+		src, src_w, src_h, true);
 }

@@ -44,7 +44,7 @@ void sweetwall_cli_usage(FILE *out) {
 	      "      --ring COLOR\n"
 	      "                     override ring color: #rrggbb or #rrggbbaa\n"
 	      "      --ring-width WIDTH\n"
-	      "                     override selection ring width (1..4096)\n"
+	      "                     override selection ring width (0..4096)\n"
 	      "  -r, --rows ROWS\n"
 	      "                     override maximum visible rows (1..1024)\n"
 	      "  -s, --spacing SPACING\n"

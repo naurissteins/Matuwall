@@ -124,8 +124,9 @@ invocation with its requested options.
 	configuration file is not changed.
 
 *--ring-width* _WIDTH_
-	Temporarily set _grid.ring_width_. _WIDTH_ must be a decimal integer from 1
-	to 4096. The configuration file is not changed.
+	Temporarily set _grid.ring_width_. _WIDTH_ must be a decimal integer from 0
+	to 4096. Zero disables the selection ring. The configuration file is not
+	changed.
 
 *-r* _ROWS_, *--rows* _ROWS_
 	Temporarily set the _grid.visible_rows_ maximum. _ROWS_ must be a decimal
