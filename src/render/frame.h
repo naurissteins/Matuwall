@@ -10,12 +10,21 @@
 #include "thumb/worker.h"
 #include "wayland/shm.h"
 
+struct sweetwall_frame_ring {
+	double x;
+	double y;
+	double width;
+	double height;
+	uint8_t alpha;
+};
+
 struct sweetwall_frame {
 	const struct sweetwall_layout *layout;
 	const struct sweetwall_thumb *thumbs;
 	size_t item_count;
-	size_t selected;
-	int32_t scroll;
+	double scroll;
+	struct sweetwall_frame_ring rings[2];
+	size_t ring_count;
 	// Panel geometry in logical, surface-local units
 	struct sweetwall_rect panel;
 	// Surface spans the whole output, so the panel floats on a backdrop
@@ -30,7 +39,7 @@ struct sweetwall_frame {
 	uint32_t tile;
 	uint32_t border;
 	uint32_t border_width;
-	uint32_t ring;
+	struct sweetwall_color ring;
 	uint32_t ring_width;
 	struct sweetwall_color spinner;
 	uint8_t spinner_alpha;

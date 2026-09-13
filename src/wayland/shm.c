@@ -1,10 +1,12 @@
 #include "wayland/shm.h"
 
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client.h>
 
 #define BYTES_PER_PIXEL 4
+#define MAX_GEOMETRY_BUFFERS 2
 
 static void handle_release(void *data, struct wl_buffer *wl_buffer) {
 	struct sweetwall_buffer *buffer = data;
@@ -109,4 +111,105 @@ void sweetwall_buffer_destroy(struct sweetwall_buffer *buffer) {
 	}
 	buffer->size = 0;
 	buffer->released = true;
+}
+
+static void free_buffer(struct sweetwall_buffer *buffer) {
+	sweetwall_buffer_destroy(buffer);
+	free(buffer);
+}
+
+static void collect_stale(
+	struct sweetwall_buffer_pool *pool, uint32_t width, uint32_t height) {
+	struct sweetwall_buffer **cursor = &pool->buffers;
+	while (*cursor != NULL) {
+		struct sweetwall_buffer *buffer = *cursor;
+		bool matches =
+			buffer->width == width && buffer->height == height;
+		if (!buffer->released || matches) {
+			cursor = &buffer->next;
+			continue;
+		}
+		*cursor = buffer->next;
+		free_buffer(buffer);
+	}
+}
+
+enum sweetwall_buffer_acquire sweetwall_buffer_pool_acquire(
+	struct sweetwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
+	uint32_t height, struct sweetwall_buffer **out) {
+	*out = NULL;
+	collect_stale(pool, width, height);
+
+	size_t matching = 0;
+	for (struct sweetwall_buffer *buffer = pool->buffers; buffer != NULL;
+		buffer = buffer->next) {
+		if (buffer->width != width || buffer->height != height) {
+			continue;
+		}
+		matching++;
+		if (buffer->released) {
+			pool->drawing = buffer;
+			*out = buffer;
+			return SWEETWALL_BUFFER_READY;
+		}
+	}
+	if (matching >= MAX_GEOMETRY_BUFFERS) {
+		return SWEETWALL_BUFFER_BUSY;
+	}
+
+	struct sweetwall_buffer *buffer = calloc(1, sizeof(*buffer));
+	if (buffer == NULL ||
+		!sweetwall_buffer_create(buffer, shm, width, height)) {
+		free(buffer);
+		return SWEETWALL_BUFFER_FAILED;
+	}
+	buffer->next = pool->buffers;
+	pool->buffers = buffer;
+	pool->drawing = buffer;
+	*out = buffer;
+	return SWEETWALL_BUFFER_READY;
+}
+
+void sweetwall_buffer_pool_submitted(struct sweetwall_buffer_pool *pool) {
+	pool->drawing->released = false;
+	pool->drawing->fresh = false;
+	pool->drawing = NULL;
+}
+
+void sweetwall_buffer_pool_collect_idle(
+	struct sweetwall_buffer_pool *pool, uint32_t width, uint32_t height) {
+	bool busy_current = false;
+	for (struct sweetwall_buffer *buffer = pool->buffers; buffer != NULL;
+		buffer = buffer->next) {
+		if (buffer->width == width && buffer->height == height &&
+			!buffer->released) {
+			busy_current = true;
+		}
+	}
+
+	bool kept_released = false;
+	struct sweetwall_buffer **cursor = &pool->buffers;
+	while (*cursor != NULL) {
+		struct sweetwall_buffer *buffer = *cursor;
+		bool current =
+			buffer->width == width && buffer->height == height;
+		bool keep = !buffer->released ||
+			    (current && !busy_current && !kept_released);
+		if (keep) {
+			kept_released |= current && buffer->released;
+			cursor = &buffer->next;
+			continue;
+		}
+		*cursor = buffer->next;
+		free_buffer(buffer);
+	}
+}
+
+void sweetwall_buffer_pool_destroy(struct sweetwall_buffer_pool *pool) {
+	while (pool->buffers != NULL) {
+		struct sweetwall_buffer *buffer = pool->buffers;
+		pool->buffers = buffer->next;
+		free_buffer(buffer);
+	}
+	pool->drawing = NULL;
 }

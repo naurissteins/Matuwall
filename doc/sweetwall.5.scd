@@ -102,6 +102,14 @@ line. Comments are not allowed inside an array.
 	With preview enabled, clicking outside the panel cancels. Defaults to _false_,
 	leaving navigation and selection keyboard-only.
 
+## [animation]
+
+*navigation_ms*
+	Duration of navigation transitions in milliseconds. Adjacent selections and
+	one-row scrolling glide smoothly; wrapped row changes and longer jumps
+	crossfade the selection ring. Defaults to _110_. Set to _0_ to disable
+	navigation animation. Must be an integer from 0 to 1000.
+
 ## [grid]
 
 *columns*
@@ -188,6 +196,9 @@ radius     = 16
 
 [input]
 mouse = false
+
+[animation]
+navigation_ms = 110
 
 [grid]
 columns = 5

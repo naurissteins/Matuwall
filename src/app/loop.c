@@ -47,8 +47,24 @@ bool sweetwall_app_loop_install_signals(void) {
 
 // --- frames ---
 
+static bool same_layout(
+	const struct sweetwall_layout *a, const struct sweetwall_layout *b) {
+	return a->columns == b->columns && a->spacing == b->spacing &&
+	       a->margin == b->margin && a->tile_width == b->tile_width &&
+	       a->tile_height == b->tile_height && a->radius == b->radius;
+}
+
+static bool same_rect(
+	const struct sweetwall_rect *a, const struct sweetwall_rect *b) {
+	return a->x == b->x && a->y == b->y && a->width == b->width &&
+	       a->height == b->height;
+}
+
 // The panel is the whole surface unless a backdrop is drawn around it
 static void refresh_panel(struct sweetwall_app *app) {
+	struct sweetwall_layout old_layout = app->layout;
+	struct sweetwall_rect old_panel = app->panel;
+	uint32_t old_first_row = app->grid.first_row;
 	if (app->config.preview) {
 		app->output_width = app->layer.width;
 		app->output_height = app->layer.height;
@@ -61,6 +77,12 @@ static void refresh_panel(struct sweetwall_app *app) {
 		app->layer.height);
 	sweetwall_grid_reveal(
 		&app->grid, &app->layout, (uint32_t)app->panel.height);
+	if (!same_layout(&old_layout, &app->layout) ||
+		!same_rect(&old_panel, &app->panel) ||
+		old_first_row != app->grid.first_row) {
+		sweetwall_animation_snap(&app->animation, &app->layout,
+			app->grid.selected, app->grid.first_row);
+	}
 	sweetwall_app_thumbs_prioritize_visible(app);
 }
 
@@ -70,9 +92,13 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		return true;
 	}
 
-	struct sweetwall_buffer *buffer =
-		sweetwall_layer_begin_frame(&app->layer, app->registry.shm);
-	if (buffer == NULL) {
+	struct sweetwall_buffer *buffer;
+	enum sweetwall_buffer_acquire acquired = sweetwall_layer_begin_frame(
+		&app->layer, app->registry.shm, &buffer);
+	if (acquired == SWEETWALL_BUFFER_BUSY) {
+		return true;
+	}
+	if (acquired == SWEETWALL_BUFFER_FAILED) {
 		sweetwall_log_error(
 			"render", "failed to acquire a frame buffer");
 		return false;
@@ -82,14 +108,15 @@ static bool render_if_needed(struct sweetwall_app *app) {
 			       ? (double)buffer->width / app->layer.width
 			       : 1.0;
 
-	int32_t step = (int32_t)(app->layout.tile_height + app->layout.spacing);
+	struct sweetwall_animation_sample visual;
+	sweetwall_animation_sample(
+		&app->animation, sweetwall_now_ms(), &visual);
 
 	struct sweetwall_frame frame = {
 		.layout = &app->layout,
 		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
-		.selected = app->grid.selected,
-		.scroll = (int32_t)app->grid.first_row * step,
+		.scroll = visual.scroll,
 		.panel = app->panel,
 		.backdrop = app->config.preview,
 		.preview = app->preview.image.pixels,
@@ -101,13 +128,28 @@ static bool render_if_needed(struct sweetwall_app *app) {
 		.tile = sweetwall_color_argb(app->config.tile),
 		.border = sweetwall_color_argb(app->config.border),
 		.border_width = app->config.border_width,
-		.ring = sweetwall_color_argb(app->config.ring),
+		.ring = app->config.ring,
 		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,
 		.spinner_alpha = sweetwall_spinner_alpha(sweetwall_now_ms()),
 	};
+	if (app->scan.count > 0) {
+		frame.ring_count = visual.ring_count;
+		for (size_t i = 0; i < visual.ring_count; i++) {
+			frame.rings[i] = (struct sweetwall_frame_ring){
+				.x = visual.rings[i].rect.x,
+				.y = visual.rings[i].rect.y,
+				.width = visual.rings[i].rect.width,
+				.height = visual.rings[i].rect.height,
+				.alpha = visual.rings[i].alpha,
+			};
+		}
+	}
 	sweetwall_frame_draw(buffer, &frame);
-	sweetwall_layer_commit_frame(&app->layer);
+	if (!sweetwall_layer_commit_frame(&app->layer, visual.active)) {
+		sweetwall_log_error("render", "failed to commit a frame");
+		return false;
+	}
 	return true;
 }
 
@@ -122,6 +164,8 @@ static void restore_selection(struct sweetwall_app *app) {
 		}
 		if (sweetwall_grid_select(&app->grid, &app->layout,
 			    (uint32_t)app->panel.height, i)) {
+			sweetwall_animation_snap(&app->animation, &app->layout,
+				app->grid.selected, app->grid.first_row);
 			app->layer.needs_repaint = true;
 		}
 		sweetwall_log_info("state", "restored selection %s", path);
@@ -227,6 +271,7 @@ static bool pump_events(struct sweetwall_app *app) {
 	if (app->pending > 0) {
 		app->layer.needs_repaint = true;
 	}
+	sweetwall_layer_collect_idle(&app->layer);
 	return true;
 }
 

@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+#include "app/animation.h"
 #include "app/instance.h"
 #include "app/preview.h"
 #include "config/config.h"
@@ -30,6 +31,7 @@ struct sweetwall_app {
 	uint32_t output_height;
 	struct sweetwall_dirscan scan;
 	struct sweetwall_grid grid;
+	struct sweetwall_animation animation;
 	// Panel geometry inside the surface; equal to the surface without
 	// preview
 	struct sweetwall_rect panel;

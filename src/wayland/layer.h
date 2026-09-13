@@ -9,6 +9,7 @@
 #include "wayland/shm.h"
 
 struct zwlr_layer_surface_v1;
+struct wl_callback;
 struct wp_viewport;
 struct wp_fractional_scale_v1;
 
@@ -27,8 +28,8 @@ struct sweetwall_layer {
 	bool needs_repaint;
 	bool closed;
 
-	struct sweetwall_buffer *buffer;
-	struct sweetwall_buffer *retired;
+	struct wl_callback *frame_callback;
+	struct sweetwall_buffer_pool buffer_pool;
 };
 
 // Starts bufferless across the selected output so its bounds are known
@@ -42,10 +43,15 @@ void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
 void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);
 
-struct sweetwall_buffer *sweetwall_layer_begin_frame(
-	struct sweetwall_layer *layer, struct wl_shm *shm);
+enum sweetwall_buffer_acquire sweetwall_layer_begin_frame(
+	struct sweetwall_layer *layer, struct wl_shm *shm,
+	struct sweetwall_buffer **buffer);
 
-void sweetwall_layer_commit_frame(struct sweetwall_layer *layer);
+bool sweetwall_layer_commit_frame(
+	struct sweetwall_layer *layer, bool continue_frames);
+
+// Release surplus buffers once no repaint is waiting
+void sweetwall_layer_collect_idle(struct sweetwall_layer *layer);
 
 void sweetwall_layer_destroy(struct sweetwall_layer *layer);
 
