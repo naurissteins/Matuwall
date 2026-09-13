@@ -1,20 +1,20 @@
-#ifndef SWEETWALL_CONFIG_TOML_H
-#define SWEETWALL_CONFIG_TOML_H
+#ifndef MATUWALL_CONFIG_TOML_H
+#define MATUWALL_CONFIG_TOML_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
-enum sweetwall_toml_type {
-	SWEETWALL_TOML_STRING,
-	SWEETWALL_TOML_INTEGER,
-	SWEETWALL_TOML_BOOLEAN,
-	SWEETWALL_TOML_ARRAY,
+enum matuwall_toml_type {
+	MATUWALL_TOML_STRING,
+	MATUWALL_TOML_INTEGER,
+	MATUWALL_TOML_BOOLEAN,
+	MATUWALL_TOML_ARRAY,
 };
 
-struct sweetwall_toml_value {
-	enum sweetwall_toml_type type;
+struct matuwall_toml_value {
+	enum matuwall_toml_type type;
 	const char *string;	  // STRING
 	int64_t integer;	  // INTEGER
 	bool boolean;		  // BOOLEAN
@@ -22,12 +22,12 @@ struct sweetwall_toml_value {
 	size_t item_count;
 };
 
-typedef bool (*sweetwall_toml_visitor)(void *user_data, const char *section,
-	const char *key, const struct sweetwall_toml_value *value, int line,
+typedef bool (*matuwall_toml_visitor)(void *user_data, const char *section,
+	const char *key, const struct matuwall_toml_value *value, int line,
 	char *err, size_t err_size);
 
-bool sweetwall_toml_parse(FILE *fp, const char *name,
-	sweetwall_toml_visitor visit, void *user_data, char *err,
+bool matuwall_toml_parse(FILE *fp, const char *name,
+	matuwall_toml_visitor visit, void *user_data, char *err,
 	size_t err_size);
 
 #endif

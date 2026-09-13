@@ -1,31 +1,31 @@
-#ifndef SWEETWALL_THUMB_WORKER_H
-#define SWEETWALL_THUMB_WORKER_H
+#ifndef MATUWALL_THUMB_WORKER_H
+#define MATUWALL_THUMB_WORKER_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-enum sweetwall_thumb_state {
-	SWEETWALL_THUMB_PENDING,
-	SWEETWALL_THUMB_READY,
-	SWEETWALL_THUMB_FAILED,
+enum matuwall_thumb_state {
+	MATUWALL_THUMB_PENDING,
+	MATUWALL_THUMB_READY,
+	MATUWALL_THUMB_FAILED,
 };
 
 // Previews are output sized and short lived, so they skip the on-disk cache
-enum sweetwall_job_kind {
-	SWEETWALL_JOB_THUMB,
-	SWEETWALL_JOB_PREVIEW,
+enum matuwall_job_kind {
+	MATUWALL_JOB_THUMB,
+	MATUWALL_JOB_PREVIEW,
 };
 
-struct sweetwall_thumb {
-	enum sweetwall_thumb_state state;
+struct matuwall_thumb {
+	enum matuwall_thumb_state state;
 	uint32_t *pixels;
 	uint32_t width;
 	uint32_t height;
 };
 
-struct sweetwall_thumb_result {
-	enum sweetwall_job_kind kind;
+struct matuwall_thumb_result {
+	enum matuwall_job_kind kind;
 	size_t index;
 	bool ok;
 	bool cache_hit;
@@ -34,30 +34,30 @@ struct sweetwall_thumb_result {
 	uint32_t height;
 };
 
-typedef void (*sweetwall_result_fn)(
-	void *user_data, const struct sweetwall_thumb_result *result);
+typedef void (*matuwall_result_fn)(
+	void *user_data, const struct matuwall_thumb_result *result);
 
-struct sweetwall_worker_pool;
+struct matuwall_worker_pool;
 
-struct sweetwall_worker_pool *sweetwall_worker_pool_start(
+struct matuwall_worker_pool *matuwall_worker_pool_start(
 	uint32_t target_w, uint32_t target_h);
 
-int sweetwall_worker_pool_fd(const struct sweetwall_worker_pool *pool);
+int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool);
 
-bool sweetwall_worker_submit(
-	struct sweetwall_worker_pool *pool, size_t index, const char *path);
+bool matuwall_worker_submit(
+	struct matuwall_worker_pool *pool, size_t index, const char *path);
 
 // Move queued thumbnails in [first, end) ahead of other thumbnail jobs
-void sweetwall_worker_prioritize_thumbs(
-	struct sweetwall_worker_pool *pool, size_t first, size_t end);
+void matuwall_worker_prioritize_thumbs(
+	struct matuwall_worker_pool *pool, size_t first, size_t end);
 
 // Jumps the queue and drops any preview that has not started; latest wins
-bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
+bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	size_t index, const char *path, uint32_t target_w, uint32_t target_h);
 
-void sweetwall_worker_drain(struct sweetwall_worker_pool *pool,
-	sweetwall_result_fn cb, void *user_data);
+void matuwall_worker_drain(struct matuwall_worker_pool *pool,
+	matuwall_result_fn cb, void *user_data);
 
-void sweetwall_worker_pool_stop(struct sweetwall_worker_pool *pool);
+void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool);
 
 #endif

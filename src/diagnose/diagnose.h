@@ -1,6 +1,6 @@
-#ifndef SWEETWALL_DIAGNOSE_DIAGNOSE_H
-#define SWEETWALL_DIAGNOSE_DIAGNOSE_H
+#ifndef MATUWALL_DIAGNOSE_DIAGNOSE_H
+#define MATUWALL_DIAGNOSE_DIAGNOSE_H
 
-int sweetwall_diagnose_run(void);
+int matuwall_diagnose_run(void);
 
 #endif

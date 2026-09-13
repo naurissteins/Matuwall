@@ -1,24 +1,24 @@
-sweetwall(1)
+matuwall(1)
 
 # NAME
 
-sweetwall - Minimal wallpaper picker for Wayland
+matuwall - Minimal wallpaper picker for Wayland
 
 # SYNOPSIS
 
-*sweetwall* [options]
+*matuwall* [options]
 
 # DESCRIPTION
 
-*sweetwall* is a keyboard-driven grid of wallpaper thumbnails for Wayland. It
+*matuwall* is a keyboard-driven grid of wallpaper thumbnails for Wayland. It
 opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 
 By default the selected wallpaper is previewed full-screen behind the grid, so
 moving the selection looks like the wallpaper changed. The preview is drawn by
-sweetwall alone: the wallpaper daemon is not involved until *Enter*, and
-*Escape* leaves the real wallpaper untouched. See _preview_ in *sweetwall*(5).
+matuwall alone: the wallpaper daemon is not involved until *Enter*, and
+*Escape* leaves the real wallpaper untouched. See _preview_ in *matuwall*(5).
 
-Only one picker can be open on a Wayland display. Starting *sweetwall* again
+Only one picker can be open on a Wayland display. Starting *matuwall* again
 cancels the existing picker without applying its selection, then opens the new
 invocation with its requested options.
 
@@ -51,7 +51,7 @@ invocation with its requested options.
 	selected output. The configuration file is not changed.
 
 *--close-on-focus-loss*
-	Close when keyboard focus leaves Sweetwall for this invocation, overriding
+	Close when keyboard focus leaves Matuwall for this invocation, overriding
 	_window.close_on_focus_loss_.
 
 *--config* _PATH_
@@ -85,7 +85,7 @@ invocation with its requested options.
 	configuration source.
 
 *--no-close-on-focus-loss*
-	Keep Sweetwall open when keyboard focus leaves for this invocation, overriding
+	Keep Matuwall open when keyboard focus leaves for this invocation, overriding
 	_window.close_on_focus_loss_. Moving focus back restores keyboard control.
 
 *--no-hooks*
@@ -93,9 +93,9 @@ invocation with its requested options.
 	later *--hook* starts a new list. The configuration file is not changed.
 
 *-o* _NAME_, *--output* _NAME_
-	Open Sweetwall explicitly on the named Wayland output, such as _DP-1_ or
+	Open Matuwall explicitly on the named Wayland output, such as _DP-1_ or
 	_HDMI-A-1_. Without this option, the compositor chooses the active output. An
-	unknown name is an error and reports the available names; Sweetwall does not
+	unknown name is an error and reports the available names; Matuwall does not
 	fall back to another output. This runtime-only selection is not written to the
 	configuration or included in *--print-config* output.
 
@@ -110,7 +110,7 @@ invocation with its requested options.
 
 *--print-config*
 	Print the fully resolved configuration as TOML and exit. Configuration-source
-	options and ordinary overrides are applied first. Sweetwall does not scan
+	options and ordinary overrides are applied first. Matuwall does not scan
 	wallpapers, connect to Wayland, apply a wallpaper, or run hooks. The output can
 	be redirected into a configuration file.
 
@@ -170,7 +170,7 @@ invocation with its requested options.
 	configuration are not touched.
 
 *--diagnose*
-	Check the current Sweetwall setup and print a compact report without opening
+	Check the current Matuwall setup and print a compact report without opening
 	the picker. Exit with status 1 for a blocking problem, or 0 when only warnings
 	remain.
 
@@ -208,14 +208,14 @@ On *Enter*, the selected wallpaper is handed to a wallpaper daemon. The default
 backend is *sweetbg*(1), invoked as _sweetbg img <path>_. The _backend_ config
 key selects a backend by name or _"auto"_ to probe. The path is passed as an
 argument, never through a shell. A backend that is unknown or fails is reported
-and sweetwall exits non-zero without changing the wallpaper.
+and matuwall exits non-zero without changing the wallpaper.
 
 After a successful apply, the _hooks.on_apply_ commands run (for example a
-colorscheme generator), spawned detached. See *sweetwall*(5).
+colorscheme generator), spawned detached. See *matuwall*(5).
 
 # REMEMBERED SELECTION
 
-After a wallpaper is applied successfully, sweetwall remembers its path. The
+After a wallpaper is applied successfully, matuwall remembers its path. The
 next launch selects it and scrolls it into view when it is still present in the
 configured directory. Missing, moved, corrupt, and unreadable state is ignored.
 
@@ -224,7 +224,7 @@ persistent file I/O off the instant-open path.
 
 # DIAGNOSTICS
 
-*sweetwall --diagnose* reports the effective config, wallpaper-directory access,
+*matuwall --diagnose* reports the effective config, wallpaper-directory access,
 Wayland reachability, backend clients and daemon detection, configured hook
 executables, remembered selection, and cache, state, and log paths. It may connect
 to the compositor, but does not create a surface, apply a wallpaper, run hooks, or
@@ -236,9 +236,9 @@ successful exit status. Invalid command-line usage exits with status 2.
 
 # LOGGING
 
-Sweetwall writes human-readable diagnostics to
-_$XDG_STATE_HOME/sweetwall/sweetwall.log_, falling back to
-_~/.local/state/sweetwall/sweetwall.log_. Warnings and errors are also written
+Matuwall writes human-readable diagnostics to
+_$XDG_STATE_HOME/matuwall/matuwall.log_, falling back to
+_~/.local/state/matuwall/matuwall.log_. Warnings and errors are also written
 to standard error. The log includes config warnings, wallpaper scan results,
 output and grid geometry, thumbnail failures and summary counts, backend
 detection and exit status, hook launch failures, remembered selection state,
@@ -249,29 +249,29 @@ config paths may appear in the log. Hook arguments are never recorded; only the
 executable name is included.
 
 Log files are capped at 256 KiB. The current file and two rotated files are kept:
-_sweetwall.log_, _sweetwall.log.1_, and _sweetwall.log.2_. Logging starts after
+_matuwall.log_, _matuwall.log.1_, and _matuwall.log.2_. Logging starts after
 the first frame so it adds no file I/O to normal startup. Diagnostics buffered
 before that point are still persisted when startup fails.
 
 # CONFIGURATION
 
-Sweetwall reads _$XDG_CONFIG_HOME/sweetwall/config.toml_, falling back to
-_~/.config/sweetwall/config.toml_. It runs with defaults when no file is
+Matuwall reads _$XDG_CONFIG_HOME/matuwall/config.toml_, falling back to
+_~/.config/matuwall/config.toml_. It runs with defaults when no file is
 present. Command-line overrides take precedence over the loaded configuration.
 When conflicting overrides are supplied, the last one takes effect.
-See *sweetwall*(5) for the keys.
+See *matuwall*(5) for the keys.
 
 # FILES
 
-_$XDG_CONFIG_HOME/sweetwall/config.toml_, _~/.config/sweetwall/config.toml_
-	Per-user configuration. See *sweetwall*(5).
+_$XDG_CONFIG_HOME/matuwall/config.toml_, _~/.config/matuwall/config.toml_
+	Per-user configuration. See *matuwall*(5).
 
-_$XDG_STATE_HOME/sweetwall/last-selection_, _~/.local/state/sweetwall/last-selection_
+_$XDG_STATE_HOME/matuwall/last-selection_, _~/.local/state/matuwall/last-selection_
 	Last successfully applied wallpaper.
 
-_$XDG_STATE_HOME/sweetwall/sweetwall.log_, _~/.local/state/sweetwall/sweetwall.log_
+_$XDG_STATE_HOME/matuwall/matuwall.log_, _~/.local/state/matuwall/matuwall.log_
 	Current diagnostic log. The _.1_ and _.2_ suffixes are older rotations.
 
 # SEE ALSO
 
-*sweetwall*(5), *sweetbg*(1)
+*matuwall*(5), *sweetbg*(1)

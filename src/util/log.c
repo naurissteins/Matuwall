@@ -12,9 +12,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#define LOG_FILE "sweetwall.log"
-#define LOG_FILE_1 "sweetwall.log.1"
-#define LOG_FILE_2 "sweetwall.log.2"
+#define LOG_FILE "matuwall.log"
+#define LOG_FILE_1 "matuwall.log.1"
+#define LOG_FILE_2 "matuwall.log.2"
 #define LOG_MAX_BYTES ((size_t)256 * 1024)
 #define LOG_LINE_MAX 1024u
 #define LOG_EARLY_MAX 32u
@@ -64,18 +64,18 @@ static const char *level_name(enum log_level level) {
 static bool state_dir(char *out, size_t out_size) {
 	const char *xdg = getenv("XDG_STATE_HOME");
 	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/sweetwall", xdg) <
+		return (size_t)snprintf(out, out_size, "%s/matuwall", xdg) <
 		       out_size;
 	}
 	const char *home = getenv("HOME");
 	if (home == NULL) {
 		return false;
 	}
-	return (size_t)snprintf(out, out_size, "%s/.local/state/sweetwall",
+	return (size_t)snprintf(out, out_size, "%s/.local/state/matuwall",
 		       home) < out_size;
 }
 
-bool sweetwall_log_path(char *out, size_t out_size) {
+bool matuwall_log_path(char *out, size_t out_size) {
 	char dir[PATH_MAX];
 	if (!state_dir(dir, sizeof(dir))) {
 		return false;
@@ -250,7 +250,7 @@ static void log_message(enum log_level level, const char *component,
 
 	if (level != LOG_INFO) {
 		const char *label = level == LOG_ERROR ? "error" : "warning";
-		fprintf(stderr, "sweetwall: %s: %s: %s\n", label, component,
+		fprintf(stderr, "matuwall: %s: %s: %s\n", label, component,
 			message);
 	}
 	struct timespec at = {0};
@@ -265,7 +265,7 @@ static void log_message(enum log_level level, const char *component,
 		if (!persist(line, size)) {
 			int saved = errno;
 			fprintf(stderr,
-				"sweetwall: warning: logging: cannot write "
+				"matuwall: warning: logging: cannot write "
 				"persistent log: %s\n",
 				strerror(saved));
 			close_log();
@@ -276,13 +276,13 @@ static void log_message(enum log_level level, const char *component,
 	}
 }
 
-void sweetwall_log_start(const char *version) {
+void matuwall_log_start(const char *version) {
 	logger.started = true;
-	sweetwall_log_info(
-		"startup", "sweetwall %s (pid %ld)", version, (long)getpid());
+	matuwall_log_info(
+		"startup", "matuwall %s (pid %ld)", version, (long)getpid());
 }
 
-bool sweetwall_log_activate(void) {
+bool matuwall_log_activate(void) {
 	if (logger.file_fd >= 0) {
 		return true;
 	}
@@ -317,14 +317,14 @@ bool sweetwall_log_activate(void) {
 	logger.early_count = 0;
 	if (logger.dropped) {
 		logger.dropped = false;
-		sweetwall_log_warn("logging", "early log buffer overflowed");
+		matuwall_log_warn("logging", "early log buffer overflowed");
 	}
 	return true;
 }
 
-void sweetwall_log_finish(void) {
+void matuwall_log_finish(void) {
 	if (logger.started && logger.file_fd < 0) {
-		sweetwall_log_activate();
+		matuwall_log_activate();
 	}
 	close_log();
 	logger = (struct logger_state){
@@ -333,21 +333,21 @@ void sweetwall_log_finish(void) {
 	};
 }
 
-void sweetwall_log_info(const char *component, const char *format, ...) {
+void matuwall_log_info(const char *component, const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 	log_message(LOG_INFO, component, format, args);
 	va_end(args);
 }
 
-void sweetwall_log_warn(const char *component, const char *format, ...) {
+void matuwall_log_warn(const char *component, const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 	log_message(LOG_WARN, component, format, args);
 	va_end(args);
 }
 
-void sweetwall_log_error(const char *component, const char *format, ...) {
+void matuwall_log_error(const char *component, const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 	log_message(LOG_ERROR, component, format, args);

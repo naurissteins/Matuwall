@@ -30,14 +30,14 @@ static bool bare_token_ok(const char *after) {
 	return *after == '\0' || *after == '#';
 }
 
-static bool parse_scalar(const char *value, struct sweetwall_toml_value *out) {
+static bool parse_scalar(const char *value, struct matuwall_toml_value *out) {
 	if (strncmp(value, "true", 4) == 0 && bare_token_ok(value + 4)) {
-		out->type = SWEETWALL_TOML_BOOLEAN;
+		out->type = MATUWALL_TOML_BOOLEAN;
 		out->boolean = true;
 		return true;
 	}
 	if (strncmp(value, "false", 5) == 0 && bare_token_ok(value + 5)) {
-		out->type = SWEETWALL_TOML_BOOLEAN;
+		out->type = MATUWALL_TOML_BOOLEAN;
 		out->boolean = false;
 		return true;
 	}
@@ -45,7 +45,7 @@ static bool parse_scalar(const char *value, struct sweetwall_toml_value *out) {
 	char *endp = NULL;
 	long long n = strtoll(value, &endp, 10);
 	if (endp != value && bare_token_ok(endp)) {
-		out->type = SWEETWALL_TOML_INTEGER;
+		out->type = MATUWALL_TOML_INTEGER;
 		out->integer = (int64_t)n;
 		return true;
 	}
@@ -132,7 +132,7 @@ static bool split_array(char *text, char **items, size_t *count,
 		}
 		char buffer[TOML_LINE_MAX];
 		const char *end = NULL;
-		if (!sweetwall_toml_string_parse(
+		if (!matuwall_toml_string_parse(
 			    p, buffer, sizeof(buffer), &end)) {
 			snprintf(err, err_size, "%s:%d: unterminated string",
 				name, line);
@@ -151,7 +151,7 @@ static bool split_array(char *text, char **items, size_t *count,
 }
 
 static bool parse_array(char *value, FILE *fp, const char *name, int *line,
-	struct sweetwall_toml_value *out, char **items, char *err,
+	struct matuwall_toml_value *out, char **items, char *err,
 	size_t err_size) {
 	char text[TOML_ARRAY_MAX_TEXT];
 	if (strlen(value) >= sizeof(text)) {
@@ -171,7 +171,7 @@ static bool parse_array(char *value, FILE *fp, const char *name, int *line,
 		}
 		return false;
 	}
-	out->type = SWEETWALL_TOML_ARRAY;
+	out->type = MATUWALL_TOML_ARRAY;
 	out->items = (const char *const *)items;
 	out->item_count = count;
 	return true;
@@ -201,8 +201,8 @@ static bool parse_section(char *line, char *section, const char *name,
 	return true;
 }
 
-bool sweetwall_toml_parse(FILE *fp, const char *name,
-	sweetwall_toml_visitor visit, void *user_data, char *err,
+bool matuwall_toml_parse(FILE *fp, const char *name,
+	matuwall_toml_visitor visit, void *user_data, char *err,
 	size_t err_size) {
 	char buffer[TOML_LINE_MAX];
 	char section[TOML_SECTION_MAX] = "";
@@ -243,14 +243,14 @@ bool sweetwall_toml_parse(FILE *fp, const char *name,
 			return false;
 		}
 
-		struct sweetwall_toml_value parsed = {0};
+		struct matuwall_toml_value parsed = {0};
 		char strbuf[TOML_LINE_MAX];
 		char *items[TOML_ARRAY_MAX_ITEMS];
 		bool is_array = false;
 
 		if (*value == '"') {
 			const char *after;
-			if (!sweetwall_toml_string_parse(
+			if (!matuwall_toml_string_parse(
 				    value, strbuf, sizeof(strbuf), &after) ||
 				!bare_token_ok(after)) {
 				snprintf(err, err_size,
@@ -258,7 +258,7 @@ bool sweetwall_toml_parse(FILE *fp, const char *name,
 					name, line);
 				return false;
 			}
-			parsed.type = SWEETWALL_TOML_STRING;
+			parsed.type = MATUWALL_TOML_STRING;
 			parsed.string = strbuf;
 		} else if (*value == '[') {
 			is_array = true;

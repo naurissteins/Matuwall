@@ -9,7 +9,7 @@
 #define MAX_GEOMETRY_BUFFERS 2
 
 static void handle_release(void *data, struct wl_buffer *wl_buffer) {
-	struct sweetwall_buffer *buffer = data;
+	struct matuwall_buffer *buffer = data;
 	(void)wl_buffer;
 
 	buffer->released = true;
@@ -38,9 +38,9 @@ static bool buffer_size(uint32_t width, uint32_t height, uint32_t *stride_out,
 	return true;
 }
 
-bool sweetwall_buffer_create(struct sweetwall_buffer *buffer,
-	struct wl_shm *shm, uint32_t width, uint32_t height) {
-	*buffer = (struct sweetwall_buffer){0};
+bool matuwall_buffer_create(struct matuwall_buffer *buffer, struct wl_shm *shm,
+	uint32_t width, uint32_t height) {
+	*buffer = (struct matuwall_buffer){0};
 
 	uint32_t stride;
 	size_t size;
@@ -48,7 +48,7 @@ bool sweetwall_buffer_create(struct sweetwall_buffer *buffer,
 		return false;
 	}
 
-	int fd = memfd_create("sweetwall-shm", MFD_CLOEXEC);
+	int fd = memfd_create("matuwall-shm", MFD_CLOEXEC);
 	if (fd < 0) {
 		return false;
 	}
@@ -93,14 +93,14 @@ bool sweetwall_buffer_create(struct sweetwall_buffer *buffer,
 	return true;
 }
 
-void sweetwall_buffer_fill(struct sweetwall_buffer *buffer, uint32_t color) {
+void matuwall_buffer_fill(struct matuwall_buffer *buffer, uint32_t color) {
 	size_t count = buffer->size / BYTES_PER_PIXEL;
 	for (size_t i = 0; i < count; i++) {
 		buffer->data[i] = color;
 	}
 }
 
-void sweetwall_buffer_destroy(struct sweetwall_buffer *buffer) {
+void matuwall_buffer_destroy(struct matuwall_buffer *buffer) {
 	if (buffer->wl_buffer != NULL) {
 		wl_buffer_destroy(buffer->wl_buffer);
 		buffer->wl_buffer = NULL;
@@ -113,16 +113,16 @@ void sweetwall_buffer_destroy(struct sweetwall_buffer *buffer) {
 	buffer->released = true;
 }
 
-static void free_buffer(struct sweetwall_buffer *buffer) {
-	sweetwall_buffer_destroy(buffer);
+static void free_buffer(struct matuwall_buffer *buffer) {
+	matuwall_buffer_destroy(buffer);
 	free(buffer);
 }
 
 static void collect_stale(
-	struct sweetwall_buffer_pool *pool, uint32_t width, uint32_t height) {
-	struct sweetwall_buffer **cursor = &pool->buffers;
+	struct matuwall_buffer_pool *pool, uint32_t width, uint32_t height) {
+	struct matuwall_buffer **cursor = &pool->buffers;
 	while (*cursor != NULL) {
-		struct sweetwall_buffer *buffer = *cursor;
+		struct matuwall_buffer *buffer = *cursor;
 		bool matches =
 			buffer->width == width && buffer->height == height;
 		if (!buffer->released || matches) {
@@ -134,14 +134,14 @@ static void collect_stale(
 	}
 }
 
-enum sweetwall_buffer_acquire sweetwall_buffer_pool_acquire(
-	struct sweetwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
-	uint32_t height, struct sweetwall_buffer **out) {
+enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
+	struct matuwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
+	uint32_t height, struct matuwall_buffer **out) {
 	*out = NULL;
 	collect_stale(pool, width, height);
 
 	size_t matching = 0;
-	for (struct sweetwall_buffer *buffer = pool->buffers; buffer != NULL;
+	for (struct matuwall_buffer *buffer = pool->buffers; buffer != NULL;
 		buffer = buffer->next) {
 		if (buffer->width != width || buffer->height != height) {
 			continue;
@@ -150,36 +150,36 @@ enum sweetwall_buffer_acquire sweetwall_buffer_pool_acquire(
 		if (buffer->released) {
 			pool->drawing = buffer;
 			*out = buffer;
-			return SWEETWALL_BUFFER_READY;
+			return MATUWALL_BUFFER_READY;
 		}
 	}
 	if (matching >= MAX_GEOMETRY_BUFFERS) {
-		return SWEETWALL_BUFFER_BUSY;
+		return MATUWALL_BUFFER_BUSY;
 	}
 
-	struct sweetwall_buffer *buffer = calloc(1, sizeof(*buffer));
+	struct matuwall_buffer *buffer = calloc(1, sizeof(*buffer));
 	if (buffer == NULL ||
-		!sweetwall_buffer_create(buffer, shm, width, height)) {
+		!matuwall_buffer_create(buffer, shm, width, height)) {
 		free(buffer);
-		return SWEETWALL_BUFFER_FAILED;
+		return MATUWALL_BUFFER_FAILED;
 	}
 	buffer->next = pool->buffers;
 	pool->buffers = buffer;
 	pool->drawing = buffer;
 	*out = buffer;
-	return SWEETWALL_BUFFER_READY;
+	return MATUWALL_BUFFER_READY;
 }
 
-void sweetwall_buffer_pool_submitted(struct sweetwall_buffer_pool *pool) {
+void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool) {
 	pool->drawing->released = false;
 	pool->drawing->fresh = false;
 	pool->drawing = NULL;
 }
 
-void sweetwall_buffer_pool_collect_idle(
-	struct sweetwall_buffer_pool *pool, uint32_t width, uint32_t height) {
+void matuwall_buffer_pool_collect_idle(
+	struct matuwall_buffer_pool *pool, uint32_t width, uint32_t height) {
 	bool busy_current = false;
-	for (struct sweetwall_buffer *buffer = pool->buffers; buffer != NULL;
+	for (struct matuwall_buffer *buffer = pool->buffers; buffer != NULL;
 		buffer = buffer->next) {
 		if (buffer->width == width && buffer->height == height &&
 			!buffer->released) {
@@ -188,9 +188,9 @@ void sweetwall_buffer_pool_collect_idle(
 	}
 
 	bool kept_released = false;
-	struct sweetwall_buffer **cursor = &pool->buffers;
+	struct matuwall_buffer **cursor = &pool->buffers;
 	while (*cursor != NULL) {
-		struct sweetwall_buffer *buffer = *cursor;
+		struct matuwall_buffer *buffer = *cursor;
 		bool current =
 			buffer->width == width && buffer->height == height;
 		bool keep = !buffer->released ||
@@ -205,9 +205,9 @@ void sweetwall_buffer_pool_collect_idle(
 	}
 }
 
-void sweetwall_buffer_pool_destroy(struct sweetwall_buffer_pool *pool) {
+void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool) {
 	while (pool->buffers != NULL) {
-		struct sweetwall_buffer *buffer = pool->buffers;
+		struct matuwall_buffer *buffer = pool->buffers;
 		pool->buffers = buffer->next;
 		free_buffer(buffer);
 	}

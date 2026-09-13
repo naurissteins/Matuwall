@@ -13,7 +13,7 @@
 #define MAX_WORKERS 4
 
 struct job {
-	enum sweetwall_job_kind kind;
+	enum matuwall_job_kind kind;
 	size_t index;
 	char *path;
 	uint32_t target_w;
@@ -22,7 +22,7 @@ struct job {
 };
 
 struct result {
-	struct sweetwall_thumb_result data;
+	struct matuwall_thumb_result data;
 	struct result *next;
 };
 
@@ -31,7 +31,7 @@ struct job_list {
 	struct job *tail;
 };
 
-struct sweetwall_worker_pool {
+struct matuwall_worker_pool {
 	pthread_t threads[MAX_WORKERS];
 	size_t thread_count;
 
@@ -57,38 +57,38 @@ static size_t worker_count(void) {
 }
 
 static bool produce(
-	const struct job *job, struct sweetwall_image *out, bool *cache_hit) {
+	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
 	// Output-sized previews would bloat the cache for one keypress of value
-	bool cached = job->kind == SWEETWALL_JOB_THUMB;
+	bool cached = job->kind == MATUWALL_JOB_THUMB;
 
 	char key[640];
-	bool have_key = cached && sweetwall_cache_key(job->path, job->target_w,
+	bool have_key = cached && matuwall_cache_key(job->path, job->target_w,
 					  job->target_h, key, sizeof(key));
-	if (have_key && sweetwall_cache_read(key, out)) {
+	if (have_key && matuwall_cache_read(key, out)) {
 		*cache_hit = true;
 		return true;
 	}
 
-	struct sweetwall_image decoded;
-	if (!sweetwall_image_decode(
+	struct matuwall_image decoded;
+	if (!matuwall_image_decode(
 		    &decoded, job->path, job->target_w, job->target_h)) {
 		return false;
 	}
-	bool scaled = sweetwall_scale_cover(
+	bool scaled = matuwall_scale_cover(
 		&decoded, job->target_w, job->target_h, out);
-	sweetwall_image_free(&decoded);
+	matuwall_image_free(&decoded);
 	if (!scaled) {
 		return false;
 	}
 
 	if (have_key) {
-		sweetwall_cache_write(key, out);
+		matuwall_cache_write(key, out);
 	}
 	return true;
 }
 
-static struct job *take_job(struct sweetwall_worker_pool *pool) {
+static struct job *take_job(struct matuwall_worker_pool *pool) {
 	while (pool->jobs_head == NULL && !pool->stopping) {
 		pthread_cond_wait(&pool->wakeup, &pool->mutex);
 	}
@@ -104,7 +104,7 @@ static struct job *take_job(struct sweetwall_worker_pool *pool) {
 }
 
 static void publish_result(
-	struct sweetwall_worker_pool *pool, struct result *res) {
+	struct matuwall_worker_pool *pool, struct result *res) {
 	pthread_mutex_lock(&pool->mutex);
 	res->next = pool->results;
 	pool->results = res;
@@ -116,7 +116,7 @@ static void publish_result(
 }
 
 static void *worker_main(void *arg) {
-	struct sweetwall_worker_pool *pool = arg;
+	struct matuwall_worker_pool *pool = arg;
 
 	pthread_mutex_lock(&pool->mutex);
 	for (;;) {
@@ -130,7 +130,7 @@ static void *worker_main(void *arg) {
 		if (res != NULL) {
 			res->data.kind = job->kind;
 			res->data.index = job->index;
-			struct sweetwall_image img;
+			struct matuwall_image img;
 			if (produce(job, &img, &res->data.cache_hit)) {
 				res->data.ok = true;
 				res->data.pixels = img.pixels;
@@ -148,9 +148,9 @@ static void *worker_main(void *arg) {
 	return NULL;
 }
 
-struct sweetwall_worker_pool *sweetwall_worker_pool_start(
+struct matuwall_worker_pool *matuwall_worker_pool_start(
 	uint32_t target_w, uint32_t target_h) {
-	struct sweetwall_worker_pool *pool = calloc(1, sizeof(*pool));
+	struct matuwall_worker_pool *pool = calloc(1, sizeof(*pool));
 	if (pool == NULL) {
 		return NULL;
 	}
@@ -176,17 +176,17 @@ struct sweetwall_worker_pool *sweetwall_worker_pool_start(
 		pool->thread_count++;
 	}
 	if (pool->thread_count == 0) {
-		sweetwall_worker_pool_stop(pool);
+		matuwall_worker_pool_stop(pool);
 		return NULL;
 	}
 	return pool;
 }
 
-int sweetwall_worker_pool_fd(const struct sweetwall_worker_pool *pool) {
+int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool) {
 	return pool->event_fd;
 }
 
-static struct job *make_job(enum sweetwall_job_kind kind, size_t index,
+static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	const char *path, uint32_t target_w, uint32_t target_h) {
 	struct job *job = calloc(1, sizeof(*job));
 	if (job == NULL) {
@@ -227,13 +227,13 @@ static void job_list_extend(struct job_list *list, struct job_list *addition) {
 }
 
 // Caller holds the mutex
-static void drop_queued_previews(struct sweetwall_worker_pool *pool) {
+static void drop_queued_previews(struct matuwall_worker_pool *pool) {
 	struct job **cursor = &pool->jobs_head;
 	struct job *prev = NULL;
 
 	while (*cursor != NULL) {
 		struct job *job = *cursor;
-		if (job->kind != SWEETWALL_JOB_PREVIEW) {
+		if (job->kind != MATUWALL_JOB_PREVIEW) {
 			prev = job;
 			cursor = &job->next;
 			continue;
@@ -247,9 +247,9 @@ static void drop_queued_previews(struct sweetwall_worker_pool *pool) {
 	}
 }
 
-bool sweetwall_worker_submit(
-	struct sweetwall_worker_pool *pool, size_t index, const char *path) {
-	struct job *job = make_job(SWEETWALL_JOB_THUMB, index, path,
+bool matuwall_worker_submit(
+	struct matuwall_worker_pool *pool, size_t index, const char *path) {
+	struct job *job = make_job(MATUWALL_JOB_THUMB, index, path,
 		pool->target_w, pool->target_h);
 	if (job == NULL) {
 		return false;
@@ -267,8 +267,8 @@ bool sweetwall_worker_submit(
 	return true;
 }
 
-void sweetwall_worker_prioritize_thumbs(
-	struct sweetwall_worker_pool *pool, size_t first, size_t end) {
+void matuwall_worker_prioritize_thumbs(
+	struct matuwall_worker_pool *pool, size_t first, size_t end) {
 	if (first >= end) {
 		return;
 	}
@@ -281,7 +281,7 @@ void sweetwall_worker_prioritize_thumbs(
 	struct job *job = pool->jobs_head;
 	while (job != NULL) {
 		struct job *next = job->next;
-		if (job->kind == SWEETWALL_JOB_PREVIEW) {
+		if (job->kind == MATUWALL_JOB_PREVIEW) {
 			job_list_append(&previews, job);
 		} else if (job->index >= first && job->index < end) {
 			job_list_append(&visible, job);
@@ -298,10 +298,10 @@ void sweetwall_worker_prioritize_thumbs(
 	pthread_mutex_unlock(&pool->mutex);
 }
 
-bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
+bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	size_t index, const char *path, uint32_t target_w, uint32_t target_h) {
-	struct job *job = make_job(
-		SWEETWALL_JOB_PREVIEW, index, path, target_w, target_h);
+	struct job *job =
+		make_job(MATUWALL_JOB_PREVIEW, index, path, target_w, target_h);
 	if (job == NULL) {
 		return false;
 	}
@@ -319,8 +319,8 @@ bool sweetwall_worker_submit_preview(struct sweetwall_worker_pool *pool,
 	return true;
 }
 
-void sweetwall_worker_drain(struct sweetwall_worker_pool *pool,
-	sweetwall_result_fn cb, void *user_data) {
+void matuwall_worker_drain(struct matuwall_worker_pool *pool,
+	matuwall_result_fn cb, void *user_data) {
 	uint64_t drained;
 	while (read(pool->event_fd, &drained, sizeof(drained)) > 0) {
 		// Clear the counter; the list below is the real work list
@@ -348,7 +348,7 @@ void sweetwall_worker_drain(struct sweetwall_worker_pool *pool,
 	}
 }
 
-void sweetwall_worker_pool_stop(struct sweetwall_worker_pool *pool) {
+void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	pthread_mutex_lock(&pool->mutex);
 	pool->stopping = true;
 	pthread_cond_broadcast(&pool->wakeup);

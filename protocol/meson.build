@@ -1,6 +1,6 @@
 # Generate Wayland client glue with wayland-scanner. xdg-shell is generated
 # only so wlr-layer-shell's xdg_popup references resolve at link time;
-# sweetwall does not use xdg-shell directly.
+# Matuwall does not use xdg-shell directly.
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 
@@ -32,15 +32,15 @@ foreach xml : protocols
 	)
 endforeach
 
-sweetwall_protocols = static_library(
-	'sweetwall-protocols',
+matuwall_protocols = static_library(
+	'matuwall-protocols',
 	protocol_src,
 	protocol_headers,
 	dependencies: wayland_client,
 )
 
-sweetwall_protocols_dep = declare_dependency(
-	link_with: sweetwall_protocols,
+matuwall_protocols_dep = declare_dependency(
+	link_with: matuwall_protocols,
 	# listing the headers as sources makes their build dir an include path
 	sources: protocol_headers,
 )

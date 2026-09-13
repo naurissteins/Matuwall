@@ -1,19 +1,19 @@
-#ifndef SWEETWALL_GRID_LAYOUT_H
-#define SWEETWALL_GRID_LAYOUT_H
+#ifndef MATUWALL_GRID_LAYOUT_H
+#define MATUWALL_GRID_LAYOUT_H
 
 #include <stddef.h>
 #include <stdint.h>
 
 // Where the grid panel sits, either as a surface anchor or inside a backdrop
-enum sweetwall_position {
-	SWEETWALL_POSITION_CENTER,
-	SWEETWALL_POSITION_LEFT,
-	SWEETWALL_POSITION_RIGHT,
-	SWEETWALL_POSITION_TOP,
-	SWEETWALL_POSITION_BOTTOM,
+enum matuwall_position {
+	MATUWALL_POSITION_CENTER,
+	MATUWALL_POSITION_LEFT,
+	MATUWALL_POSITION_RIGHT,
+	MATUWALL_POSITION_TOP,
+	MATUWALL_POSITION_BOTTOM,
 };
 
-struct sweetwall_rect {
+struct matuwall_rect {
 	int32_t x;
 	int32_t y;
 	int32_t width;
@@ -21,7 +21,7 @@ struct sweetwall_rect {
 };
 
 // Grid metrics in logical (surface-local) units
-struct sweetwall_layout {
+struct matuwall_layout {
 	uint32_t columns;
 	uint32_t spacing;
 	uint32_t margin;
@@ -30,28 +30,27 @@ struct sweetwall_layout {
 	uint32_t radius;
 };
 
-void sweetwall_layout_adapt(const struct sweetwall_layout *configured,
+void matuwall_layout_adapt(const struct matuwall_layout *configured,
 	uint32_t configured_rows, uint32_t available_width,
-	uint32_t available_height, struct sweetwall_layout *layout,
+	uint32_t available_height, struct matuwall_layout *layout,
 	uint32_t *visible_rows);
 
-uint32_t sweetwall_layout_rows(
-	const struct sweetwall_layout *layout, size_t count);
+uint32_t matuwall_layout_rows(
+	const struct matuwall_layout *layout, size_t count);
 
-struct sweetwall_rect sweetwall_layout_item(
-	const struct sweetwall_layout *layout, size_t index);
+struct matuwall_rect matuwall_layout_item(
+	const struct matuwall_layout *layout, size_t index);
 
-void sweetwall_layout_surface_size(const struct sweetwall_layout *layout,
+void matuwall_layout_surface_size(const struct matuwall_layout *layout,
 	size_t count, uint32_t max_rows, uint32_t *width, uint32_t *height);
 
 // Where the panel sits inside a surface that may be larger than it
-struct sweetwall_rect sweetwall_layout_panel(
-	const struct sweetwall_layout *layout, size_t count, uint32_t max_rows,
-	enum sweetwall_position position, uint32_t surface_width,
-	uint32_t surface_height);
+struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
+	size_t count, uint32_t max_rows, enum matuwall_position position,
+	uint32_t surface_width, uint32_t surface_height);
 
-size_t sweetwall_layout_hit(const struct sweetwall_layout *layout,
-	const struct sweetwall_rect *panel, int32_t scroll, size_t count,
+size_t matuwall_layout_hit(const struct matuwall_layout *layout,
+	const struct matuwall_rect *panel, int32_t scroll, size_t count,
 	int32_t x, int32_t y);
 
 #endif

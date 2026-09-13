@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_APP_APP_H
-#define SWEETWALL_APP_APP_H
+#ifndef MATUWALL_APP_APP_H
+#define MATUWALL_APP_APP_H
 
 #include <stdbool.h>
 
@@ -16,29 +16,29 @@
 #include "wayland/registry.h"
 #include "wayland/seat.h"
 
-struct sweetwall_app {
+struct matuwall_app {
 	struct wl_display *display;
-	struct sweetwall_registry registry;
-	struct sweetwall_layer layer;
-	struct sweetwall_seat seat;
-	struct sweetwall_instance instance;
+	struct matuwall_registry registry;
+	struct matuwall_layer layer;
+	struct matuwall_seat seat;
+	struct matuwall_instance instance;
 
-	struct sweetwall_config config;
+	struct matuwall_config config;
 	// Effective grid after fitting the configured maxima to the output
-	struct sweetwall_layout layout;
+	struct matuwall_layout layout;
 	uint32_t visible_rows;
 	uint32_t output_width;
 	uint32_t output_height;
-	struct sweetwall_dirscan scan;
-	struct sweetwall_grid grid;
-	struct sweetwall_animation animation;
+	struct matuwall_dirscan scan;
+	struct matuwall_grid grid;
+	struct matuwall_animation animation;
 	// Panel geometry inside the surface; equal to the surface without
 	// preview
-	struct sweetwall_rect panel;
-	struct sweetwall_preview preview;
+	struct matuwall_rect panel;
+	struct matuwall_preview preview;
 
-	struct sweetwall_worker_pool *workers;
-	struct sweetwall_thumb *thumbs;
+	struct matuwall_worker_pool *workers;
+	struct matuwall_thumb *thumbs;
 	size_t thumb_count;
 	size_t pending;
 	size_t thumb_priority_first;
@@ -51,11 +51,11 @@ struct sweetwall_app {
 	bool apply_requested;
 };
 
-bool sweetwall_app_init(struct sweetwall_app *app,
-	const struct sweetwall_config *config, const char *output_name);
+bool matuwall_app_init(struct matuwall_app *app,
+	const struct matuwall_config *config, const char *output_name);
 
-bool sweetwall_app_run(struct sweetwall_app *app);
+bool matuwall_app_run(struct matuwall_app *app);
 
-void sweetwall_app_finish(struct sweetwall_app *app);
+void matuwall_app_finish(struct matuwall_app *app);
 
 #endif

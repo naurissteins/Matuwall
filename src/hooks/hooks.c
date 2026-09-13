@@ -64,7 +64,7 @@ static bool expand_token(const char *token, const char *path, char *dst,
 static void spawn_detached(char *const argv[]) {
 	int exec_error[2];
 	if (pipe2(exec_error, O_CLOEXEC) != 0) {
-		sweetwall_log_warn("hook", "cannot create exec pipe for %s: %s",
+		matuwall_log_warn("hook", "cannot create exec pipe for %s: %s",
 			argv[0], strerror(errno));
 		return;
 	}
@@ -72,7 +72,7 @@ static void spawn_detached(char *const argv[]) {
 	if (pid < 0) {
 		close(exec_error[0]);
 		close(exec_error[1]);
-		sweetwall_log_warn(
+		matuwall_log_warn(
 			"hook", "cannot fork %s: %s", argv[0], strerror(errno));
 		return;
 	}
@@ -100,18 +100,18 @@ static void spawn_detached(char *const argv[]) {
 	int read_error = errno;
 	close(exec_error[0]);
 	if (count == (ssize_t)sizeof(saved)) {
-		sweetwall_log_warn("hook", "cannot start %s: %s", argv[0],
+		matuwall_log_warn("hook", "cannot start %s: %s", argv[0],
 			strerror(saved));
 	} else if (count < 0) {
-		sweetwall_log_warn("hook", "cannot inspect %s startup: %s",
+		matuwall_log_warn("hook", "cannot inspect %s startup: %s",
 			argv[0], strerror(read_error));
 	} else {
-		sweetwall_log_info("hook", "started %s", argv[0]);
+		matuwall_log_info("hook", "started %s", argv[0]);
 	}
 }
 
 static void run_one(const char *command, const char *path) {
-	char tmpl[SWEETWALL_HOOK_MAX];
+	char tmpl[MATUWALL_HOOK_MAX];
 	memcpy(tmpl, command, strlen(command) + 1);
 
 	char *raw[HOOK_MAX_ARGS];
@@ -127,7 +127,7 @@ static void run_one(const char *command, const char *path) {
 		size_t written;
 		if (!expand_token(raw[i], path, buf + used, sizeof(buf) - used,
 			    &written)) {
-			sweetwall_log_warn("hook",
+			matuwall_log_warn("hook",
 				"%s command is too long; skipped", raw[0]);
 			return;
 		}
@@ -138,7 +138,7 @@ static void run_one(const char *command, const char *path) {
 	spawn_detached(argv);
 }
 
-void sweetwall_hooks_run(const struct sweetwall_config *cfg, const char *path) {
+void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path) {
 	for (size_t i = 0; i < cfg->on_apply_count; i++) {
 		run_one(cfg->on_apply[i], path);
 	}

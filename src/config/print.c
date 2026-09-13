@@ -41,12 +41,12 @@ static void print_quoted(FILE *out, const char *value) {
 }
 
 static void print_color(
-	FILE *out, const char *name, struct sweetwall_color color) {
+	FILE *out, const char *name, struct matuwall_color color) {
 	fprintf(out, "%s = \"#%02x%02x%02x%02x\"\n", name, color.r, color.g,
 		color.b, color.a);
 }
 
-static void print_hooks(FILE *out, const struct sweetwall_config *config) {
+static void print_hooks(FILE *out, const struct matuwall_config *config) {
 	fputs("[hooks]\non_apply = [\n", out);
 	for (size_t i = 0; i < config->on_apply_count; i++) {
 		fputs("  ", out);
@@ -56,7 +56,7 @@ static void print_hooks(FILE *out, const struct sweetwall_config *config) {
 	fputs("]\n", out);
 }
 
-bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
+bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 	fputs("[general]\ndirectory = ", out);
 	print_quoted(out, config->directory);
 	fputs("\nbackend = ", out);
@@ -67,7 +67,7 @@ bool sweetwall_config_print(FILE *out, const struct sweetwall_config *config) {
 	fputs("close_on_focus_loss = ", out);
 	fputs(config->close_on_focus_loss ? "true\n" : "false\n", out);
 	fputs("position = ", out);
-	print_quoted(out, sweetwall_position_name(config->position));
+	print_quoted(out, matuwall_position_name(config->position));
 	fputc('\n', out);
 	print_color(out, "background", config->background);
 	fprintf(out, "margin = %u\nradius = %u\n", config->layout.margin,

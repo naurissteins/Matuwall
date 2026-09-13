@@ -6,13 +6,13 @@
 #include "viewporter-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
-#define LAYER_NAMESPACE "sweetwall"
+#define LAYER_NAMESPACE "matuwall"
 // fractional-scale-v1 reports scale in 120ths of the logical size
 #define FRACTIONAL_SCALE_DENOM 120
 
 // --- frame pacing ---
 
-void sweetwall_layer_collect_idle(struct sweetwall_layer *layer) {
+void matuwall_layer_collect_idle(struct matuwall_layer *layer) {
 	if (layer->needs_repaint || layer->frame_callback != NULL ||
 		layer->buffer_pool.drawing != NULL || !layer->configured) {
 		return;
@@ -20,13 +20,13 @@ void sweetwall_layer_collect_idle(struct sweetwall_layer *layer) {
 
 	uint32_t width;
 	uint32_t height;
-	sweetwall_layer_buffer_size(layer, &width, &height);
-	sweetwall_buffer_pool_collect_idle(&layer->buffer_pool, width, height);
+	matuwall_layer_buffer_size(layer, &width, &height);
+	matuwall_buffer_pool_collect_idle(&layer->buffer_pool, width, height);
 }
 
 static void handle_frame_done(
 	void *data, struct wl_callback *callback, uint32_t time) {
-	struct sweetwall_layer *layer = data;
+	struct matuwall_layer *layer = data;
 	(void)time;
 
 	wl_callback_destroy(callback);
@@ -43,7 +43,7 @@ static const struct wl_callback_listener frame_listener = {
 static void handle_configure(void *data,
 	struct zwlr_layer_surface_v1 *layer_surface, uint32_t serial,
 	uint32_t width, uint32_t height) {
-	struct sweetwall_layer *layer = data;
+	struct matuwall_layer *layer = data;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
 	if (width != layer->width || height != layer->height) {
@@ -57,7 +57,7 @@ static void handle_configure(void *data,
 // The compositor withdrew the surface; flag it and let the app tear down
 static void handle_closed(
 	void *data, struct zwlr_layer_surface_v1 *layer_surface) {
-	struct sweetwall_layer *layer = data;
+	struct matuwall_layer *layer = data;
 	(void)layer_surface;
 
 	layer->closed = true;
@@ -70,7 +70,7 @@ static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
 
 static void handle_preferred_scale(
 	void *data, struct wp_fractional_scale_v1 *fractional, uint32_t scale) {
-	struct sweetwall_layer *layer = data;
+	struct matuwall_layer *layer = data;
 	(void)fractional;
 
 	if (scale != layer->fractional_scale) {
@@ -101,7 +101,7 @@ static void handle_surface_leave(
 // Integer-scale fallback for compositors without fractional-scale-v1
 static void handle_preferred_buffer_scale(
 	void *data, struct wl_surface *surface, int32_t factor) {
-	struct sweetwall_layer *layer = data;
+	struct matuwall_layer *layer = data;
 	(void)surface;
 
 	if (factor >= 1 && factor != layer->buffer_scale) {
@@ -126,17 +126,17 @@ static const struct wl_surface_listener surface_listener = {
 
 // --- surface setup ---
 
-static uint32_t anchor_for(enum sweetwall_position position) {
+static uint32_t anchor_for(enum matuwall_position position) {
 	switch (position) {
-	case SWEETWALL_POSITION_LEFT:
+	case MATUWALL_POSITION_LEFT:
 		return ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
-	case SWEETWALL_POSITION_RIGHT:
+	case MATUWALL_POSITION_RIGHT:
 		return ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
-	case SWEETWALL_POSITION_TOP:
+	case MATUWALL_POSITION_TOP:
 		return ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
-	case SWEETWALL_POSITION_BOTTOM:
+	case MATUWALL_POSITION_BOTTOM:
 		return ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
-	case SWEETWALL_POSITION_CENTER:
+	case MATUWALL_POSITION_CENTER:
 		break;
 	}
 	// No anchor leaves the compositor to center the surface
@@ -150,9 +150,9 @@ static uint32_t anchor_for(enum sweetwall_position position) {
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |                            \
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT)
 
-bool sweetwall_layer_create(struct sweetwall_layer *layer,
-	const struct sweetwall_registry *reg, struct wl_output *output) {
-	*layer = (struct sweetwall_layer){
+bool matuwall_layer_create(struct matuwall_layer *layer,
+	const struct matuwall_registry *reg, struct wl_output *output) {
+	*layer = (struct matuwall_layer){
 		.buffer_scale = 1,
 	};
 
@@ -199,8 +199,8 @@ bool sweetwall_layer_create(struct sweetwall_layer *layer,
 	return true;
 }
 
-void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
-	uint32_t height, enum sweetwall_position position) {
+void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
+	uint32_t height, enum matuwall_position position) {
 	layer->configured = false;
 	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
 	zwlr_layer_surface_v1_set_anchor(
@@ -208,7 +208,7 @@ void sweetwall_layer_set_panel(struct sweetwall_layer *layer, uint32_t width,
 	wl_surface_commit(layer->wl_surface);
 }
 
-void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
+void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height) {
 	if (layer->fractional_scale > 0) {
 		*pixel_width =
@@ -228,8 +228,8 @@ void sweetwall_layer_buffer_size(const struct sweetwall_layer *layer,
 	*pixel_height = layer->height * (uint32_t)scale;
 }
 
-static bool present(struct sweetwall_layer *layer, bool continue_frames) {
-	struct sweetwall_buffer *buffer = layer->buffer_pool.drawing;
+static bool present(struct matuwall_layer *layer, bool continue_frames) {
+	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
 	if (continue_frames && layer->frame_callback == NULL) {
 		layer->frame_callback = wl_surface_frame(layer->wl_surface);
 		if (layer->frame_callback == NULL) {
@@ -255,42 +255,42 @@ static bool present(struct sweetwall_layer *layer, bool continue_frames) {
 		(int32_t)buffer->width, (int32_t)buffer->height);
 	wl_surface_commit(layer->wl_surface);
 
-	sweetwall_buffer_pool_submitted(&layer->buffer_pool);
+	matuwall_buffer_pool_submitted(&layer->buffer_pool);
 	layer->needs_repaint = false;
-	sweetwall_layer_collect_idle(layer);
+	matuwall_layer_collect_idle(layer);
 	return true;
 }
 
-enum sweetwall_buffer_acquire sweetwall_layer_begin_frame(
-	struct sweetwall_layer *layer, struct wl_shm *shm,
-	struct sweetwall_buffer **out) {
+enum matuwall_buffer_acquire matuwall_layer_begin_frame(
+	struct matuwall_layer *layer, struct wl_shm *shm,
+	struct matuwall_buffer **out) {
 	*out = NULL;
 	if (!layer->configured || layer->wl_surface == NULL) {
-		return SWEETWALL_BUFFER_FAILED;
+		return MATUWALL_BUFFER_FAILED;
 	}
 	// A requested callback is the compositor's permission for the next
 	// frame
 	if (layer->frame_callback != NULL) {
-		return SWEETWALL_BUFFER_BUSY;
+		return MATUWALL_BUFFER_BUSY;
 	}
 
 	uint32_t pixel_width;
 	uint32_t pixel_height;
-	sweetwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
+	matuwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
 
-	return sweetwall_buffer_pool_acquire(
+	return matuwall_buffer_pool_acquire(
 		&layer->buffer_pool, shm, pixel_width, pixel_height, out);
 }
 
-bool sweetwall_layer_commit_frame(
-	struct sweetwall_layer *layer, bool continue_frames) {
+bool matuwall_layer_commit_frame(
+	struct matuwall_layer *layer, bool continue_frames) {
 	if (layer->buffer_pool.drawing == NULL) {
 		return false;
 	}
 	return present(layer, continue_frames);
 }
 
-void sweetwall_layer_destroy(struct sweetwall_layer *layer) {
+void matuwall_layer_destroy(struct matuwall_layer *layer) {
 	if (layer->frame_callback != NULL) {
 		wl_callback_destroy(layer->frame_callback);
 		layer->frame_callback = NULL;
@@ -313,6 +313,6 @@ void sweetwall_layer_destroy(struct sweetwall_layer *layer) {
 	}
 
 	// The surface no longer references client-side buffer objects
-	sweetwall_buffer_pool_destroy(&layer->buffer_pool);
+	matuwall_buffer_pool_destroy(&layer->buffer_pool);
 	layer->configured = false;
 }

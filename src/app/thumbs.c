@@ -10,14 +10,14 @@
 #include "util/log.h"
 
 static void on_result(
-	void *user_data, const struct sweetwall_thumb_result *result) {
-	struct sweetwall_app *app = user_data;
-	if (result->kind == SWEETWALL_JOB_PREVIEW) {
+	void *user_data, const struct matuwall_thumb_result *result) {
+	struct matuwall_app *app = user_data;
+	if (result->kind == MATUWALL_JOB_PREVIEW) {
 		if (!result->ok && result->index < app->scan.count) {
-			sweetwall_log_warn("preview", "could not decode %s",
+			matuwall_log_warn("preview", "could not decode %s",
 				app->scan.paths[result->index]);
 		}
-		sweetwall_app_preview_result(app, result);
+		matuwall_app_preview_result(app, result);
 		return;
 	}
 	if (result->index >= app->thumb_count) {
@@ -25,14 +25,14 @@ static void on_result(
 		return;
 	}
 
-	struct sweetwall_thumb *thumb = &app->thumbs[result->index];
-	if (thumb->state != SWEETWALL_THUMB_PENDING) {
+	struct matuwall_thumb *thumb = &app->thumbs[result->index];
+	if (thumb->state != MATUWALL_THUMB_PENDING) {
 		free(result->pixels);
 		return;
 	}
 
 	if (result->ok) {
-		thumb->state = SWEETWALL_THUMB_READY;
+		thumb->state = MATUWALL_THUMB_READY;
 		thumb->pixels = result->pixels;
 		thumb->width = result->width;
 		thumb->height = result->height;
@@ -42,9 +42,9 @@ static void on_result(
 			app->thumb_decoded++;
 		}
 	} else {
-		thumb->state = SWEETWALL_THUMB_FAILED;
+		thumb->state = MATUWALL_THUMB_FAILED;
 		app->thumb_failed++;
-		sweetwall_log_warn("thumbnail", "could not decode %s",
+		matuwall_log_warn("thumbnail", "could not decode %s",
 			app->scan.paths[result->index]);
 	}
 	if (app->pending > 0) {
@@ -55,10 +55,10 @@ static void on_result(
 
 // Thumbnail target size in physical pixels, scaled to the current output
 static void thumbnail_target(
-	const struct sweetwall_app *app, uint32_t *tw, uint32_t *th) {
+	const struct matuwall_app *app, uint32_t *tw, uint32_t *th) {
 	uint32_t pw;
 	uint32_t ph;
-	sweetwall_layer_buffer_size(&app->layer, &pw, &ph);
+	matuwall_layer_buffer_size(&app->layer, &pw, &ph);
 	double scale =
 		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
 	*tw = (uint32_t)(app->layout.tile_width * scale + 0.5);
@@ -66,7 +66,7 @@ static void thumbnail_target(
 }
 
 static void visible_range(
-	const struct sweetwall_app *app, size_t *first, size_t *end) {
+	const struct matuwall_app *app, size_t *first, size_t *end) {
 	size_t columns = app->layout.columns;
 	if (columns == 0) {
 		columns = 1;
@@ -81,34 +81,34 @@ static void visible_range(
 
 	uint32_t height =
 		app->panel.height > 0 ? (uint32_t)app->panel.height : 0;
-	size_t rows = sweetwall_grid_visible_rows(&app->layout, height);
+	size_t rows = matuwall_grid_visible_rows(&app->layout, height);
 	size_t count = rows * columns;
 	size_t remaining = app->scan.count - *first;
 	*end = *first + (count < remaining ? count : remaining);
 }
 
-static void submit_range(struct sweetwall_app *app, size_t first, size_t end) {
+static void submit_range(struct matuwall_app *app, size_t first, size_t end) {
 	for (size_t i = first; i < end; i++) {
-		if (sweetwall_worker_submit(
+		if (matuwall_worker_submit(
 			    app->workers, i, app->scan.paths[i])) {
 			app->pending++;
 		} else {
-			app->thumbs[i].state = SWEETWALL_THUMB_FAILED;
+			app->thumbs[i].state = MATUWALL_THUMB_FAILED;
 			app->thumb_failed++;
-			sweetwall_log_warn("thumbnail", "could not queue %s",
+			matuwall_log_warn("thumbnail", "could not queue %s",
 				app->scan.paths[i]);
 		}
 	}
 }
 
-void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
+void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	if (app->scan.count == 0) {
 		return;
 	}
 
 	app->thumbs = calloc(app->scan.count, sizeof(*app->thumbs));
 	if (app->thumbs == NULL) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"thumbnail", "cannot allocate thumbnail state");
 		return;
 	}
@@ -117,9 +117,9 @@ void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
 	uint32_t tw;
 	uint32_t th;
 	thumbnail_target(app, &tw, &th);
-	app->workers = sweetwall_worker_pool_start(tw, th);
+	app->workers = matuwall_worker_pool_start(tw, th);
 	if (app->workers == NULL) {
-		sweetwall_log_error("thumbnail", "failed to start workers");
+		matuwall_log_error("thumbnail", "failed to start workers");
 		return;
 	}
 
@@ -134,7 +134,7 @@ void sweetwall_app_thumbs_start(struct sweetwall_app *app) {
 	app->thumb_priority_set = true;
 }
 
-void sweetwall_app_thumbs_prioritize_visible(struct sweetwall_app *app) {
+void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	if (app->workers == NULL) {
 		return;
 	}
@@ -147,27 +147,27 @@ void sweetwall_app_thumbs_prioritize_visible(struct sweetwall_app *app) {
 		return;
 	}
 
-	sweetwall_worker_prioritize_thumbs(app->workers, first, end);
+	matuwall_worker_prioritize_thumbs(app->workers, first, end);
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
 	app->thumb_priority_set = true;
 }
 
-void sweetwall_app_thumbs_drain(struct sweetwall_app *app) {
+void matuwall_app_thumbs_drain(struct matuwall_app *app) {
 	if (app->workers != NULL) {
-		sweetwall_worker_drain(app->workers, on_result, app);
+		matuwall_worker_drain(app->workers, on_result, app);
 	}
 }
 
-void sweetwall_app_thumbs_finish(struct sweetwall_app *app) {
+void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 	if (app->workers != NULL) {
-		sweetwall_worker_pool_stop(app->workers);
+		matuwall_worker_pool_stop(app->workers);
 		app->workers = NULL;
 	}
 	if (app->thumb_count > 0) {
 		size_t pending = app->thumb_count - app->thumb_cache_hits -
 				 app->thumb_decoded - app->thumb_failed;
-		sweetwall_log_info("thumbnail",
+		matuwall_log_info("thumbnail",
 			"summary: %zu cache hit%s, %zu decoded, %zu failed, "
 			"%zu unfinished",
 			app->thumb_cache_hits,

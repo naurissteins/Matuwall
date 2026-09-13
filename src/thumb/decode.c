@@ -14,7 +14,7 @@
 #define MAX_PIXELS (1u << 26)
 #define WEBP_FILE_LIMIT (64UL * 1024 * 1024)
 
-bool sweetwall_image_dimensions_ok(uint32_t width, uint32_t height) {
+bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height) {
 	if (width == 0 || height == 0 || width > MAX_DIMENSION ||
 		height > MAX_DIMENSION) {
 		return false;
@@ -63,8 +63,8 @@ static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 	cinfo->scale_denom = 1;
 }
 
-static bool decode_jpeg(FILE *fp, struct sweetwall_image *img,
-	uint32_t target_w, uint32_t target_h) {
+static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
+	uint32_t target_h) {
 	struct jpeg_decompress_struct cinfo = {0};
 	struct jpeg_guard guard;
 	cinfo.err = jpeg_std_error(&guard.base);
@@ -81,7 +81,7 @@ static bool decode_jpeg(FILE *fp, struct sweetwall_image *img,
 	jpeg_stdio_src(&cinfo, fp);
 	jpeg_read_header(&cinfo, TRUE);
 
-	if (!sweetwall_image_dimensions_ok(
+	if (!matuwall_image_dimensions_ok(
 		    cinfo.image_width, cinfo.image_height)) {
 		jpeg_destroy_decompress(&cinfo);
 		return false;
@@ -124,7 +124,7 @@ static void rgba_to_argb(uint32_t *pixels, size_t count) {
 	}
 }
 
-static bool decode_png(FILE *fp, struct sweetwall_image *img) {
+static bool decode_png(FILE *fp, struct matuwall_image *img) {
 	png_structp png =
 		png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (png == NULL) {
@@ -150,7 +150,7 @@ static bool decode_png(FILE *fp, struct sweetwall_image *img) {
 
 	uint32_t width = png_get_image_width(png, info);
 	uint32_t height = png_get_image_height(png, info);
-	if (!sweetwall_image_dimensions_ok(width, height)) {
+	if (!matuwall_image_dimensions_ok(width, height)) {
 		png_destroy_read_struct(&png, &info, NULL);
 		return false;
 	}
@@ -199,7 +199,7 @@ static bool decode_png(FILE *fp, struct sweetwall_image *img) {
 
 // --- webp ---
 
-static bool decode_webp(FILE *fp, struct sweetwall_image *img) {
+static bool decode_webp(FILE *fp, struct matuwall_image *img) {
 	if (fseek(fp, 0, SEEK_END) != 0) {
 		return false;
 	}
@@ -223,7 +223,7 @@ static bool decode_webp(FILE *fp, struct sweetwall_image *img) {
 	int width = 0;
 	int height = 0;
 	if (!WebPGetInfo(data, (size_t)size, &width, &height) ||
-		!sweetwall_image_dimensions_ok(
+		!matuwall_image_dimensions_ok(
 			(uint32_t)width, (uint32_t)height)) {
 		free(data);
 		return false;
@@ -269,9 +269,9 @@ static bool is_webp(const uint8_t *sig, size_t n) {
 	       memcmp(sig + 8, "WEBP", 4) == 0;
 }
 
-bool sweetwall_image_decode(struct sweetwall_image *img, const char *path,
+bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h) {
-	*img = (struct sweetwall_image){0};
+	*img = (struct matuwall_image){0};
 
 	FILE *fp = fopen(path, "rb");
 	if (fp == NULL) {
@@ -300,7 +300,7 @@ bool sweetwall_image_decode(struct sweetwall_image *img, const char *path,
 	return ok;
 }
 
-void sweetwall_image_free(struct sweetwall_image *img) {
+void matuwall_image_free(struct matuwall_image *img) {
 	free(img->pixels);
 	img->pixels = NULL;
 	img->width = 0;

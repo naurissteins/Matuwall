@@ -12,7 +12,7 @@
 static void handle_enter(void *data, struct wl_pointer *wl_pointer,
 	uint32_t serial, struct wl_surface *surface, wl_fixed_t x,
 	wl_fixed_t y) {
-	struct sweetwall_pointer *pointer = data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)serial;
 	(void)surface;
@@ -36,7 +36,7 @@ static void handle_leave(void *data, struct wl_pointer *wl_pointer,
 
 static void handle_motion(void *data, struct wl_pointer *wl_pointer,
 	uint32_t time, wl_fixed_t x, wl_fixed_t y) {
-	struct sweetwall_pointer *pointer = data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)time;
 
@@ -50,7 +50,7 @@ static void handle_motion(void *data, struct wl_pointer *wl_pointer,
 
 static void handle_button(void *data, struct wl_pointer *wl_pointer,
 	uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-	struct sweetwall_pointer *pointer = data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)serial;
 	(void)time;
@@ -65,7 +65,7 @@ static void handle_button(void *data, struct wl_pointer *wl_pointer,
 
 static void handle_axis(void *data, struct wl_pointer *wl_pointer,
 	uint32_t time, uint32_t axis, wl_fixed_t value) {
-	struct sweetwall_pointer *pointer = data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)time;
 
@@ -76,7 +76,7 @@ static void handle_axis(void *data, struct wl_pointer *wl_pointer,
 
 // Emit whole scroll steps once the axis group for this frame is complete
 static void handle_frame(void *data, struct wl_pointer *wl_pointer) {
-	struct sweetwall_pointer *pointer = data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 
 	int32_t steps = (int32_t)(pointer->scroll_accum / SCROLL_NOTCH);
@@ -124,10 +124,10 @@ static const struct wl_pointer_listener pointer_listener = {
 	.axis_discrete = handle_axis_discrete,
 };
 
-void sweetwall_pointer_init(struct sweetwall_pointer *pointer,
+void matuwall_pointer_init(struct matuwall_pointer *pointer,
 	struct wl_pointer *wl_pointer,
-	const struct sweetwall_seat_handler *handler, void *user_data) {
-	*pointer = (struct sweetwall_pointer){
+	const struct matuwall_seat_handler *handler, void *user_data) {
+	*pointer = (struct matuwall_pointer){
 		.wl_pointer = wl_pointer,
 		.handler = handler,
 		.user_data = user_data,
@@ -135,7 +135,7 @@ void sweetwall_pointer_init(struct sweetwall_pointer *pointer,
 	wl_pointer_add_listener(wl_pointer, &pointer_listener, pointer);
 }
 
-void sweetwall_pointer_finish(struct sweetwall_pointer *pointer) {
+void matuwall_pointer_finish(struct matuwall_pointer *pointer) {
 	if (pointer->wl_pointer == NULL) {
 		return;
 	}

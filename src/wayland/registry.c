@@ -22,7 +22,7 @@ static uint32_t min_u32(uint32_t a, uint32_t b) {
 
 static void handle_global(void *data, struct wl_registry *registry,
 	uint32_t name, const char *interface, uint32_t version) {
-	struct sweetwall_registry *reg = data;
+	struct matuwall_registry *reg = data;
 
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
 		reg->compositor = wl_registry_bind(registry, name,
@@ -36,7 +36,7 @@ static void handle_global(void *data, struct wl_registry *registry,
 			min_u32(version, SEAT_MAX_VERSION));
 	} else if (reg->requested_output_name != NULL &&
 		   strcmp(interface, wl_output_interface.name) == 0) {
-		sweetwall_outputs_bind(&reg->outputs, registry, name, version);
+		matuwall_outputs_bind(&reg->outputs, registry, name, version);
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		reg->layer_shell = wl_registry_bind(registry, name,
 			&zwlr_layer_shell_v1_interface,
@@ -55,9 +55,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 
 static void handle_global_remove(
 	void *data, struct wl_registry *registry, uint32_t name) {
-	struct sweetwall_registry *reg = data;
+	struct matuwall_registry *reg = data;
 	(void)registry;
-	if (sweetwall_outputs_remove(
+	if (matuwall_outputs_remove(
 		    &reg->outputs, name, reg->selected_output)) {
 		reg->selected_output = NULL;
 	}
@@ -68,77 +68,77 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-static bool required_globals_available(const struct sweetwall_registry *reg) {
+static bool required_globals_available(const struct matuwall_registry *reg) {
 	bool ok = true;
 	if (reg->compositor == NULL) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"wayland", "compositor does not expose wl_compositor");
 		ok = false;
 	}
 	if (reg->shm == NULL) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"wayland", "compositor does not expose wl_shm");
 		ok = false;
 	}
 	if (reg->layer_shell == NULL) {
-		sweetwall_log_error("wayland",
+		matuwall_log_error("wayland",
 			"compositor lacks wlr-layer-shell "
 			"(zwlr_layer_shell_v1)");
 		ok = false;
 	}
 	// Without a seat there would be no way to dismiss the picker
 	if (reg->seat == NULL) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"wayland", "compositor does not expose wl_seat");
 		ok = false;
 	}
 	return ok;
 }
 
-bool sweetwall_registry_init(struct sweetwall_registry *reg,
+bool matuwall_registry_init(struct matuwall_registry *reg,
 	struct wl_display *display, const char *output_name) {
-	*reg = (struct sweetwall_registry){
+	*reg = (struct matuwall_registry){
 		.requested_output_name = output_name,
 	};
 
 	reg->registry = wl_display_get_registry(display);
 	if (reg->registry == NULL) {
-		sweetwall_log_error("wayland", "failed to get the registry");
+		matuwall_log_error("wayland", "failed to get the registry");
 		return false;
 	}
 
 	if (wl_registry_add_listener(reg->registry, &registry_listener, reg) <
 		0) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"wayland", "failed to listen for registry globals");
 		return false;
 	}
 
 	if (wl_display_roundtrip(display) < 0) {
-		sweetwall_log_error("wayland", "registry roundtrip failed");
+		matuwall_log_error("wayland", "registry roundtrip failed");
 		return false;
 	}
 
 	return required_globals_available(reg);
 }
 
-bool sweetwall_registry_select_output(
-	struct sweetwall_registry *reg, struct wl_display *display) {
+bool matuwall_registry_select_output(
+	struct matuwall_registry *reg, struct wl_display *display) {
 	if (reg->requested_output_name == NULL) {
 		return true;
 	}
 	// Bound globals can now deliver initial events to installed listeners
 	if (wl_display_roundtrip(display) < 0) {
-		sweetwall_log_error(
+		matuwall_log_error(
 			"wayland", "output discovery roundtrip failed");
 		return false;
 	}
-	return sweetwall_outputs_select(&reg->outputs,
+	return matuwall_outputs_select(&reg->outputs,
 		reg->requested_output_name, &reg->selected_output);
 }
 
-void sweetwall_registry_finish(struct sweetwall_registry *reg) {
-	sweetwall_outputs_finish(&reg->outputs);
+void matuwall_registry_finish(struct matuwall_registry *reg) {
+	matuwall_outputs_finish(&reg->outputs);
 	reg->selected_output = NULL;
 	if (reg->fractional_scale_manager != NULL) {
 		wp_fractional_scale_manager_v1_destroy(

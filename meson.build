@@ -1,5 +1,5 @@
 project(
-	'sweetwall',
+	'matuwall',
 	'c',
 	version: '0.1.0',
 	meson_version: '>= 0.60.0',
@@ -10,7 +10,7 @@ project(
 )
 
 add_project_arguments(
-	'-DSWEETWALL_VERSION="' + meson.project_version() + '"',
+	'-DMATUWALL_VERSION="' + meson.project_version() + '"',
 	# memfd_create, sigaction, and the wider POSIX surface
 	'-D_GNU_SOURCE',
 	language: 'c',
@@ -46,10 +46,10 @@ wayland_scanner = find_program(
 
 subdir('protocol')
 
-sweetwall_inc = include_directories('src')
+matuwall_inc = include_directories('src')
 
 executable(
-	'sweetwall',
+	'matuwall',
 	'src/main.c',
 	'src/app/app.c',
 	'src/app/animation.c',
@@ -89,7 +89,7 @@ executable(
 	'src/wayland/pointer.c',
 	'src/wayland/seat.c',
 	'src/wayland/shm.c',
-	include_directories: sweetwall_inc,
+	include_directories: matuwall_inc,
 	dependencies: [
 		wayland_client,
 		xkbcommon,
@@ -98,7 +98,7 @@ executable(
 		libwebp,
 		threads,
 		libm,
-		sweetwall_protocols_dep,
+		matuwall_protocols_dep,
 	],
 	install: true,
 )

@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
-	struct sweetwall_config *config) {
+void matuwall_cli_apply(const struct matuwall_cli_options *options,
+	struct matuwall_config *config) {
 	if (options->background_set) {
 		config->background = options->background;
 	}

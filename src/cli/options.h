@@ -1,5 +1,5 @@
-#ifndef SWEETWALL_CLI_OPTIONS_H
-#define SWEETWALL_CLI_OPTIONS_H
+#ifndef MATUWALL_CLI_OPTIONS_H
+#define MATUWALL_CLI_OPTIONS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,31 +7,31 @@
 
 #include "config/config.h"
 
-enum sweetwall_cli_action {
-	SWEETWALL_CLI_RUN,
-	SWEETWALL_CLI_HELP,
-	SWEETWALL_CLI_VERSION,
-	SWEETWALL_CLI_CLEAR_CACHE,
-	SWEETWALL_CLI_DIAGNOSE,
-	SWEETWALL_CLI_PRINT_CONFIG,
+enum matuwall_cli_action {
+	MATUWALL_CLI_RUN,
+	MATUWALL_CLI_HELP,
+	MATUWALL_CLI_VERSION,
+	MATUWALL_CLI_CLEAR_CACHE,
+	MATUWALL_CLI_DIAGNOSE,
+	MATUWALL_CLI_PRINT_CONFIG,
 };
 
-struct sweetwall_cli_options {
-	enum sweetwall_cli_action action;
+struct matuwall_cli_options {
+	enum matuwall_cli_action action;
 	bool background_set;
-	struct sweetwall_color background;
+	struct matuwall_color background;
 	bool tile_set;
-	struct sweetwall_color tile;
+	struct matuwall_color tile;
 	bool border_set;
-	struct sweetwall_color border;
+	struct matuwall_color border;
 	bool border_width_set;
 	uint32_t border_width;
 	bool ring_set;
-	struct sweetwall_color ring;
+	struct matuwall_color ring;
 	bool ring_width_set;
 	uint32_t ring_width;
 	bool spinner_set;
-	struct sweetwall_color spinner;
+	struct matuwall_color spinner;
 	bool backend_set;
 	char backend[32];
 	bool columns_set;
@@ -43,7 +43,7 @@ struct sweetwall_cli_options {
 	uint32_t height;
 	bool hooks_set;
 	// Hook pointers borrow argv storage
-	const char *hooks[SWEETWALL_MAX_HOOKS];
+	const char *hooks[MATUWALL_MAX_HOOKS];
 	size_t hook_count;
 	bool margin_set;
 	uint32_t margin;
@@ -63,17 +63,17 @@ struct sweetwall_cli_options {
 	bool directory_set;
 	char directory[PATH_MAX];
 	bool position_set;
-	enum sweetwall_position position;
+	enum matuwall_position position;
 	bool preview_set;
 	bool preview;
 	bool close_on_focus_loss_set;
 	bool close_on_focus_loss;
 };
 
-bool sweetwall_cli_parse(int argc, char *argv[],
-	struct sweetwall_cli_options *options, char *err, size_t err_size);
-void sweetwall_cli_apply(const struct sweetwall_cli_options *options,
-	struct sweetwall_config *config);
-void sweetwall_cli_usage(FILE *out);
+bool matuwall_cli_parse(int argc, char *argv[],
+	struct matuwall_cli_options *options, char *err, size_t err_size);
+void matuwall_cli_apply(const struct matuwall_cli_options *options,
+	struct matuwall_config *config);
+void matuwall_cli_usage(FILE *out);
 
 #endif
