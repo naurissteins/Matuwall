@@ -83,12 +83,15 @@ static bool adjacent(const struct matuwall_layout *layout, size_t previous,
 	       (dx == 0 && dy == (int32_t)step_y);
 }
 
-static bool row_wrap(const struct matuwall_layout *layout, size_t previous,
-	size_t selected) {
-	size_t distance =
-		previous > selected ? previous - selected : selected - previous;
+static bool neighboring_row(const struct matuwall_layout *layout,
+	size_t previous, size_t selected) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
-	return distance == 1 && previous / columns != selected / columns;
+	size_t previous_row = previous / columns;
+	size_t selected_row = selected / columns;
+	size_t distance = previous_row > selected_row
+				  ? previous_row - selected_row
+				  : selected_row - previous_row;
+	return distance == 1;
 }
 
 static void add_focus(
@@ -233,7 +236,7 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 		animation->from_scroll = current.scroll;
 		animation->kind = MATUWALL_ANIMATION_GLIDE;
 	} else {
-		if (row_wrap(layout, previous, selected)) {
+		if (neighboring_row(layout, previous, selected)) {
 			animation->from_ring = current_ring;
 			animation->from_scroll = current.scroll;
 		} else {
