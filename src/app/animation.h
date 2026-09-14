@@ -60,12 +60,12 @@ void matuwall_animation_init(struct matuwall_animation *animation,
 	uint32_t duration_ms, uint32_t zoom_percent);
 
 void matuwall_animation_snap(struct matuwall_animation *animation,
-	const struct matuwall_layout *layout, size_t selected,
-	uint32_t first_row);
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t selected, uint32_t first_row);
 
 void matuwall_animation_move(struct matuwall_animation *animation,
-	const struct matuwall_layout *layout, size_t previous, size_t selected,
-	uint32_t first_row, int64_t now_ms);
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t previous, size_t selected, uint32_t first_row, int64_t now_ms);
 
 void matuwall_animation_sample(struct matuwall_animation *animation,
 	int64_t now_ms, struct matuwall_animation_sample *sample);

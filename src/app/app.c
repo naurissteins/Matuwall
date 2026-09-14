@@ -99,8 +99,8 @@ bool matuwall_app_init(struct matuwall_app *app,
 	app->output_width = app->layer.width;
 	app->output_height = app->layer.height;
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
-		app->output_width, app->output_height, &app->layout,
-		&app->visible_rows);
+		app->output_width, app->output_height, app->config.carousel,
+		app->config.position, &app->layout, &app->visible_rows);
 	matuwall_log_info("output", "%ux%u, grid %ux%u, preview %s",
 		app->output_width, app->output_height, app->layout.columns,
 		app->visible_rows, app->config.preview ? "on" : "off");

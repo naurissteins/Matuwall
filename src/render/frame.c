@@ -90,9 +90,9 @@ static void draw_panel(struct matuwall_buffer *buffer,
 }
 
 enum tile_position {
-	TILE_ABOVE,
+	TILE_BEFORE,
 	TILE_VISIBLE,
-	TILE_BELOW,
+	TILE_AFTER,
 };
 
 struct tile_geometry {
@@ -111,17 +111,30 @@ static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	double width = item.width * focus;
 	double height = item.height * focus;
 	double x = frame->panel.x + item.x - (width - item.width) / 2.0;
-	double y = frame->panel.y + item.y - (height - item.height) / 2.0 -
-		   frame->scroll;
+	double y = frame->panel.y + item.y - (height - item.height) / 2.0;
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		x -= frame->scroll;
+	} else {
+		y -= frame->scroll;
+	}
 	int32_t left = scaled(x, frame->scale);
 	int32_t top = scaled(y, frame->scale);
 	int32_t right = scaled(x + width, frame->scale);
 	int32_t bottom = scaled(y + height, frame->scale);
-	if (top >= clip->y1) {
-		return TILE_BELOW;
-	}
-	if (bottom <= clip->y0) {
-		return TILE_ABOVE;
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		if (left >= clip->x1) {
+			return TILE_AFTER;
+		}
+		if (right <= clip->x0) {
+			return TILE_BEFORE;
+		}
+	} else {
+		if (top >= clip->y1) {
+			return TILE_AFTER;
+		}
+		if (bottom <= clip->y0) {
+			return TILE_BEFORE;
+		}
 	}
 
 	int32_t border = scaled(frame->border_width * focus, frame->scale);
@@ -215,10 +228,10 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 		struct tile_geometry geometry;
 		enum tile_position position =
 			tile_geometry(frame, clip, i, 1.0, &geometry);
-		if (position == TILE_BELOW) {
+		if (position == TILE_AFTER) {
 			break;
 		}
-		if (position == TILE_ABOVE || focused(frame, i)) {
+		if (position == TILE_BEFORE || focused(frame, i)) {
 			continue;
 		}
 		if (shadows) {
@@ -257,13 +270,20 @@ static void draw_ring(struct matuwall_buffer *buffer,
 		return;
 	}
 	int32_t left = scaled(frame->panel.x + ring->x, frame->scale);
-	int32_t top =
-		scaled(frame->panel.y + ring->y - frame->scroll, frame->scale);
+	int32_t top = scaled(frame->panel.y + ring->y, frame->scale);
 	int32_t right =
 		scaled(frame->panel.x + ring->x + ring->width, frame->scale);
 	int32_t bottom =
-		scaled(frame->panel.y + ring->y + ring->height - frame->scroll,
-			frame->scale);
+		scaled(frame->panel.y + ring->y + ring->height, frame->scale);
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		int32_t offset = scaled(frame->scroll, frame->scale);
+		left -= offset;
+		right -= offset;
+	} else {
+		int32_t offset = scaled(frame->scroll, frame->scale);
+		top -= offset;
+		bottom -= offset;
+	}
 	int32_t inset = gap + width;
 	double focus = frame->layout->tile_width > 0
 			       ? ring->width / frame->layout->tile_width

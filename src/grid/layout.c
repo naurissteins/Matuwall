@@ -21,12 +21,30 @@ static uint32_t fit_cells(uint32_t available, uint32_t margin, uint32_t tile,
 
 void matuwall_layout_adapt(const struct matuwall_layout *configured,
 	uint32_t configured_rows, uint32_t available_width,
-	uint32_t available_height, struct matuwall_layout *layout,
+	uint32_t available_height, bool carousel,
+	enum matuwall_position position, struct matuwall_layout *layout,
 	uint32_t *visible_rows) {
 	*layout = *configured;
+	if (carousel && (position == MATUWALL_POSITION_LEFT ||
+				position == MATUWALL_POSITION_RIGHT)) {
+		layout->flow = MATUWALL_FLOW_VERTICAL;
+		layout->columns = 1;
+		*visible_rows = fit_cells(available_height, configured->margin,
+			configured->tile_height, configured->spacing,
+			configured->columns);
+		return;
+	}
+
 	layout->columns = fit_cells(available_width, configured->margin,
 		configured->tile_width, configured->spacing,
 		configured->columns);
+	if (carousel) {
+		layout->flow = MATUWALL_FLOW_HORIZONTAL;
+		*visible_rows = 1;
+		return;
+	}
+
+	layout->flow = MATUWALL_FLOW_GRID;
 	*visible_rows = fit_cells(available_height, configured->margin,
 		configured->tile_height, configured->spacing, configured_rows);
 }
@@ -45,8 +63,15 @@ struct matuwall_rect matuwall_layout_item(
 		return (struct matuwall_rect){0};
 	}
 
-	uint32_t column = (uint32_t)(index % layout->columns);
-	uint32_t row = (uint32_t)(index / layout->columns);
+	uint32_t column;
+	uint32_t row;
+	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		column = (uint32_t)index;
+		row = 0;
+	} else {
+		column = (uint32_t)(index % layout->columns);
+		row = (uint32_t)(index / layout->columns);
+	}
 
 	return (struct matuwall_rect){
 		.x = (int32_t)(layout->margin +
@@ -56,6 +81,23 @@ struct matuwall_rect matuwall_layout_item(
 		.width = (int32_t)layout->tile_width,
 		.height = (int32_t)layout->tile_height,
 	};
+}
+
+double matuwall_layout_scroll(const struct matuwall_layout *layout,
+	const struct matuwall_rect *panel, size_t selected,
+	uint32_t first_row) {
+	if (layout->flow == MATUWALL_FLOW_GRID) {
+		return (double)first_row *
+		       (double)(layout->tile_height + layout->spacing);
+	}
+
+	struct matuwall_rect item = matuwall_layout_item(layout, selected);
+	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		return (double)item.x + (double)item.width / 2.0 -
+		       (double)panel->width / 2.0;
+	}
+	return (double)item.y + (double)item.height / 2.0 -
+	       (double)panel->height / 2.0;
 }
 
 void matuwall_layout_surface_size(const struct matuwall_layout *layout,
@@ -148,14 +190,22 @@ size_t matuwall_layout_hit(const struct matuwall_layout *layout,
 
 	// Translate the on-screen point into unscrolled content space
 	int32_t cx = x - panel->x - (int32_t)layout->margin;
-	int32_t cy = y - panel->y - (int32_t)layout->margin + scroll;
+	int32_t cy = y - panel->y - (int32_t)layout->margin;
+	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		cx += scroll;
+	} else {
+		cy += scroll;
+	}
 	if (cx < 0 || cy < 0) {
 		return SIZE_MAX;
 	}
 
 	uint32_t col = (uint32_t)(cx / stride_x);
 	uint32_t row = (uint32_t)(cy / stride_y);
-	if (col >= columns) {
+	if (layout->flow != MATUWALL_FLOW_HORIZONTAL && col >= columns) {
+		return SIZE_MAX;
+	}
+	if (layout->flow == MATUWALL_FLOW_HORIZONTAL && row != 0) {
 		return SIZE_MAX;
 	}
 	// Reject points that fall in the spacing gap, not on a tile
@@ -166,6 +216,8 @@ size_t matuwall_layout_hit(const struct matuwall_layout *layout,
 		return SIZE_MAX;
 	}
 
-	size_t index = (size_t)row * columns + col;
+	size_t index = layout->flow == MATUWALL_FLOW_HORIZONTAL
+			       ? col
+			       : (size_t)row * columns + col;
 	return index < count ? index : SIZE_MAX;
 }

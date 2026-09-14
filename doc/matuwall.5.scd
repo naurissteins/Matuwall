@@ -120,7 +120,8 @@ line. Comments are not allowed inside an array.
 
 *columns*
 	Maximum number of tile columns. Matuwall uses fewer when the selected
-	output is too narrow for the configured grid. Defaults to _5_.
+	output is too narrow for the configured grid. In carousel mode this
+	is the maximum number of visible tiles along either axis. Defaults to _5_.
 
 *spacing*
 	Pixels between tiles. Defaults to _16_.
@@ -144,7 +145,16 @@ line. Comments are not allowed inside an array.
 
 *visible_rows*
 	Maximum rows kept visible before the grid scrolls. Matuwall uses fewer when
-	the selected output is too short for the configured grid. Defaults to _2_.
+	the selected output is too short for the configured grid. Ignored when
+	*carousel* is enabled. Defaults to _2_.
+
+*carousel*
+	Turn the grid into a centered, single-axis strip. Defaults to _false_. At
+	_window.position_ _"top"_, _"bottom"_, or _"center"_, the strip is one
+	horizontal row navigated with Left/Right. At _"left"_ or _"right"_, it is
+	one vertical column navigated with Up/Down. The selected tile remains
+	centered while the strip moves. Orthogonal arrows and Page Up/Page Down do
+	nothing; Home/End still jump to the ends.
 
 Matuwall keeps the configured tile size, spacing, and margin while fitting the
 grid, and always displays at least one tile.
@@ -225,6 +235,7 @@ border_width = 0
 shadow_width = 0
 ring_width = 2
 visible_rows = 2
+carousel = false
 
 [thumbnail]
 width  = 240
