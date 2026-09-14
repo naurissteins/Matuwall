@@ -83,6 +83,14 @@ static bool adjacent(const struct matuwall_layout *layout, size_t previous,
 	       (dx == 0 && dy == (int32_t)step_y);
 }
 
+static bool row_wrap(const struct matuwall_layout *layout, size_t previous,
+	size_t selected) {
+	size_t distance =
+		previous > selected ? previous - selected : selected - previous;
+	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
+	return distance == 1 && previous / columns != selected / columns;
+}
+
 static void add_focus(
 	struct matuwall_animation_sample *sample, size_t index, double scale) {
 	if (scale <= 1.0) {
@@ -225,11 +233,15 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 		animation->from_scroll = current.scroll;
 		animation->kind = MATUWALL_ANIMATION_GLIDE;
 	} else {
-		// Preserve the old on-screen ring while content snaps to its
-		// target
-		current_ring.y += target_scroll - current.scroll;
-		animation->from_ring = current_ring;
-		animation->from_scroll = target_scroll;
+		if (row_wrap(layout, previous, selected)) {
+			animation->from_ring = current_ring;
+			animation->from_scroll = current.scroll;
+		} else {
+			// Preserve the old ring position across distant jumps
+			current_ring.y += target_scroll - current.scroll;
+			animation->from_ring = current_ring;
+			animation->from_scroll = target_scroll;
+		}
 		animation->kind = MATUWALL_ANIMATION_HANDOFF;
 	}
 }
