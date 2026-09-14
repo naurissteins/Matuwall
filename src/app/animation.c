@@ -26,12 +26,6 @@ static struct matuwall_animation_rect scale_rect(
 	};
 }
 
-static double scroll_for(
-	const struct matuwall_layout *layout, uint32_t first_row) {
-	return (double)first_row *
-	       (double)(layout->tile_height + layout->spacing);
-}
-
 static double lerp(double from, double to, double progress) {
 	return from + (to - from) * progress;
 }
@@ -136,12 +130,13 @@ void matuwall_animation_init(struct matuwall_animation *animation,
 }
 
 void matuwall_animation_snap(struct matuwall_animation *animation,
-	const struct matuwall_layout *layout, size_t selected,
-	uint32_t first_row) {
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t selected, uint32_t first_row) {
 	animation->from_ring =
 		scale_rect(item_rect(layout, selected), animation->focus_scale);
 	animation->to_ring = animation->from_ring;
-	animation->from_scroll = scroll_for(layout, first_row);
+	animation->from_scroll =
+		matuwall_layout_scroll(layout, panel, selected, first_row);
 	animation->to_scroll = animation->from_scroll;
 	animation->from_focus = selected;
 	animation->to_focus = selected;
@@ -206,10 +201,11 @@ void matuwall_animation_sample(struct matuwall_animation *animation,
 }
 
 void matuwall_animation_move(struct matuwall_animation *animation,
-	const struct matuwall_layout *layout, size_t previous, size_t selected,
-	uint32_t first_row, int64_t now_ms) {
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t previous, size_t selected, uint32_t first_row, int64_t now_ms) {
 	if (!animation->initialized || animation->duration_ms == 0) {
-		matuwall_animation_snap(animation, layout, selected, first_row);
+		matuwall_animation_snap(
+			animation, layout, panel, selected, first_row);
 		return;
 	}
 
@@ -220,7 +216,8 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 					: animation->to_ring;
 	struct matuwall_animation_rect target =
 		scale_rect(item_rect(layout, selected), animation->focus_scale);
-	double target_scroll = scroll_for(layout, first_row);
+	double target_scroll =
+		matuwall_layout_scroll(layout, panel, selected, first_row);
 	double previous_scale = focus_at(&current, previous);
 	double selected_scale = focus_at(&current, selected);
 
@@ -241,7 +238,13 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 			animation->from_scroll = current.scroll;
 		} else {
 			// Preserve the old ring position across distant jumps
-			current_ring.y += target_scroll - current.scroll;
+			if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+				current_ring.x +=
+					target_scroll - current.scroll;
+			} else {
+				current_ring.y +=
+					target_scroll - current.scroll;
+			}
 			animation->from_ring = current_ring;
 			animation->from_scroll = target_scroll;
 		}

@@ -64,6 +64,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 			.tile_height = 400,
 			.radius = 8},
 		.visible_rows = 2,
+		.carousel = false,
 		.panel_radius = 16,
 		.border_width = 0,
 		.shadow_width = 0,
@@ -300,6 +301,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "visible_rows") == 0) {
 			apply_uint(&cfg->visible_rows, v, line,
 				"visible_rows must be 1..1024", 1, 1024);
+			return true;
+		}
+		if (strcmp(key, "carousel") == 0) {
+			apply_bool(&cfg->carousel, v, line,
+				"carousel must be true or false");
 			return true;
 		}
 	} else if (strcmp(section, "thumbnail") == 0) {

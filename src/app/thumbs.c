@@ -72,6 +72,25 @@ static void visible_range(
 		columns = 1;
 	}
 
+	if (app->layout.flow != MATUWALL_FLOW_GRID) {
+		size_t visible =
+			app->layout.flow == MATUWALL_FLOW_HORIZONTAL
+				? columns
+				: matuwall_grid_visible_rows(&app->layout,
+					  (uint32_t)app->panel.height);
+		size_t before = visible / 2;
+		size_t after = visible - before;
+		*first = app->grid.selected > before
+				 ? app->grid.selected - before
+				 : 0;
+		*end = app->grid.selected < app->scan.count - 1 &&
+				       after < app->scan.count -
+						       app->grid.selected
+			       ? app->grid.selected + after
+			       : app->scan.count;
+		return;
+	}
+
 	*first = (size_t)app->grid.first_row * columns;
 	if (*first >= app->scan.count) {
 		*first = app->scan.count;

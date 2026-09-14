@@ -12,8 +12,8 @@
 // Selection changed: animate presentation and let the backdrop follow later
 static void selection_changed(
 	struct matuwall_app *app, size_t previous, int64_t now_ms) {
-	matuwall_animation_move(&app->animation, &app->layout, previous,
-		app->grid.selected, app->grid.first_row, now_ms);
+	matuwall_animation_move(&app->animation, &app->layout, &app->panel,
+		previous, app->grid.selected, app->grid.first_row, now_ms);
 	app->layer.needs_repaint = true;
 	matuwall_app_thumbs_prioritize_visible(app);
 	matuwall_app_preview_select(app, app->grid.selected, now_ms);
@@ -137,8 +137,11 @@ static void handle_pointer_button(
 
 static void handle_pointer_scroll(void *user_data, int32_t steps) {
 	struct matuwall_app *app = user_data;
-	enum matuwall_move move =
-		steps > 0 ? MATUWALL_MOVE_DOWN : MATUWALL_MOVE_UP;
+	bool horizontal = app->layout.flow == MATUWALL_FLOW_HORIZONTAL;
+	enum matuwall_move move = steps > 0 ? (horizontal ? MATUWALL_MOVE_RIGHT
+							  : MATUWALL_MOVE_DOWN)
+					    : (horizontal ? MATUWALL_MOVE_LEFT
+							  : MATUWALL_MOVE_UP);
 	int32_t count = steps > 0 ? steps : -steps;
 	bool changed = false;
 	size_t previous = app->grid.selected;

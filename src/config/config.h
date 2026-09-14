@@ -27,6 +27,7 @@ struct matuwall_config {
 	struct matuwall_color spinner;
 	struct matuwall_layout layout;
 	uint32_t visible_rows;
+	bool carousel;
 	uint32_t panel_radius;
 	uint32_t border_width;
 	uint32_t shadow_width;

@@ -51,7 +51,8 @@ static bool same_layout(
 	const struct matuwall_layout *a, const struct matuwall_layout *b) {
 	return a->columns == b->columns && a->spacing == b->spacing &&
 	       a->margin == b->margin && a->tile_width == b->tile_width &&
-	       a->tile_height == b->tile_height && a->radius == b->radius;
+	       a->tile_height == b->tile_height && a->radius == b->radius &&
+	       a->flow == b->flow;
 }
 
 static bool same_rect(
@@ -70,8 +71,8 @@ static void refresh_panel(struct matuwall_app *app) {
 		app->output_height = app->layer.height;
 	}
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
-		app->output_width, app->output_height, &app->layout,
-		&app->visible_rows);
+		app->output_width, app->output_height, app->config.carousel,
+		app->config.position, &app->layout, &app->visible_rows);
 	app->panel = matuwall_layout_panel(&app->layout, app->scan.count,
 		app->visible_rows, app->config.position, app->layer.width,
 		app->layer.height);
@@ -81,7 +82,7 @@ static void refresh_panel(struct matuwall_app *app) {
 		!same_rect(&old_panel, &app->panel) ||
 		old_first_row != app->grid.first_row) {
 		matuwall_animation_snap(&app->animation, &app->layout,
-			app->grid.selected, app->grid.first_row);
+			&app->panel, app->grid.selected, app->grid.first_row);
 	}
 	matuwall_app_thumbs_prioritize_visible(app);
 }
@@ -173,7 +174,8 @@ static void restore_selection(struct matuwall_app *app) {
 		if (matuwall_grid_select(&app->grid, &app->layout,
 			    (uint32_t)app->panel.height, i)) {
 			matuwall_animation_snap(&app->animation, &app->layout,
-				app->grid.selected, app->grid.first_row);
+				&app->panel, app->grid.selected,
+				app->grid.first_row);
 			app->layer.needs_repaint = true;
 		}
 		matuwall_log_info("state", "restored selection %s", path);

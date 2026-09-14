@@ -191,9 +191,17 @@ static void report_configuration(
 	char backend[sizeof(config->backend)];
 	report_line(report, DIAG_INFO, "backend", "%s",
 		clean(config->backend, backend, sizeof(backend)));
-	report_line(report, DIAG_INFO, "grid", "maximum %ux%u, tile %ux%u",
-		config->layout.columns, config->visible_rows,
-		config->layout.tile_width, config->layout.tile_height);
+	if (config->carousel) {
+		report_line(report, DIAG_INFO, "grid",
+			"carousel, maximum %u tiles, tile %ux%u",
+			config->layout.columns, config->layout.tile_width,
+			config->layout.tile_height);
+	} else {
+		report_line(report, DIAG_INFO, "grid",
+			"maximum %ux%u, tile %ux%u", config->layout.columns,
+			config->visible_rows, config->layout.tile_width,
+			config->layout.tile_height);
+	}
 	report_line(report, DIAG_INFO, "preview", "%s",
 		config->preview ? "enabled" : "disabled");
 	report_directory(report, config->directory);

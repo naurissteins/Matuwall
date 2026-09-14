@@ -22,6 +22,7 @@ Simple, fast and lightweight wallpaper picker for Wayland
 - Asynchronous JPEG, PNG, and WebP thumbnails with a fast on-disk cache
 - Full-screen wallpaper previews without applying the selection
 - Configurable grid layout, colors, thumbnail edge shadows, placement, output and fractional scaling
+- Optional centered carousel layout for horizontal or vertical scrolling
 - Native `sweetbg` and `awww` backends with automatic detection
 - Keyboard-only by default, with optional mouse controls
 - Safe, detached post-apply hooks for tools such as Matugen and Pywal
@@ -94,6 +95,18 @@ navigation_ms = 110
 zoom_percent = 3
 ```
 
+Centered carousel:
+
+```toml
+[grid]
+carousel = true
+```
+
+At `top`, `bottom`, or `center`, the strip is horizontal and uses only
+Left/Right. At `left` or `right`, it is vertical and uses only Up/Down. The
+selected thumbnail stays centered while the strip moves. `columns` limits the
+number of visible thumbnails; `visible_rows` is ignored in this mode.
+
 ## Controls
 - Arrows or `h` `j` `k` `l`
 - `Page Up`, `Page Down` | Move one page |
@@ -101,6 +114,8 @@ zoom_percent = 3
 - `End`, `G` | Last wallpaper |
 - `Enter` | Apply and exit |
 - `Escape` | Cancel and exit |
+
+In carousel mode, orthogonal arrows and page movement are disabled.
 
 ## Configure
 

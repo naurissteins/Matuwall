@@ -58,6 +58,14 @@ static size_t move_page(struct matuwall_grid *grid,
 // Keep the selected row inside the viewport and never scroll past the end
 static bool scroll_into_view(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height) {
+	if (layout->flow != MATUWALL_FLOW_GRID) {
+		if (grid->first_row == 0) {
+			return false;
+		}
+		grid->first_row = 0;
+		return true;
+	}
+
 	uint32_t visible = matuwall_grid_visible_rows(layout, surface_height);
 	uint32_t total = matuwall_layout_rows(layout, grid->count);
 	uint32_t first = grid->first_row;
@@ -96,22 +104,46 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 
 	switch (move) {
 	case MATUWALL_MOVE_LEFT:
+		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
+			break;
+		}
 		// Linear across row boundaries, like an icon grid
 		if (selected > 0) {
 			selected--;
 		}
 		break;
 	case MATUWALL_MOVE_RIGHT:
+		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
+			break;
+		}
 		if (selected < last) {
 			selected++;
 		}
 		break;
 	case MATUWALL_MOVE_UP:
+		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+			break;
+		}
+		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
+			if (selected > 0) {
+				selected--;
+			}
+			break;
+		}
 		if (selected >= columns) {
 			selected -= columns;
 		}
 		break;
 	case MATUWALL_MOVE_DOWN:
+		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+			break;
+		}
+		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
+			if (selected < last) {
+				selected++;
+			}
+			break;
+		}
 		if (selected + columns <= last) {
 			selected += columns;
 		} else if (row_of(layout, selected) < row_of(layout, last)) {
@@ -120,9 +152,15 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 		}
 		break;
 	case MATUWALL_MOVE_PAGE_UP:
+		if (layout->flow != MATUWALL_FLOW_GRID) {
+			break;
+		}
 		selected = move_page(grid, layout, surface_height, false);
 		break;
 	case MATUWALL_MOVE_PAGE_DOWN:
+		if (layout->flow != MATUWALL_FLOW_GRID) {
+			break;
+		}
 		selected = move_page(grid, layout, surface_height, true);
 		break;
 	case MATUWALL_MOVE_FIRST:

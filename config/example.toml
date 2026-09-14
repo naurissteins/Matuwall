@@ -68,6 +68,11 @@ ring_width = 2
 # Maximum rows kept visible. Fewer are used on short outputs.
 visible_rows = 2
 
+# Turn the grid into a centered carousel. Top, bottom, and center use a
+# horizontal row; left and right use a vertical column. In this mode columns
+# controls the maximum visible tiles and visible_rows is ignored.
+carousel = false
+
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing
 # them regenerates thumbnails at the new size.
