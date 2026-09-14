@@ -21,6 +21,7 @@ struct matuwall_animation_ring {
 
 struct matuwall_animation_focus {
 	size_t index;
+	int64_t slot;
 	double scale;
 };
 
@@ -50,6 +51,8 @@ struct matuwall_animation {
 	double focus_scale;
 	size_t from_focus;
 	size_t to_focus;
+	int64_t from_slot;
+	int64_t to_slot;
 	double from_focus_scale;
 	double to_focus_scale;
 	enum matuwall_animation_kind kind;
@@ -61,11 +64,12 @@ void matuwall_animation_init(struct matuwall_animation *animation,
 
 void matuwall_animation_snap(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
-	size_t selected, uint32_t first_row);
+	size_t selected, int64_t selected_slot, uint32_t first_row);
 
 void matuwall_animation_move(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
-	size_t previous, size_t selected, uint32_t first_row, int64_t now_ms);
+	size_t previous, int64_t previous_slot, size_t selected,
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms);
 
 void matuwall_animation_sample(struct matuwall_animation *animation,
 	int64_t now_ms, struct matuwall_animation_sample *sample);

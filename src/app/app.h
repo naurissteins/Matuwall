@@ -43,6 +43,7 @@ struct matuwall_app {
 	size_t pending;
 	size_t thumb_priority_first;
 	size_t thumb_priority_end;
+	size_t thumb_priority_wrap_end;
 	size_t thumb_cache_hits;
 	size_t thumb_decoded;
 	size_t thumb_failed;

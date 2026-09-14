@@ -104,8 +104,10 @@ carousel = true
 
 At `top`, `bottom`, or `center`, the strip is horizontal and uses only
 Left/Right. At `left` or `right`, it is vertical and uses only Up/Down. The
-selected thumbnail stays centered while the strip moves. `columns` limits the
-number of visible thumbnails; `visible_rows` is ignored in this mode.
+selected thumbnail stays centered while the strip moves. The carousel is
+circular: moving past the last wallpaper continues at the first, and repeated
+items fill the strip when necessary. `columns` limits the number of visible
+thumbnails; `visible_rows` is ignored in this mode.
 
 ## Controls
 - Arrows or `h` `j` `k` `l`

@@ -105,9 +105,10 @@ struct tile_geometry {
 };
 
 static enum tile_position tile_geometry(const struct matuwall_frame *frame,
-	const struct matuwall_clip *clip, size_t index, double focus,
+	const struct matuwall_clip *clip, int64_t slot, double focus,
 	struct tile_geometry *geometry) {
-	struct matuwall_rect item = matuwall_layout_item(frame->layout, index);
+	struct matuwall_layout_rect item =
+		matuwall_layout_slot(frame->layout, slot);
 	double width = item.width * focus;
 	double height = item.height * focus;
 	double x = frame->panel.x + item.x - (width - item.width) / 2.0;
@@ -212,32 +213,75 @@ static void draw_shadow(struct matuwall_buffer *buffer,
 		geometry->radius, width, frame->shadow);
 }
 
-static bool focused(const struct matuwall_frame *frame, size_t index) {
+static bool focused(const struct matuwall_frame *frame, int64_t slot) {
 	for (size_t i = 0; i < frame->focus_count; i++) {
-		if (frame->focuses[i].index == index) {
+		if (frame->focuses[i].slot == slot) {
 			return true;
 		}
 	}
 	return false;
 }
 
+static void slot_bounds(
+	const struct matuwall_frame *frame, int64_t *first, int64_t *last) {
+	if (frame->item_count == 0) {
+		*first = 1;
+		*last = 0;
+		return;
+	}
+	if (frame->layout->flow == MATUWALL_FLOW_GRID) {
+		*first = 0;
+		*last = (int64_t)(frame->item_count - 1);
+		return;
+	}
+
+	uint32_t extent = frame->layout->flow == MATUWALL_FLOW_HORIZONTAL
+				  ? (uint32_t)frame->panel.width
+				  : (uint32_t)frame->panel.height;
+	uint32_t step =
+		frame->layout->flow == MATUWALL_FLOW_HORIZONTAL
+			? frame->layout->tile_width + frame->layout->spacing
+			: frame->layout->tile_height + frame->layout->spacing;
+	int64_t radius = step > 0 ? (int64_t)(extent / step) + 2 : 2;
+	*first = frame->carousel_slot >= INT64_MIN + radius
+			 ? frame->carousel_slot - radius
+			 : INT64_MIN;
+	*last = frame->carousel_slot <= INT64_MAX - radius
+			? frame->carousel_slot + radius
+			: INT64_MAX;
+}
+
+static size_t slot_index(const struct matuwall_frame *frame, int64_t slot) {
+	if (frame->layout->flow == MATUWALL_FLOW_GRID) {
+		return (size_t)slot;
+	}
+	return matuwall_layout_carousel_index(slot, frame->item_count);
+}
+
 static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	bool shadows) {
-	for (size_t i = 0; i < frame->item_count; i++) {
+	int64_t first;
+	int64_t last;
+	slot_bounds(frame, &first, &last);
+	for (int64_t slot = first; slot <= last; slot++) {
+		size_t index = slot_index(frame, slot);
 		struct tile_geometry geometry;
 		enum tile_position position =
-			tile_geometry(frame, clip, i, 1.0, &geometry);
+			tile_geometry(frame, clip, slot, 1.0, &geometry);
 		if (position == TILE_AFTER) {
 			break;
 		}
-		if (position == TILE_BEFORE || focused(frame, i)) {
+		if (position == TILE_BEFORE || focused(frame, slot)) {
 			continue;
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &geometry, 1.0);
 		} else {
-			draw_tile(buffer, frame, clip, i, &geometry, false);
+			draw_tile(buffer, frame, clip, index, &geometry, false);
+		}
+		if (slot == INT64_MAX) {
+			break;
 		}
 	}
 }
@@ -247,12 +291,13 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 	bool shadows) {
 	for (size_t i = 0; i < frame->focus_count; i++) {
 		size_t index = frame->focuses[i].index;
+		int64_t slot = frame->focuses[i].slot;
 		if (index >= frame->item_count) {
 			continue;
 		}
 		double focus = frame->focuses[i].scale;
 		struct tile_geometry geometry;
-		if (tile_geometry(frame, clip, index, focus, &geometry) !=
+		if (tile_geometry(frame, clip, slot, focus, &geometry) !=
 			TILE_VISIBLE) {
 			continue;
 		}

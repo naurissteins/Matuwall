@@ -47,9 +47,9 @@ int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool);
 bool matuwall_worker_submit(
 	struct matuwall_worker_pool *pool, size_t index, const char *path);
 
-// Move queued thumbnails in [first, end) ahead of other thumbnail jobs
-void matuwall_worker_prioritize_thumbs(
-	struct matuwall_worker_pool *pool, size_t first, size_t end);
+// Move queued thumbnails in [first, end) and [0, wrap_end) ahead
+void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
+	size_t first, size_t end, size_t wrap_end);
 
 // Jumps the queue and drops any preview that has not started; latest wins
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,

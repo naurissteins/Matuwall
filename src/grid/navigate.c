@@ -100,11 +100,20 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 	size_t last = grid->count - 1;
 	size_t selected = grid->selected;
 	size_t previous_selected = grid->selected;
+	int64_t previous_cursor = grid->cursor;
 	uint32_t first_row = grid->first_row;
 
 	switch (move) {
 	case MATUWALL_MOVE_LEFT:
 		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
+			break;
+		}
+		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+			if (grid->cursor > INT64_MIN) {
+				grid->cursor--;
+			}
+			selected = matuwall_layout_carousel_index(
+				grid->cursor, grid->count);
 			break;
 		}
 		// Linear across row boundaries, like an icon grid
@@ -116,6 +125,14 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
 			break;
 		}
+		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+			if (grid->cursor < INT64_MAX) {
+				grid->cursor++;
+			}
+			selected = matuwall_layout_carousel_index(
+				grid->cursor, grid->count);
+			break;
+		}
 		if (selected < last) {
 			selected++;
 		}
@@ -125,9 +142,11 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 			break;
 		}
 		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			if (selected > 0) {
-				selected--;
+			if (grid->cursor > INT64_MIN) {
+				grid->cursor--;
 			}
+			selected = matuwall_layout_carousel_index(
+				grid->cursor, grid->count);
 			break;
 		}
 		if (selected >= columns) {
@@ -139,9 +158,11 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 			break;
 		}
 		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			if (selected < last) {
-				selected++;
+			if (grid->cursor < INT64_MAX) {
+				grid->cursor++;
 			}
+			selected = matuwall_layout_carousel_index(
+				grid->cursor, grid->count);
 			break;
 		}
 		if (selected + columns <= last) {
@@ -165,24 +186,37 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 		break;
 	case MATUWALL_MOVE_FIRST:
 		selected = 0;
+		grid->cursor = 0;
 		break;
 	case MATUWALL_MOVE_LAST:
 		selected = last;
+		grid->cursor = (int64_t)last;
 		break;
 	}
 
 	grid->selected = selected;
+	if (layout->flow == MATUWALL_FLOW_GRID) {
+		grid->cursor = (int64_t)selected;
+	}
 	scroll_into_view(grid, layout, surface_height);
-	return selected != previous_selected || grid->first_row != first_row;
+	return selected != previous_selected ||
+	       grid->cursor != previous_cursor || grid->first_row != first_row;
 }
 
 bool matuwall_grid_select(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
-	size_t index) {
+	size_t index, int64_t slot) {
 	if (grid->count == 0 || index >= grid->count) {
 		return false;
 	}
 	bool moved = index != grid->selected;
+	if (layout->flow != MATUWALL_FLOW_GRID &&
+		matuwall_layout_carousel_index(slot, grid->count) == index) {
+		moved = moved || slot != grid->cursor;
+		grid->cursor = slot;
+	} else {
+		grid->cursor = (int64_t)index;
+	}
 	grid->selected = index;
 	bool scrolled = scroll_into_view(grid, layout, surface_height);
 	return moved || scrolled;

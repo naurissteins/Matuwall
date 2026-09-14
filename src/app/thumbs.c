@@ -65,8 +65,8 @@ static void thumbnail_target(
 	*th = (uint32_t)(app->layout.tile_height * scale + 0.5);
 }
 
-static void visible_range(
-	const struct matuwall_app *app, size_t *first, size_t *end) {
+static void visible_ranges(const struct matuwall_app *app, size_t *first,
+	size_t *end, size_t *wrap_end) {
 	size_t columns = app->layout.columns;
 	if (columns == 0) {
 		columns = 1;
@@ -78,16 +78,23 @@ static void visible_range(
 				? columns
 				: matuwall_grid_visible_rows(&app->layout,
 					  (uint32_t)app->panel.height);
-		size_t before = visible / 2;
-		size_t after = visible - before;
-		*first = app->grid.selected > before
-				 ? app->grid.selected - before
-				 : 0;
-		*end = app->grid.selected < app->scan.count - 1 &&
-				       after < app->scan.count -
-						       app->grid.selected
-			       ? app->grid.selected + after
-			       : app->scan.count;
+		if (visible > app->scan.count) {
+			visible = app->scan.count;
+		}
+		int64_t before = (int64_t)(visible / 2);
+		int64_t start_slot = app->grid.cursor >= INT64_MIN + before
+					     ? app->grid.cursor - before
+					     : INT64_MIN;
+		*first = matuwall_layout_carousel_index(
+			start_slot, app->scan.count);
+		size_t until_end = app->scan.count - *first;
+		if (visible <= until_end) {
+			*end = *first + visible;
+			*wrap_end = 0;
+		} else {
+			*end = app->scan.count;
+			*wrap_end = visible - until_end;
+		}
 		return;
 	}
 
@@ -95,6 +102,7 @@ static void visible_range(
 	if (*first >= app->scan.count) {
 		*first = app->scan.count;
 		*end = app->scan.count;
+		*wrap_end = 0;
 		return;
 	}
 
@@ -104,6 +112,7 @@ static void visible_range(
 	size_t count = rows * columns;
 	size_t remaining = app->scan.count - *first;
 	*end = *first + (count < remaining ? count : remaining);
+	*wrap_end = 0;
 }
 
 static void submit_range(struct matuwall_app *app, size_t first, size_t end) {
@@ -144,12 +153,19 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 
 	size_t first;
 	size_t end;
-	visible_range(app, &first, &end);
+	size_t wrap_end;
+	visible_ranges(app, &first, &end, &wrap_end);
 	submit_range(app, first, end);
-	submit_range(app, 0, first);
-	submit_range(app, end, app->scan.count);
+	if (wrap_end > 0) {
+		submit_range(app, 0, wrap_end);
+		submit_range(app, wrap_end, first);
+	} else {
+		submit_range(app, 0, first);
+		submit_range(app, end, app->scan.count);
+	}
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
+	app->thumb_priority_wrap_end = wrap_end;
 	app->thumb_priority_set = true;
 }
 
@@ -160,15 +176,18 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 
 	size_t first;
 	size_t end;
-	visible_range(app, &first, &end);
+	size_t wrap_end;
+	visible_ranges(app, &first, &end, &wrap_end);
 	if (app->thumb_priority_set && first == app->thumb_priority_first &&
-		end == app->thumb_priority_end) {
+		end == app->thumb_priority_end &&
+		wrap_end == app->thumb_priority_wrap_end) {
 		return;
 	}
 
-	matuwall_worker_prioritize_thumbs(app->workers, first, end);
+	matuwall_worker_prioritize_thumbs(app->workers, first, end, wrap_end);
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
+	app->thumb_priority_wrap_end = wrap_end;
 	app->thumb_priority_set = true;
 }
 

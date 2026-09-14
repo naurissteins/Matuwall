@@ -11,6 +11,7 @@
 struct matuwall_grid {
 	size_t count;
 	size_t selected;
+	int64_t cursor;
 	uint32_t first_row;
 };
 
@@ -36,7 +37,7 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 
 bool matuwall_grid_select(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
-	size_t index);
+	size_t index, int64_t slot);
 
 bool matuwall_grid_reveal(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height);
