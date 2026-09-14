@@ -153,8 +153,10 @@ line. Comments are not allowed inside an array.
 	_window.position_ _"top"_, _"bottom"_, or _"center"_, the strip is one
 	horizontal row navigated with Left/Right. At _"left"_ or _"right"_, it is
 	one vertical column navigated with Up/Down. The selected tile remains
-	centered while the strip moves. Orthogonal arrows and Page Up/Page Down do
-	nothing; Home/End still jump to the ends.
+	centered while the strip moves. The carousel wraps continuously in both
+	directions, and repeats thumbnails when needed to keep the panel full.
+	Orthogonal arrows and Page Up/Page Down do nothing; Home/End still jump to
+	the ends.
 
 Matuwall keeps the configured tile size, spacing, and margin while fitting the
 grid, and always displays at least one tile.

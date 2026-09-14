@@ -70,7 +70,8 @@ visible_rows = 2
 
 # Turn the grid into a centered carousel. Top, bottom, and center use a
 # horizontal row; left and right use a vertical column. In this mode columns
-# controls the maximum visible tiles and visible_rows is ignored.
+# controls the maximum visible tiles and visible_rows is ignored. Navigation
+# wraps continuously, repeating thumbnails as needed to keep the strip full.
 carousel = false
 
 [thumbnail]

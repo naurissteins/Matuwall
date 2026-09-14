@@ -1,11 +1,10 @@
 #include "app/animation.h"
 
 #include <math.h>
-#include <stdlib.h>
 
 static struct matuwall_animation_rect item_rect(
-	const struct matuwall_layout *layout, size_t index) {
-	struct matuwall_rect rect = matuwall_layout_item(layout, index);
+	const struct matuwall_layout *layout, int64_t slot) {
+	struct matuwall_layout_rect rect = matuwall_layout_slot(layout, slot);
 	return (struct matuwall_animation_rect){
 		.x = rect.x,
 		.y = rect.y,
@@ -64,37 +63,37 @@ static double smoothstep(double progress) {
 	return progress * progress * (3.0 - 2.0 * progress);
 }
 
-static bool adjacent(const struct matuwall_layout *layout, size_t previous,
-	size_t selected) {
-	struct matuwall_rect from = matuwall_layout_item(layout, previous);
-	struct matuwall_rect to = matuwall_layout_item(layout, selected);
-	int32_t dx = abs(to.x - from.x);
-	int32_t dy = abs(to.y - from.y);
+static bool adjacent(const struct matuwall_layout *layout, int64_t previous,
+	int64_t selected) {
+	struct matuwall_layout_rect from =
+		matuwall_layout_slot(layout, previous);
+	struct matuwall_layout_rect to = matuwall_layout_slot(layout, selected);
+	double dx = fabs(to.x - from.x);
+	double dy = fabs(to.y - from.y);
 	uint32_t step_x = layout->tile_width + layout->spacing;
 	uint32_t step_y = layout->tile_height + layout->spacing;
 
-	return (dy == 0 && dx == (int32_t)step_x) ||
-	       (dx == 0 && dy == (int32_t)step_y);
+	return (dy == 0 && dx == step_x) || (dx == 0 && dy == step_y);
 }
 
 static bool neighboring_row(const struct matuwall_layout *layout,
-	size_t previous, size_t selected) {
+	int64_t previous, int64_t selected) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
-	size_t previous_row = previous / columns;
-	size_t selected_row = selected / columns;
-	size_t distance = previous_row > selected_row
-				  ? previous_row - selected_row
-				  : selected_row - previous_row;
+	int64_t previous_row = previous / columns;
+	int64_t selected_row = selected / columns;
+	uint64_t distance = previous_row > selected_row
+				    ? (uint64_t)(previous_row - selected_row)
+				    : (uint64_t)(selected_row - previous_row);
 	return distance == 1;
 }
 
-static void add_focus(
-	struct matuwall_animation_sample *sample, size_t index, double scale) {
+static void add_focus(struct matuwall_animation_sample *sample, size_t index,
+	int64_t slot, double scale) {
 	if (scale <= 1.0) {
 		return;
 	}
 	for (size_t i = 0; i < sample->focus_count; i++) {
-		if (sample->focuses[i].index != index) {
+		if (sample->focuses[i].slot != slot) {
 			continue;
 		}
 		if (scale > sample->focuses[i].scale) {
@@ -106,15 +105,16 @@ static void add_focus(
 		sample->focuses[sample->focus_count++] =
 			(struct matuwall_animation_focus){
 				.index = index,
+				.slot = slot,
 				.scale = scale,
 			};
 	}
 }
 
 static double focus_at(
-	const struct matuwall_animation_sample *sample, size_t index) {
+	const struct matuwall_animation_sample *sample, int64_t slot) {
 	for (size_t i = 0; i < sample->focus_count; i++) {
-		if (sample->focuses[i].index == index) {
+		if (sample->focuses[i].slot == slot) {
 			return sample->focuses[i].scale;
 		}
 	}
@@ -131,15 +131,17 @@ void matuwall_animation_init(struct matuwall_animation *animation,
 
 void matuwall_animation_snap(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
-	size_t selected, uint32_t first_row) {
-	animation->from_ring =
-		scale_rect(item_rect(layout, selected), animation->focus_scale);
+	size_t selected, int64_t selected_slot, uint32_t first_row) {
+	animation->from_ring = scale_rect(
+		item_rect(layout, selected_slot), animation->focus_scale);
 	animation->to_ring = animation->from_ring;
 	animation->from_scroll =
-		matuwall_layout_scroll(layout, panel, selected, first_row);
+		matuwall_layout_scroll(layout, panel, selected_slot, first_row);
 	animation->to_scroll = animation->from_scroll;
 	animation->from_focus = selected;
 	animation->to_focus = selected;
+	animation->from_slot = selected_slot;
+	animation->to_slot = selected_slot;
 	animation->from_focus_scale = animation->focus_scale;
 	animation->to_focus_scale = animation->focus_scale;
 	animation->kind = MATUWALL_ANIMATION_NONE;
@@ -182,18 +184,20 @@ void matuwall_animation_sample(struct matuwall_animation *animation,
 	}
 
 	if (sample->active) {
-		add_focus(sample, animation->from_focus,
+		add_focus(sample, animation->from_focus, animation->from_slot,
 			lerp(animation->from_focus_scale, 1.0, eased));
-		add_focus(sample, animation->to_focus,
+		add_focus(sample, animation->to_focus, animation->to_slot,
 			lerp(animation->to_focus_scale, animation->focus_scale,
 				eased));
 	} else {
-		add_focus(sample, animation->to_focus, animation->focus_scale);
+		add_focus(sample, animation->to_focus, animation->to_slot,
+			animation->focus_scale);
 	}
 	if (!sample->active) {
 		animation->from_ring = animation->to_ring;
 		animation->from_scroll = animation->to_scroll;
 		animation->from_focus = animation->to_focus;
+		animation->from_slot = animation->to_slot;
 		animation->from_focus_scale = animation->focus_scale;
 		animation->to_focus_scale = animation->focus_scale;
 		animation->kind = MATUWALL_ANIMATION_NONE;
@@ -202,10 +206,11 @@ void matuwall_animation_sample(struct matuwall_animation *animation,
 
 void matuwall_animation_move(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
-	size_t previous, size_t selected, uint32_t first_row, int64_t now_ms) {
+	size_t previous, int64_t previous_slot, size_t selected,
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms) {
 	if (!animation->initialized || animation->duration_ms == 0) {
-		matuwall_animation_snap(
-			animation, layout, panel, selected, first_row);
+		matuwall_animation_snap(animation, layout, panel, selected,
+			selected_slot, first_row);
 		return;
 	}
 
@@ -214,26 +219,28 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 	struct matuwall_animation_rect current_ring =
 		current.ring_count == 1 ? current.rings[0].rect
 					: animation->to_ring;
-	struct matuwall_animation_rect target =
-		scale_rect(item_rect(layout, selected), animation->focus_scale);
+	struct matuwall_animation_rect target = scale_rect(
+		item_rect(layout, selected_slot), animation->focus_scale);
 	double target_scroll =
-		matuwall_layout_scroll(layout, panel, selected, first_row);
-	double previous_scale = focus_at(&current, previous);
-	double selected_scale = focus_at(&current, selected);
+		matuwall_layout_scroll(layout, panel, selected_slot, first_row);
+	double previous_scale = focus_at(&current, previous_slot);
+	double selected_scale = focus_at(&current, selected_slot);
 
 	animation->started_ms = now_ms;
 	animation->to_ring = target;
 	animation->to_scroll = target_scroll;
 	animation->from_focus = previous;
 	animation->to_focus = selected;
+	animation->from_slot = previous_slot;
+	animation->to_slot = selected_slot;
 	animation->from_focus_scale = previous_scale;
 	animation->to_focus_scale = selected_scale;
-	if (adjacent(layout, previous, selected)) {
+	if (adjacent(layout, previous_slot, selected_slot)) {
 		animation->from_ring = current_ring;
 		animation->from_scroll = current.scroll;
 		animation->kind = MATUWALL_ANIMATION_GLIDE;
 	} else {
-		if (neighboring_row(layout, previous, selected)) {
+		if (neighboring_row(layout, previous_slot, selected_slot)) {
 			animation->from_ring = current_ring;
 			animation->from_scroll = current.scroll;
 		} else {

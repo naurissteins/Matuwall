@@ -1,5 +1,7 @@
 #include "grid/layout.h"
 
+#include <math.h>
+
 static uint32_t fit_cells(uint32_t available, uint32_t margin, uint32_t tile,
 	uint32_t spacing, uint32_t maximum) {
 	if (maximum == 0 || tile == 0) {
@@ -57,41 +59,50 @@ uint32_t matuwall_layout_rows(
 	return (uint32_t)((count + layout->columns - 1) / layout->columns);
 }
 
-struct matuwall_rect matuwall_layout_item(
-	const struct matuwall_layout *layout, size_t index) {
-	if (layout->columns == 0) {
-		return (struct matuwall_rect){0};
+struct matuwall_layout_rect matuwall_layout_slot(
+	const struct matuwall_layout *layout, int64_t slot) {
+	double column =
+		layout->flow == MATUWALL_FLOW_HORIZONTAL ? (double)slot : 0;
+	double row = layout->flow == MATUWALL_FLOW_VERTICAL ? (double)slot : 0;
+	if (layout->flow == MATUWALL_FLOW_GRID && slot >= 0) {
+		uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
+		column = (double)((uint64_t)slot % columns);
+		uint64_t row_index = (uint64_t)slot / columns;
+		row = (double)row_index;
 	}
 
-	uint32_t column;
-	uint32_t row;
-	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-		column = (uint32_t)index;
-		row = 0;
-	} else {
-		column = (uint32_t)(index % layout->columns);
-		row = (uint32_t)(index / layout->columns);
-	}
-
-	return (struct matuwall_rect){
-		.x = (int32_t)(layout->margin +
-			       column * (layout->tile_width + layout->spacing)),
-		.y = (int32_t)(layout->margin +
-			       row * (layout->tile_height + layout->spacing)),
-		.width = (int32_t)layout->tile_width,
-		.height = (int32_t)layout->tile_height,
+	return (struct matuwall_layout_rect){
+		.x = layout->margin +
+		     column * (layout->tile_width + layout->spacing),
+		.y = layout->margin +
+		     row * (layout->tile_height + layout->spacing),
+		.width = layout->tile_width,
+		.height = layout->tile_height,
 	};
 }
 
+size_t matuwall_layout_carousel_index(int64_t slot, size_t count) {
+	if (count == 0) {
+		return SIZE_MAX;
+	}
+	if (slot >= 0) {
+		return (size_t)slot % count;
+	}
+	uint64_t magnitude = (uint64_t)(-(slot + 1)) + 1;
+	size_t remainder = (size_t)(magnitude % count);
+	return remainder == 0 ? 0 : count - remainder;
+}
+
 double matuwall_layout_scroll(const struct matuwall_layout *layout,
-	const struct matuwall_rect *panel, size_t selected,
+	const struct matuwall_rect *panel, int64_t selected_slot,
 	uint32_t first_row) {
 	if (layout->flow == MATUWALL_FLOW_GRID) {
 		return (double)first_row *
 		       (double)(layout->tile_height + layout->spacing);
 	}
 
-	struct matuwall_rect item = matuwall_layout_item(layout, selected);
+	struct matuwall_layout_rect item =
+		matuwall_layout_slot(layout, selected_slot);
 	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
 		return (double)item.x + (double)item.width / 2.0 -
 		       (double)panel->width / 2.0;
@@ -106,12 +117,15 @@ void matuwall_layout_surface_size(const struct matuwall_layout *layout,
 	if (columns == 0) {
 		columns = 1;
 	}
-	// A short directory should not leave empty columns of padding
-	if (count > 0 && count < columns) {
+	// A short grid should not leave empty columns of padding
+	if (layout->flow == MATUWALL_FLOW_GRID && count > 0 &&
+		count < columns) {
 		columns = (uint32_t)count;
 	}
 
-	uint32_t rows = matuwall_layout_rows(layout, count);
+	uint32_t rows = layout->flow == MATUWALL_FLOW_VERTICAL
+				? max_rows
+				: matuwall_layout_rows(layout, count);
 	if (rows == 0) {
 		rows = 1;
 	}
@@ -177,11 +191,11 @@ struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 }
 
 size_t matuwall_layout_hit(const struct matuwall_layout *layout,
-	const struct matuwall_rect *panel, int32_t scroll, size_t count,
-	int32_t x, int32_t y) {
+	const struct matuwall_rect *panel, double scroll, size_t count,
+	int64_t *slot, int32_t x, int32_t y) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
-	int32_t stride_x = (int32_t)(layout->tile_width + layout->spacing);
-	int32_t stride_y = (int32_t)(layout->tile_height + layout->spacing);
+	double stride_x = layout->tile_width + layout->spacing;
+	double stride_y = layout->tile_height + layout->spacing;
 
 	if (x < panel->x || y < panel->y || x >= panel->x + panel->width ||
 		y >= panel->y + panel->height) {
@@ -189,35 +203,46 @@ size_t matuwall_layout_hit(const struct matuwall_layout *layout,
 	}
 
 	// Translate the on-screen point into unscrolled content space
-	int32_t cx = x - panel->x - (int32_t)layout->margin;
-	int32_t cy = y - panel->y - (int32_t)layout->margin;
+	double cx = x - panel->x - (int32_t)layout->margin;
+	double cy = y - panel->y - (int32_t)layout->margin;
 	if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
 		cx += scroll;
 	} else {
 		cy += scroll;
 	}
-	if (cx < 0 || cy < 0) {
+	if (layout->flow == MATUWALL_FLOW_GRID && (cx < 0 || cy < 0)) {
 		return SIZE_MAX;
 	}
 
-	uint32_t col = (uint32_t)(cx / stride_x);
-	uint32_t row = (uint32_t)(cy / stride_y);
-	if (layout->flow != MATUWALL_FLOW_HORIZONTAL && col >= columns) {
+	int64_t col = (int64_t)floor(cx / stride_x);
+	int64_t row = (int64_t)floor(cy / stride_y);
+	if (layout->flow != MATUWALL_FLOW_HORIZONTAL &&
+		(col < 0 || (uint64_t)col >= columns)) {
 		return SIZE_MAX;
 	}
 	if (layout->flow == MATUWALL_FLOW_HORIZONTAL && row != 0) {
 		return SIZE_MAX;
 	}
 	// Reject points that fall in the spacing gap, not on a tile
-	if (cx - (int32_t)col * stride_x >= (int32_t)layout->tile_width) {
+	if (cx - (double)col * stride_x >= layout->tile_width) {
 		return SIZE_MAX;
 	}
-	if (cy - (int32_t)row * stride_y >= (int32_t)layout->tile_height) {
+	if (cy - (double)row * stride_y >= layout->tile_height) {
 		return SIZE_MAX;
 	}
 
-	size_t index = layout->flow == MATUWALL_FLOW_HORIZONTAL
-			       ? col
-			       : (size_t)row * columns + col;
+	if (layout->flow != MATUWALL_FLOW_GRID) {
+		int64_t hit_slot =
+			layout->flow == MATUWALL_FLOW_HORIZONTAL ? col : row;
+		if (slot != NULL) {
+			*slot = hit_slot;
+		}
+		return matuwall_layout_carousel_index(hit_slot, count);
+	}
+
+	size_t index = (size_t)row * columns + (size_t)col;
+	if (slot != NULL) {
+		*slot = (int64_t)index;
+	}
 	return index < count ? index : SIZE_MAX;
 }

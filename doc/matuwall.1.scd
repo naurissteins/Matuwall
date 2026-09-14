@@ -189,7 +189,7 @@ invocation with its requested options.
 *Arrow keys*, *h* *j* *k* *l*
 	Move the selection. With _grid.carousel_ enabled, top, bottom, and center
 	positions accept only Left/Right; left and right positions accept only
-	Up/Down.
+	Up/Down. Moving past either end wraps continuously to the other end.
 
 *Page Up*, *Page Down*
 	Move the selection by one visible page. Disabled when _grid.carousel_ is

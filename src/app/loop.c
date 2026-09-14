@@ -82,7 +82,8 @@ static void refresh_panel(struct matuwall_app *app) {
 		!same_rect(&old_panel, &app->panel) ||
 		old_first_row != app->grid.first_row) {
 		matuwall_animation_snap(&app->animation, &app->layout,
-			&app->panel, app->grid.selected, app->grid.first_row);
+			&app->panel, app->grid.selected, app->grid.cursor,
+			app->grid.first_row);
 	}
 	matuwall_app_thumbs_prioritize_visible(app);
 }
@@ -116,6 +117,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.layout = &app->layout,
 		.thumbs = app->thumbs,
 		.item_count = app->scan.count,
+		.carousel_slot = app->grid.cursor,
 		.scroll = visual.scroll,
 		.panel = app->panel,
 		.backdrop = app->config.preview,
@@ -150,6 +152,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 		for (size_t i = 0; i < visual.focus_count; i++) {
 			frame.focuses[i] = (struct matuwall_frame_focus){
 				.index = visual.focuses[i].index,
+				.slot = visual.focuses[i].slot,
 				.scale = visual.focuses[i].scale,
 			};
 		}
@@ -172,10 +175,10 @@ static void restore_selection(struct matuwall_app *app) {
 			continue;
 		}
 		if (matuwall_grid_select(&app->grid, &app->layout,
-			    (uint32_t)app->panel.height, i)) {
+			    (uint32_t)app->panel.height, i, (int64_t)i)) {
 			matuwall_animation_snap(&app->animation, &app->layout,
 				&app->panel, app->grid.selected,
-				app->grid.first_row);
+				app->grid.cursor, app->grid.first_row);
 			app->layer.needs_repaint = true;
 		}
 		matuwall_log_info("state", "restored selection %s", path);

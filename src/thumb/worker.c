@@ -267,9 +267,9 @@ bool matuwall_worker_submit(
 	return true;
 }
 
-void matuwall_worker_prioritize_thumbs(
-	struct matuwall_worker_pool *pool, size_t first, size_t end) {
-	if (first >= end) {
+void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
+	size_t first, size_t end, size_t wrap_end) {
+	if (first >= end && wrap_end == 0) {
 		return;
 	}
 
@@ -283,7 +283,8 @@ void matuwall_worker_prioritize_thumbs(
 		struct job *next = job->next;
 		if (job->kind == MATUWALL_JOB_PREVIEW) {
 			job_list_append(&previews, job);
-		} else if (job->index >= first && job->index < end) {
+		} else if ((job->index >= first && job->index < end) ||
+			   job->index < wrap_end) {
 			job_list_append(&visible, job);
 		} else {
 			job_list_append(&remaining, job);

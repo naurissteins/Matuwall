@@ -1,6 +1,5 @@
 #include "app/input.h"
 
-#include <math.h>
 #include <stddef.h>
 
 #include "app/app.h"
@@ -10,10 +9,11 @@
 #include "util/log.h"
 
 // Selection changed: animate presentation and let the backdrop follow later
-static void selection_changed(
-	struct matuwall_app *app, size_t previous, int64_t now_ms) {
+static void selection_changed(struct matuwall_app *app, size_t previous,
+	int64_t previous_cursor, int64_t now_ms) {
 	matuwall_animation_move(&app->animation, &app->layout, &app->panel,
-		previous, app->grid.selected, app->grid.first_row, now_ms);
+		previous, previous_cursor, app->grid.selected, app->grid.cursor,
+		app->grid.first_row, now_ms);
 	app->layer.needs_repaint = true;
 	matuwall_app_thumbs_prioritize_visible(app);
 	matuwall_app_preview_select(app, app->grid.selected, now_ms);
@@ -78,9 +78,11 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 	}
 
 	size_t previous = app->grid.selected;
+	int64_t previous_cursor = app->grid.cursor;
 	if (matuwall_grid_move(&app->grid, &app->layout,
 		    (uint32_t)app->panel.height, move)) {
-		selection_changed(app, previous, matuwall_now_ms());
+		selection_changed(
+			app, previous, previous_cursor, matuwall_now_ms());
 	}
 }
 
@@ -99,14 +101,16 @@ static void handle_focus_lost(void *user_data) {
 static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
 	struct matuwall_app *app = user_data;
 	int64_t now_ms = matuwall_now_ms();
-	int32_t scroll = (int32_t)lround(
-		matuwall_animation_scroll(&app->animation, now_ms));
-	size_t hit = matuwall_layout_hit(
-		&app->layout, &app->panel, scroll, app->scan.count, x, y);
+	double scroll = matuwall_animation_scroll(&app->animation, now_ms);
+	int64_t slot;
+	size_t hit = matuwall_layout_hit(&app->layout, &app->panel, scroll,
+		app->scan.count, &slot, x, y);
 	size_t previous = app->grid.selected;
-	if (hit != SIZE_MAX && matuwall_grid_select(&app->grid, &app->layout,
-				       (uint32_t)app->panel.height, hit)) {
-		selection_changed(app, previous, now_ms);
+	int64_t previous_cursor = app->grid.cursor;
+	if (hit != SIZE_MAX &&
+		matuwall_grid_select(&app->grid, &app->layout,
+			(uint32_t)app->panel.height, hit, slot)) {
+		selection_changed(app, previous, previous_cursor, now_ms);
 	}
 }
 
@@ -117,10 +121,11 @@ static void handle_pointer_button(
 	if (!pressed) {
 		return;
 	}
-	int32_t scroll = (int32_t)lround(
-		matuwall_animation_scroll(&app->animation, matuwall_now_ms()));
-	size_t hit = matuwall_layout_hit(
-		&app->layout, &app->panel, scroll, app->scan.count, x, y);
+	double scroll =
+		matuwall_animation_scroll(&app->animation, matuwall_now_ms());
+	int64_t slot;
+	size_t hit = matuwall_layout_hit(&app->layout, &app->panel, scroll,
+		app->scan.count, &slot, x, y);
 	if (hit == SIZE_MAX) {
 		// Only a backdrop surface has anywhere to click past the panel
 		if (app->config.preview) {
@@ -130,8 +135,8 @@ static void handle_pointer_button(
 		}
 		return;
 	}
-	matuwall_grid_select(
-		&app->grid, &app->layout, (uint32_t)app->panel.height, hit);
+	matuwall_grid_select(&app->grid, &app->layout,
+		(uint32_t)app->panel.height, hit, slot);
 	apply_and_exit(app);
 }
 
@@ -145,12 +150,14 @@ static void handle_pointer_scroll(void *user_data, int32_t steps) {
 	int32_t count = steps > 0 ? steps : -steps;
 	bool changed = false;
 	size_t previous = app->grid.selected;
+	int64_t previous_cursor = app->grid.cursor;
 	for (int32_t i = 0; i < count; i++) {
 		changed |= matuwall_grid_move(&app->grid, &app->layout,
 			(uint32_t)app->panel.height, move);
 	}
 	if (changed) {
-		selection_changed(app, previous, matuwall_now_ms());
+		selection_changed(
+			app, previous, previous_cursor, matuwall_now_ms());
 	}
 }
 

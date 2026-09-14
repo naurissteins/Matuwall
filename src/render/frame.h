@@ -20,6 +20,7 @@ struct matuwall_frame_ring {
 
 struct matuwall_frame_focus {
 	size_t index;
+	int64_t slot;
 	double scale;
 };
 
@@ -27,6 +28,7 @@ struct matuwall_frame {
 	const struct matuwall_layout *layout;
 	const struct matuwall_thumb *thumbs;
 	size_t item_count;
+	int64_t carousel_slot;
 	double scroll;
 	struct matuwall_frame_ring rings[2];
 	size_t ring_count;
