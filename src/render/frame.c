@@ -208,7 +208,7 @@ static bool focused(const struct matuwall_frame *frame, size_t index) {
 	return false;
 }
 
-static void draw_tile_pass(struct matuwall_buffer *buffer,
+static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	bool shadows) {
 	for (size_t i = 0; i < frame->item_count; i++) {
@@ -227,7 +227,11 @@ static void draw_tile_pass(struct matuwall_buffer *buffer,
 			draw_tile(buffer, frame, clip, i, &geometry, false);
 		}
 	}
+}
 
+static void draw_focused_tiles(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	bool shadows) {
 	for (size_t i = 0; i < frame->focus_count; i++) {
 		size_t index = frame->focuses[i].index;
 		if (index >= frame->item_count) {
@@ -241,9 +245,8 @@ static void draw_tile_pass(struct matuwall_buffer *buffer,
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &geometry, focus);
-		} else {
-			draw_tile(buffer, frame, clip, index, &geometry, true);
 		}
+		draw_tile(buffer, frame, clip, index, &geometry, true);
 	}
 }
 
@@ -295,10 +298,12 @@ void matuwall_frame_draw(
 		ring_width = 1;
 	}
 
-	if (frame->shadow_width > 0 && (frame->shadow >> 24) > 0) {
-		draw_tile_pass(buffer, frame, &clip, true);
+	bool shadows = frame->shadow_width > 0 && (frame->shadow >> 24) > 0;
+	if (shadows) {
+		draw_unfocused_pass(buffer, frame, &clip, true);
 	}
-	draw_tile_pass(buffer, frame, &clip, false);
+	draw_unfocused_pass(buffer, frame, &clip, false);
+	draw_focused_tiles(buffer, frame, &clip, shadows);
 
 	if (ring_width > 0 && frame->ring.a > 0) {
 		for (size_t i = 0; i < frame->ring_count; i++) {
