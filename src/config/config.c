@@ -51,6 +51,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 	*cfg = (struct matuwall_config){
 		.backend = "sweetbg",
 		.position = MATUWALL_POSITION_CENTER,
+		.edge_margin = 24,
 		.background = {.r = 0x1e, .g = 0x1e, .b = 0x2e, .a = 0xcc},
 		.tile = {.r = 0x31, .g = 0x32, .b = 0x44, .a = 0xff},
 		.border = {.r = 0x58, .g = 0x5b, .b = 0x70, .a = 0xff},
@@ -233,6 +234,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "margin") == 0) {
 			apply_uint(&cfg->layout.margin, v, line,
 				"margin must be 0..4096", 0, 4096);
+			return true;
+		}
+		if (strcmp(key, "edge_margin") == 0) {
+			apply_uint(&cfg->edge_margin, v, line,
+				"edge_margin must be 0..4096", 0, 4096);
 			return true;
 		}
 		if (strcmp(key, "radius") == 0) {

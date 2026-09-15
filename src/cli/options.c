@@ -18,6 +18,7 @@ enum {
 	OPTION_SHADOW_WIDTH,
 	OPTION_CLOSE_ON_FOCUS_LOSS,
 	OPTION_CONFIG,
+	OPTION_EDGE_MARGIN,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
 	OPTION_NO_CLOSE_ON_FOCUS_LOSS,
@@ -52,6 +53,7 @@ static const struct option long_options[] = {
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
 	{"directory", required_argument, NULL, 'd'},
+	{"edge-margin", required_argument, NULL, OPTION_EDGE_MARGIN},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
@@ -191,6 +193,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 	case OPTION_HEIGHT:
 		return parse_uint_override("height", value, 1, 16384,
 			&options->height, &options->height_set, err, err_size);
+	case OPTION_EDGE_MARGIN:
+		return parse_uint_override("edge margin", value, 0, 4096,
+			&options->edge_margin, &options->edge_margin_set, err,
+			err_size);
 	case 'm':
 		return parse_uint_override("margin", value, 0, 4096,
 			&options->margin, &options->margin_set, err, err_size);

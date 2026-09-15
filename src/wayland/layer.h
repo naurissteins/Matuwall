@@ -38,7 +38,7 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 
 // Replace the output probe with the final compact panel geometry
 void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
-	uint32_t height, enum matuwall_position position);
+	uint32_t height, enum matuwall_position position, uint32_t margin);
 
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);

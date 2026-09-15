@@ -72,10 +72,11 @@ static void refresh_panel(struct matuwall_app *app) {
 	}
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
 		app->output_width, app->output_height, app->config.carousel,
-		app->config.position, &app->layout, &app->visible_rows);
+		app->config.position, app->config.edge_margin, &app->layout,
+		&app->visible_rows);
 	app->panel = matuwall_layout_panel(&app->layout, app->scan.count,
-		app->visible_rows, app->config.position, app->layer.width,
-		app->layer.height);
+		app->visible_rows, app->config.position,
+		app->config.edge_margin, app->layer.width, app->layer.height);
 	matuwall_grid_reveal(
 		&app->grid, &app->layout, (uint32_t)app->panel.height);
 	if (!same_layout(&old_layout, &app->layout) ||

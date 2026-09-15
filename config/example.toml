@@ -31,6 +31,9 @@ background = "#1e1e2ecc"
 # Gap in pixels between the tiles and the panel edge.
 margin = 24
 
+# Gap in pixels between an edge-positioned panel and the monitor edge.
+edge_margin = 24
+
 # Panel corner radius in pixels.
 radius = 16
 

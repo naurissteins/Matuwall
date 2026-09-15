@@ -51,6 +51,8 @@ struct matuwall_cli_options {
 	size_t hook_count;
 	bool margin_set;
 	uint32_t margin;
+	bool edge_margin_set;
+	uint32_t edge_margin;
 	bool output_set;
 	// Output name borrows argv storage
 	const char *output_name;

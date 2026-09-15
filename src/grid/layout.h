@@ -48,8 +48,8 @@ struct matuwall_layout {
 void matuwall_layout_adapt(const struct matuwall_layout *configured,
 	uint32_t configured_rows, uint32_t available_width,
 	uint32_t available_height, bool carousel,
-	enum matuwall_position position, struct matuwall_layout *layout,
-	uint32_t *visible_rows);
+	enum matuwall_position position, uint32_t edge_margin,
+	struct matuwall_layout *layout, uint32_t *visible_rows);
 
 uint32_t matuwall_layout_rows(
 	const struct matuwall_layout *layout, size_t count);
@@ -69,7 +69,7 @@ void matuwall_layout_surface_size(const struct matuwall_layout *layout,
 // Where the panel sits inside a surface that may be larger than it
 struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 	size_t count, uint32_t max_rows, enum matuwall_position position,
-	uint32_t surface_width, uint32_t surface_height);
+	uint32_t edge_margin, uint32_t surface_width, uint32_t surface_height);
 
 size_t matuwall_layout_hit(const struct matuwall_layout *layout,
 	const struct matuwall_rect *panel, double scroll, size_t count,

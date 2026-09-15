@@ -200,11 +200,35 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 }
 
 void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
-	uint32_t height, enum matuwall_position position) {
+	uint32_t height, enum matuwall_position position, uint32_t margin) {
+	int32_t top = 0;
+	int32_t right = 0;
+	int32_t bottom = 0;
+	int32_t left = 0;
+
+	switch (position) {
+	case MATUWALL_POSITION_LEFT:
+		left = (int32_t)margin;
+		break;
+	case MATUWALL_POSITION_RIGHT:
+		right = (int32_t)margin;
+		break;
+	case MATUWALL_POSITION_TOP:
+		top = (int32_t)margin;
+		break;
+	case MATUWALL_POSITION_BOTTOM:
+		bottom = (int32_t)margin;
+		break;
+	case MATUWALL_POSITION_CENTER:
+		break;
+	}
+
 	layer->configured = false;
 	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
 	zwlr_layer_surface_v1_set_anchor(
 		layer->layer_surface, anchor_for(position));
+	zwlr_layer_surface_v1_set_margin(
+		layer->layer_surface, top, right, bottom, left);
 	wl_surface_commit(layer->wl_surface);
 }
 

@@ -100,7 +100,8 @@ bool matuwall_app_init(struct matuwall_app *app,
 	app->output_height = app->layer.height;
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
 		app->output_width, app->output_height, app->config.carousel,
-		app->config.position, &app->layout, &app->visible_rows);
+		app->config.position, app->config.edge_margin, &app->layout,
+		&app->visible_rows);
 	matuwall_log_info("output", "%ux%u, grid %ux%u, preview %s",
 		app->output_width, app->output_height, app->layout.columns,
 		app->visible_rows, app->config.preview ? "on" : "off");
@@ -110,8 +111,8 @@ bool matuwall_app_init(struct matuwall_app *app,
 		uint32_t height;
 		matuwall_layout_surface_size(&app->layout, app->scan.count,
 			app->visible_rows, &width, &height);
-		matuwall_layer_set_panel(
-			&app->layer, width, height, app->config.position);
+		matuwall_layer_set_panel(&app->layer, width, height,
+			app->config.position, app->config.edge_margin);
 		if (!wait_for_configure(app)) {
 			return false;
 		}

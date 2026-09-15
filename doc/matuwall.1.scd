@@ -84,9 +84,14 @@ invocation with its requested options.
 	order. Up to 16 non-empty commands of at most 511 bytes are accepted. Quote a
 	command containing spaces in the shell. The configuration file is not changed.
 
+*--edge-margin* _MARGIN_
+	Temporarily set _window.edge_margin_. _MARGIN_ must be a decimal integer from
+	0 to 4096. The configuration file is not changed.
+
 *-m* _MARGIN_, *--margin* _MARGIN_
 	Temporarily set _window.margin_. _MARGIN_ must be a decimal integer from 0 to
-	4096. The configuration file is not changed.
+	4096. This controls the panel's internal padding. The configuration file is
+	not changed.
 
 *--no-config*
 	Do not resolve or read the standard configuration file. Start from built-in
