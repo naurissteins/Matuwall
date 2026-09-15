@@ -76,8 +76,7 @@ line. Comments are not allowed inside an array.
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,
 	_"top"_, or _"bottom"_. Defaults to _"center"_. With *preview* on this
-	places the panel within the full-screen surface, inset by *margin* at the
-	edges.
+	places the panel within the full-screen surface.
 
 *background*
 	Panel color, as _"#rrggbb"_ (opaque) or _"#rrggbbaa"_ (with an alpha
@@ -86,9 +85,11 @@ line. Comments are not allowed inside an array.
 	the backdrop shows through behind the tiles.
 
 *margin*
-	Pixels between the tiles and the panel edge. Defaults to _24_. With
-	*preview* on it is also the gap between the panel and the screen edge for
-	the non-centered *position* values.
+	Pixels between the tiles and the panel edge. Defaults to _24_.
+
+*edge_margin*
+	Pixels between the panel and the screen edge for non-centered *position*
+	values. Defaults to _24_. Has no effect when *position* is _"center"_.
 
 *radius*
 	Panel corner radius in pixels. Defaults to _16_. This is independent of
@@ -220,6 +221,7 @@ close_on_focus_loss = true
 position   = "center"
 background = "#1e1e2ecc"
 margin     = 24
+edge_margin = 24
 radius     = 16
 
 [input]

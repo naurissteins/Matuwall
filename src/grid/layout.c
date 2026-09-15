@@ -24,8 +24,20 @@ static uint32_t fit_cells(uint32_t available, uint32_t margin, uint32_t tile,
 void matuwall_layout_adapt(const struct matuwall_layout *configured,
 	uint32_t configured_rows, uint32_t available_width,
 	uint32_t available_height, bool carousel,
-	enum matuwall_position position, struct matuwall_layout *layout,
-	uint32_t *visible_rows) {
+	enum matuwall_position position, uint32_t edge_margin,
+	struct matuwall_layout *layout, uint32_t *visible_rows) {
+	if (position == MATUWALL_POSITION_LEFT ||
+		position == MATUWALL_POSITION_RIGHT) {
+		available_width = available_width > edge_margin
+					  ? available_width - edge_margin
+					  : 0;
+	} else if (position == MATUWALL_POSITION_TOP ||
+		   position == MATUWALL_POSITION_BOTTOM) {
+		available_height = available_height > edge_margin
+					   ? available_height - edge_margin
+					   : 0;
+	}
+
 	*layout = *configured;
 	if (carousel && (position == MATUWALL_POSITION_LEFT ||
 				position == MATUWALL_POSITION_RIGHT)) {
@@ -149,7 +161,7 @@ static int32_t edge_gap(int32_t gap, int32_t free_space) {
 
 struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 	size_t count, uint32_t max_rows, enum matuwall_position position,
-	uint32_t surface_width, uint32_t surface_height) {
+	uint32_t edge_margin, uint32_t surface_width, uint32_t surface_height) {
 	uint32_t width;
 	uint32_t height;
 	matuwall_layout_surface_size(layout, count, max_rows, &width, &height);
@@ -162,7 +174,7 @@ struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 
 	int32_t free_x = (int32_t)(surface_width - width);
 	int32_t free_y = (int32_t)(surface_height - height);
-	int32_t gap = (int32_t)layout->margin;
+	int32_t gap = (int32_t)edge_margin;
 
 	struct matuwall_rect rect = {
 		.x = free_x / 2,

@@ -60,7 +60,8 @@ matuwall --backend auto                         # detect a running backend
 matuwall -c 4                                   # use at most four columns
 matuwall -r 3                                   # use at most three visible rows
 matuwall -s 12                                  # set tile spacing to 12
-matuwall -m 24                                  # set the window margin to 24
+matuwall -m 24                                  # set panel padding to 24
+matuwall --edge-margin 32                       # set the monitor edge gap to 32
 matuwall --radius 10                            # set the tile corner radius to 10
 matuwall --panel-radius 16                      # set the panel corner radius to 16
 matuwall -w 320                                 # set thumbnail width to 320

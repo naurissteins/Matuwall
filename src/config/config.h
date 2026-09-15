@@ -19,6 +19,7 @@ struct matuwall_config {
 	char directory[PATH_MAX];
 	char backend[32];
 	enum matuwall_position position;
+	uint32_t edge_margin;
 	struct matuwall_color background;
 	struct matuwall_color tile;
 	struct matuwall_color border;

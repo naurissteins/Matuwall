@@ -149,6 +149,10 @@ int main(int argc, char *argv[]) {
 		matuwall_log_info("config", "margin overridden to %u",
 			config.layout.margin);
 	}
+	if (options.edge_margin_set) {
+		matuwall_log_info("config", "edge margin overridden to %u",
+			config.edge_margin);
+	}
 	if (options.hooks_set) {
 		matuwall_log_info("config",
 			"on-apply hooks overridden with %zu command%s",

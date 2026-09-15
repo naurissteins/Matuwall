@@ -44,6 +44,9 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->margin_set) {
 		config->layout.margin = options->margin;
 	}
+	if (options->edge_margin_set) {
+		config->edge_margin = options->edge_margin;
+	}
 	if (options->hooks_set) {
 		config->on_apply_count = options->hook_count;
 		for (size_t i = 0; i < options->hook_count; i++) {

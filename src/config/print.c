@@ -70,7 +70,8 @@ bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 	print_quoted(out, matuwall_position_name(config->position));
 	fputc('\n', out);
 	print_color(out, "background", config->background);
-	fprintf(out, "margin = %u\nradius = %u\n", config->layout.margin,
+	fprintf(out, "margin = %u\nedge_margin = %u\nradius = %u\n",
+		config->layout.margin, config->edge_margin,
 		config->panel_radius);
 	fputs("\n[input]\nmouse = ", out);
 	fputs(config->mouse_enabled ? "true\n" : "false\n", out);
