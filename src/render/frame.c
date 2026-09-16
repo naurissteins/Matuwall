@@ -23,18 +23,12 @@ static uint32_t ring_color(struct matuwall_color color, uint8_t alpha) {
 }
 
 static int32_t content_overflow(const struct matuwall_frame *frame) {
-	double overflow = 0.0;
-	for (size_t i = 0; i < frame->focus_count; i++) {
-		double extra_x = (frame->focuses[i].scale - 1.0) *
-				 frame->layout->tile_width / 2.0;
-		double extra_y = (frame->focuses[i].scale - 1.0) *
-				 frame->layout->tile_height / 2.0;
-		double extra = extra_x > extra_y ? extra_x : extra_y;
-		if (extra > overflow) {
-			overflow = extra;
-		}
-	}
-	double edge = (frame->shadow >> 24) > 0 ? frame->shadow_width : 0;
+	double focus = frame->focus_scale > 1.0 ? frame->focus_scale : 1.0;
+	double extra_x = (focus - 1.0) * frame->layout->tile_width / 2.0;
+	double extra_y = (focus - 1.0) * frame->layout->tile_height / 2.0;
+	double overflow = extra_x > extra_y ? extra_x : extra_y;
+	double edge =
+		(frame->shadow >> 24) > 0 ? frame->shadow_width * focus : 0;
 	if (frame->ring_width > 0 && frame->ring.a > 0) {
 		double ring = RING_GAP + frame->ring_width;
 		if (ring > edge) {
