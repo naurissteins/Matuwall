@@ -46,6 +46,10 @@ invocation with its requested options.
 	0 to 4096. Zero disables thumbnail borders. The configuration file is not
 	changed.
 
+*--carousel*
+	Enable the centered carousel for this invocation, overriding the configured
+	_grid.carousel_ value. If combined with *--no-carousel*, the last option wins.
+
 *--shadow* _COLOR_
 	Temporarily set _colors.shadow_. _COLOR_ must be _"#rrggbb"_ or
 	_"#rrggbbaa"_. Quote the value in a shell because it starts with _#_. The
@@ -103,6 +107,11 @@ invocation with its requested options.
 *--no-close-on-focus-loss*
 	Keep Matuwall open when keyboard focus leaves for this invocation, overriding
 	_window.close_on_focus_loss_. Moving focus back restores keyboard control.
+
+*--no-carousel*
+	Disable the centered carousel for this invocation and use the regular grid,
+	overriding the configured _grid.carousel_ value. If combined with
+	*--carousel*, the last option wins.
 
 *--no-hooks*
 	Clear the runtime _hooks.on_apply_ list at this point in option processing. A

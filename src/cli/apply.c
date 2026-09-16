@@ -38,6 +38,9 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
 	}
+	if (options->carousel_set) {
+		config->carousel = options->carousel;
+	}
 	if (options->height_set) {
 		config->layout.tile_height = options->height;
 	}

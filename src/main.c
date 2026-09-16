@@ -141,6 +141,10 @@ int main(int argc, char *argv[]) {
 		matuwall_log_info("config", "columns overridden to %u",
 			config.layout.columns);
 	}
+	if (options.carousel_set) {
+		matuwall_log_info("config", "carousel overridden to %s",
+			config.carousel ? "true" : "false");
+	}
 	if (options.height_set) {
 		matuwall_log_info("config", "thumbnail height overridden to %u",
 			config.layout.tile_height);
