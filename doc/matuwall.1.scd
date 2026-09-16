@@ -13,10 +13,11 @@ matuwall - Minimal wallpaper picker for Wayland
 *matuwall* is a keyboard-driven grid of wallpaper thumbnails for Wayland. It
 opens instantly, you move around the grid, press *Enter* to apply, and it exits.
 
-By default the selected wallpaper is previewed full-screen behind the grid, so
-moving the selection looks like the wallpaper changed. The preview is drawn by
-matuwall alone: the wallpaper daemon is not involved until *Enter*, and
-*Escape* leaves the real wallpaper untouched. See _preview_ in *matuwall*(5).
+By default matuwall opens a bottom-aligned, panel-sized carousel. Full-screen
+preview can be enabled with *--preview* or the _window.preview_ setting. The
+preview is drawn by matuwall alone: the wallpaper daemon is not involved until
+*Enter*, and *Escape* leaves the real wallpaper untouched. See _preview_ in
+*matuwall*(5).
 
 Only one picker can be open on a Wayland display. Starting *matuwall* again
 cancels the existing picker without applying its selection, then opens the new
@@ -223,7 +224,7 @@ grid. When the preview backdrop is on, a left click outside the panel cancels
 # BACKENDS
 
 On *Enter*, the selected wallpaper is handed to a wallpaper daemon. The default
-backend is *sweetbg*(1), invoked as _sweetbg img <path>_. The _backend_ config
+backend is *awww*, invoked as _awww img -- <path>_. The _backend_ config
 key selects a backend by name or _"auto"_ to probe. The path is passed as an
 argument, never through a shell. A backend that is unknown or fails is reported
 and matuwall exits non-zero without changing the wallpaper.

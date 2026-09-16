@@ -9,7 +9,7 @@ directory = "~/Pictures/Wallpapers"
 
 # Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto".
 # "auto" probes sweetbg then awww and picks the first one actually running.
-backend = "sweetbg"
+backend = "awww"
 
 [window]
 # Show the selected wallpaper full-screen behind the grid. Nothing is applied
@@ -19,23 +19,23 @@ preview = false
 
 # Close when keyboard focus moves away from Matuwall. Set to false to keep the
 # picker open while using another output.
-close_on_focus_loss = true
+close_on_focus_loss = false
 
 # Placement on screen: "center", "left", "right", "top", or "bottom". With
 # preview on, this places the panel inside the full-screen surface.
-position = "center"
+position = "bottom"
 
 # Panel color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha).
-background = "#1e1e2ecc"
+background = "#11111b"
 
 # Gap in pixels between the tiles and the panel edge.
-margin = 24
+margin = 34
 
 # Gap in pixels between an edge-positioned panel and the monitor edge.
 edge_margin = 24
 
 # Panel corner radius in pixels.
-radius = 16
+radius = 40
 
 [input]
 # Enable hover selection, wheel navigation, and left-click apply. Disabled by
@@ -44,10 +44,10 @@ mouse = false
 
 [animation]
 # Duration of navigation transitions in milliseconds. Zero disables them.
-navigation_ms = 110
+navigation_ms = 410
 
 # Selected-thumbnail enlargement in percent. Zero disables it.
-zoom_percent = 3
+zoom_percent = 10
 
 [grid]
 # Maximum number of tile columns. Fewer are used on narrow outputs.
@@ -57,31 +57,31 @@ columns = 5
 spacing = 16
 
 # Tile corner radius in pixels.
-radius = 8
+radius = 20
 
 # Thumbnail border width in pixels. Zero disables the border.
 border_width = 0
 
 # Soft shadow width outside thumbnail edges. Zero disables the shadow.
-shadow_width = 0
+shadow_width = 12
 
 # Selection ring width in pixels. Zero disables the ring.
-ring_width = 2
+ring_width = 0
 
 # Maximum rows kept visible. Fewer are used on short outputs.
-visible_rows = 2
+visible_rows = 1
 
 # Turn the grid into a centered carousel. Top, bottom, and center use a
 # horizontal row; left and right use a vertical column. In this mode columns
 # controls the maximum visible tiles and visible_rows is ignored. Navigation
 # wraps continuously, repeating thumbnails as needed to keep the strip full.
-carousel = false
+carousel = true
 
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing
 # them regenerates thumbnails at the new size.
-width = 240
-height = 400
+width = 300
+height = 169
 
 [colors]
 # Placeholder tile shown until a thumbnail is ready.
