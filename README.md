@@ -77,8 +77,8 @@ matuwall --ring-width 0                         # disable the selection ring
 matuwall --spinner "#cdd0e6"                    # set the loading spinner color
 matuwall -o DP-1                                # open explicitly on DP-1
 matuwall -p left                                # move the panel
-matuwall --no-preview                           # open without the backdrop
-matuwall --no-close-on-focus-loss               # stay open when focus moves away
+matuwall --preview                              # enable the full-screen backdrop
+matuwall --close-on-focus-loss                  # close when focus moves away
 matuwall --no-hooks                             # apply without running hooks
 matuwall --hook 'matugen image {path}'          # replace hooks for one run
 ```
@@ -92,8 +92,8 @@ Navigation transition:
 
 ```toml
 [animation]
-navigation_ms = 110
-zoom_percent = 3
+navigation_ms = 410
+zoom_percent = 10
 ```
 
 Centered carousel:
@@ -131,6 +131,9 @@ If something is not working as expected, run `matuwall --diagnose` to see the
 diagnostic log and any error messages.
 
 ## Backends
+
+The built-in default is `awww`. Set `backend = "sweetbg"` or use `-b sweetbg`
+to select sweetbg instead.
 
 | Value | Command |
 | --- | --- |

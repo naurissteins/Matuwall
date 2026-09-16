@@ -37,7 +37,7 @@ line. Comments are not allowed inside an array.
 *backend*
 	Wallpaper daemon used to apply the selection. One of _"sweetbg"_
 	(*sweetbg img <path>*), _"awww"_ (*awww img -- <path>*), or _"auto"_.
-	Defaults to _"sweetbg"_.
+	Defaults to _"awww"_.
 
 	_"auto"_ probes sweetbg first, then awww, and picks the first one that is
 	both installed and *running*: its client on *PATH* and its daemon socket
@@ -57,7 +57,7 @@ line. Comments are not allowed inside an array.
 
 *preview*
 	Show the selected wallpaper full-screen behind the grid, so moving the
-	selection looks like the wallpaper changed. _true_ by default. Nothing is
+	selection looks like the wallpaper changed. _false_ by default. Nothing is
 	applied until you press *Enter*; *Escape* leaves the real wallpaper
 	untouched.
 
@@ -68,35 +68,35 @@ line. Comments are not allowed inside an array.
 
 	The backdrop costs one output-sized image in memory (about 33 MB at 3840x2160,
 	15 MB at 2560x1440) plus a larger drawing surface, and adds a few
-	milliseconds to the first frame. Set it to _false_ for the older
-	panel-sized window with no backdrop.
+	milliseconds to the first frame. Set it to _true_ to enable the full-screen
+	preview instead of the default panel-sized window.
 
 *close_on_focus_loss*
-	Close Matuwall when keyboard focus leaves its surface. Defaults to _true_.
-	Set this to _false_ to keep the picker open while focus moves to another
+	Close Matuwall when keyboard focus leaves its surface. Defaults to _false_.
+	Set this to _true_ to close the picker when focus moves to another
 	output; moving focus back restores keyboard control. Starting another
 	Matuwall invocation still replaces the open picker.
 
 *position*
 	Where the picker sits on screen: _"center"_, _"left"_, _"right"_,
-	_"top"_, or _"bottom"_. Defaults to _"center"_. With *preview* on this
+	_"top"_, or _"bottom"_. Defaults to _"bottom"_. With *preview* on this
 	places the panel within the full-screen surface.
 
 *background*
 	Panel color, as _"#rrggbb"_ (opaque) or _"#rrggbbaa"_ (with an alpha
-	byte). Defaults to _"#1e1e2ecc"_. With *preview* on this is the color of
+	byte). Defaults to _"#11111bff"_. With *preview* on this is the color of
 	the panel that floats over the wallpaper, so its alpha decides how much of
 	the backdrop shows through behind the tiles.
 
 *margin*
-	Pixels between the tiles and the panel edge. Defaults to _24_.
+	Pixels between the tiles and the panel edge. Defaults to _34_.
 
 *edge_margin*
 	Pixels between the panel and the screen edge for non-centered *position*
 	values. Defaults to _24_. Has no effect when *position* is _"center"_.
 
 *radius*
-	Panel corner radius in pixels. Defaults to _16_. This is independent of
+	Panel corner radius in pixels. Defaults to _40_. This is independent of
 	_grid.radius_, which controls the tile corners.
 
 ## [input]
@@ -112,13 +112,13 @@ line. Comments are not allowed inside an array.
 *navigation_ms*
 	Duration of navigation transitions in milliseconds. Adjacent selections and
 	one-row scrolling glide smoothly; wrapped row changes and longer jumps
-	crossfade the selection ring. Defaults to _110_. Set to _0_ to disable
+	crossfade the selection ring. Defaults to _410_. Set to _0_ to disable
 	navigation animation. Must be an integer from 0 to 1000.
 
 *zoom_percent*
 	Amount the selected thumbnail grows, as a percentage of its configured size.
 	The previous thumbnail shrinks while the new selection grows on the navigation
-	timeline. Defaults to _3_. Set to _0_ to disable focus scaling. Must be an
+	timeline. Defaults to _10_. Set to _0_ to disable focus scaling. Must be an
 	integer from 0 to 10.
 
 ## [grid]
@@ -132,7 +132,7 @@ line. Comments are not allowed inside an array.
 	Pixels between tiles. Defaults to _16_.
 
 *radius*
-	Tile corner radius in pixels. Defaults to _8_.
+	Tile corner radius in pixels. Defaults to _20_.
 
 *border_width*
 	Border width drawn inside every thumbnail in logical pixels. Defaults to _0_,
@@ -141,20 +141,20 @@ line. Comments are not allowed inside an array.
 *shadow_width*
 	Distance in logical pixels over which the thumbnail shadow fades outward.
 	Only the exterior rounded edges are drawn; no shadow fill is rendered beneath
-	the thumbnail. Defaults to _0_, which disables shadows. Must be an integer
-	from 0 to 4096.
+	the thumbnail. Defaults to _12_. Set to _0_ to disable shadows. Must be an
+	integer from 0 to 4096.
 
 *ring_width*
-	Selection ring width in logical pixels. Defaults to _2_. Set to _0_ to disable
+	Selection ring width in logical pixels. Defaults to _0_, which disables
 	the ring. Must be an integer from 0 to 4096.
 
 *visible_rows*
 	Maximum rows kept visible before the grid scrolls. Matuwall uses fewer when
 	the selected output is too short for the configured grid. Ignored when
-	*carousel* is enabled. Defaults to _2_.
+	*carousel* is enabled. Defaults to _1_.
 
 *carousel*
-	Turn the grid into a centered, single-axis strip. Defaults to _false_. At
+	Turn the grid into a centered, single-axis strip. Defaults to _true_. At
 	_window.position_ _"top"_, _"bottom"_, or _"center"_, the strip is one
 	horizontal row navigated with Left/Right. At _"left"_ or _"right"_, it is
 	one vertical column navigated with Up/Down. The selected tile remains
@@ -169,7 +169,7 @@ grid, and always displays at least one tile.
 ## [thumbnail]
 
 *width*, *height*
-	Tile size in logical pixels. Default to _240_ and _400_. The thumbnail
+	Tile size in logical pixels. Default to _300_ and _169_. The thumbnail
 	cache key includes these, so changing them regenerates thumbnails at the
 	new size.
 
@@ -218,40 +218,44 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 ```
 [general]
 directory = "~/Pictures/Wallpapers"
+backend = "awww"
 
 [window]
-preview    = true
-close_on_focus_loss = true
-position   = "center"
-background = "#1e1e2ecc"
-margin     = 24
+preview    = false
+close_on_focus_loss = false
+position   = "bottom"
+background = "#11111b"
+margin     = 34
 edge_margin = 24
-radius     = 16
+radius     = 40
 
 [input]
 mouse = false
 
 [animation]
-navigation_ms = 110
-zoom_percent = 3
+navigation_ms = 410
+zoom_percent = 10
 
 [grid]
 columns = 5
 spacing = 16
-radius  = 8
+radius  = 20
 border_width = 0
-shadow_width = 0
-ring_width = 2
-visible_rows = 2
-carousel = false
+shadow_width = 12
+ring_width = 0
+visible_rows = 1
+carousel = true
 
 [thumbnail]
-width  = 240
-height = 400
+width  = 300
+height = 169
 
 [colors]
+tile = "#313244ff"
 border = "#585b70ff"
 shadow = "#00000066"
+ring = "#f2cdcdff"
+spinner = "#cdd0e6ff"
 
 [hooks]
 on_apply = [
