@@ -252,6 +252,11 @@ An *ERROR* is a problem that prevents normal use and makes the command exit with
 status 1. A *WARN* identifies a non-blocking problem and does not change the
 successful exit status. Invalid command-line usage exits with status 2.
 
+When the configured wallpaper directory cannot be opened, the normal picker
+still opens and shows a folder warning glyph. Dismissing it exits with status 1;
+the exact path and operating-system error are available here, on standard error,
+and in the diagnostic log.
+
 # LOGGING
 
 Matuwall writes human-readable diagnostics to

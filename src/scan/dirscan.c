@@ -76,9 +76,10 @@ bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir) {
 
 	DIR *handle = opendir(dir);
 	if (handle == NULL) {
-		matuwall_log_error("wallpapers", "cannot open %s: %s", dir,
-			strerror(errno));
-		return false;
+		scan->unavailable = true;
+		matuwall_log_error("wallpapers",
+			"directory unavailable: %s: %s", dir, strerror(errno));
+		return true;
 	}
 
 	struct dirent *entry;

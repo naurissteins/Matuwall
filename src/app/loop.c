@@ -125,6 +125,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.preview = app->preview.image.pixels,
 		.preview_width = app->preview.image.width,
 		.preview_height = app->preview.image.height,
+		.directory_unavailable = app->scan.unavailable,
 		.scale = scale,
 		.background = matuwall_color_argb(app->config.background),
 		.panel_radius = app->config.panel_radius,
@@ -364,5 +365,5 @@ bool matuwall_app_run(struct matuwall_app *app) {
 	if (app->apply_requested) {
 		return apply_selection(app);
 	}
-	return true;
+	return !app->scan.unavailable;
 }
