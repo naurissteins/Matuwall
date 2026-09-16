@@ -40,6 +40,8 @@ struct matuwall_cli_options {
 	char backend[32];
 	bool columns_set;
 	uint32_t columns;
+	bool carousel_set;
+	bool carousel;
 	bool config_path_set;
 	char config_path[PATH_MAX];
 	bool no_config;

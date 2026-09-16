@@ -49,38 +49,40 @@ to build the man page
 
 ## Run
 
-```sh
-matuwall                                         # use the config or built-in defaults
-matuwall --config ~/.config/matuwall/work.toml   # use another config once
-matuwall --no-config -d ~/Pictures/Wallpapers   # defaults plus CLI overrides
-matuwall --print-config                         # show the effective config and exit
-matuwall -d ~/Pictures/Photography              # use another directory
-matuwall -b awww                                # use awww once
-matuwall --backend auto                         # detect a running backend
-matuwall -c 4                                   # use at most four columns
-matuwall -r 3                                   # use at most three visible rows
-matuwall -s 12                                  # set tile spacing to 12
-matuwall -m 24                                  # set panel padding to 24
-matuwall --edge-margin 32                       # set the monitor edge gap to 32
-matuwall --radius 10                            # set the tile corner radius to 10
-matuwall --panel-radius 16                      # set the panel corner radius to 16
-matuwall -w 320                                 # set thumbnail width to 320
-matuwall --height 480                           # set thumbnail height to 480
-matuwall --background "#181825cc"               # set the panel background color
-matuwall --tile "#313244"                       # set the tile color
-matuwall --border "#585b70"                     # set the thumbnail border color
-matuwall --border-width 1                       # set the thumbnail border width
-matuwall --shadow "#00000066"                   # set the thumbnail shadow color
-matuwall --shadow-width 10                      # set the shadow fade distance
-matuwall --ring "#f2cdcd"                       # set the selection ring color
-matuwall --ring-width 0                         # disable the selection ring
-matuwall --spinner "#cdd0e6"                    # set the loading spinner color
-matuwall -o DP-1                                # open explicitly on DP-1
-matuwall -p left                                # move the panel
-matuwall --preview                              # enable the full-screen backdrop
-matuwall --close-on-focus-loss                  # close when focus moves away
-matuwall --no-hooks                             # apply without running hooks
-matuwall --hook 'matugen image {path}'          # replace hooks for one run
+```kdl
+matuwall                                         // use the config or built-in defaults
+matuwall --config ~/.config/matuwall/work.toml   // use another config once
+matuwall --no-config -d ~/Pictures/Wallpapers    // defaults plus CLI overrides
+matuwall --print-config                          // show the effective config and exit
+matuwall -d ~/Pictures/Photography               // use another directory
+matuwall -b awww                                 // use awww once
+matuwall --backend auto                          // detect a running backend
+matuwall --carousel                              // enable the centered carousel
+matuwall --no-carousel                           // use the regular grid
+matuwall -c 4                                    // use at most four columns
+matuwall -r 3                                    // use at most three visible rows
+matuwall -s 12                                   // set tile spacing to 12
+matuwall -m 24                                   // set panel padding to 24
+matuwall --edge-margin 32                        // set the monitor edge gap to 32
+matuwall --radius 10                             // set the tile corner radius to 10
+matuwall --panel-radius 16                       // set the panel corner radius to 16
+matuwall -w 320                                  // set thumbnail width to 320
+matuwall --height 480                            // set thumbnail height to 480
+matuwall --background "#181825cc"                // set the panel background color
+matuwall --tile "#313244"                        // set the tile color
+matuwall --border "#585b70"                      // set the thumbnail border color
+matuwall --border-width 1                        // set the thumbnail border width
+matuwall --shadow "#00000066"                    // set the thumbnail shadow color
+matuwall --shadow-width 10                       // set the shadow fade distance
+matuwall --ring "#f2cdcd"                        // set the selection ring color
+matuwall --ring-width 0                          // disable the selection ring
+matuwall --spinner "#cdd0e6"                     // set the loading spinner color
+matuwall -o DP-1                                 // open explicitly on DP-1
+matuwall -p left                                 // move the panel
+matuwall --preview                               // enable the full-screen backdrop
+matuwall --close-on-focus-loss                   // close when focus moves away
+matuwall --no-hooks                              // apply without running hooks
+matuwall --hook 'matugen image {path}'           // replace hooks for one run
 ```
 
 Run `matuwall --help` for every option.

@@ -16,11 +16,13 @@ enum {
 	OPTION_BORDER_WIDTH,
 	OPTION_SHADOW,
 	OPTION_SHADOW_WIDTH,
+	OPTION_CAROUSEL,
 	OPTION_CLOSE_ON_FOCUS_LOSS,
 	OPTION_CONFIG,
 	OPTION_EDGE_MARGIN,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
+	OPTION_NO_CAROUSEL,
 	OPTION_NO_CLOSE_ON_FOCUS_LOSS,
 	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
@@ -49,6 +51,7 @@ static const struct option long_options[] = {
 	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
 	{"shadow", required_argument, NULL, OPTION_SHADOW},
 	{"shadow-width", required_argument, NULL, OPTION_SHADOW_WIDTH},
+	{"carousel", no_argument, NULL, OPTION_CAROUSEL},
 	{"close-on-focus-loss", no_argument, NULL, OPTION_CLOSE_ON_FOCUS_LOSS},
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
@@ -57,6 +60,7 @@ static const struct option long_options[] = {
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
+	{"no-carousel", no_argument, NULL, OPTION_NO_CAROUSEL},
 	{"no-close-on-focus-loss", no_argument, NULL,
 		OPTION_NO_CLOSE_ON_FOCUS_LOSS},
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
@@ -246,6 +250,10 @@ static enum parse_result parse_override(int option, const char *value,
 		options->close_on_focus_loss_set = true;
 		options->close_on_focus_loss = true;
 		return PARSE_CONTINUE;
+	case OPTION_CAROUSEL:
+		options->carousel_set = true;
+		options->carousel = true;
+		return PARSE_CONTINUE;
 	case 'b':
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
@@ -273,6 +281,10 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_NO_HOOKS:
 		options->hooks_set = true;
 		options->hook_count = 0;
+		return PARSE_CONTINUE;
+	case OPTION_NO_CAROUSEL:
+		options->carousel_set = true;
+		options->carousel = false;
 		return PARSE_CONTINUE;
 	case OPTION_NO_CLOSE_ON_FOCUS_LOSS:
 		options->close_on_focus_loss_set = true;
