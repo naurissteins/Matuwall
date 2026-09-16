@@ -127,6 +127,9 @@ Config file is optional. It is read from `~/.config/matuwall/config.toml` or `$X
 See [`config/example.toml`](config/example.toml) for comments and `matuwall(5)`
 for the full reference.
 
+If something is not working as expected, run `matuwall --diagnose` to see the
+diagnostic log and any error messages.
+
 ## Backends
 
 | Value | Command |

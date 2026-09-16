@@ -9,6 +9,8 @@ struct matuwall_dirscan {
 	size_t count;
 	size_t capacity;
 	bool truncated;
+	// A path error is renderable; false return means an internal failure
+	bool unavailable;
 };
 
 bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir);

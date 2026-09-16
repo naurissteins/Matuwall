@@ -30,6 +30,10 @@ line. Comments are not allowed inside an array.
 	Directory scanned for wallpapers. A leading _~_ expands to _$HOME_.
 	Defaults to _"~/Pictures/Wallpapers"_.
 
+	When the directory is missing, unreadable, or not a directory, the picker
+	shows a folder warning glyph. The exact path and error are written to
+	standard error and the diagnostic log and reported by *--diagnose*.
+
 *backend*
 	Wallpaper daemon used to apply the selection. One of _"sweetbg"_
 	(*sweetbg img <path>*), _"awww"_ (*awww img -- <path>*), or _"auto"_.

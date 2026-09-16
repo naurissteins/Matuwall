@@ -89,6 +89,61 @@ static void draw_panel(struct matuwall_buffer *buffer,
 		bottom - top, radius, frame->background);
 }
 
+static void draw_directory_unavailable(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame) {
+	struct matuwall_clip clip = matuwall_clip_buffer(buffer);
+	int32_t panel_width = to_pixels(frame->panel.width, frame->scale);
+	int32_t panel_height = to_pixels(frame->panel.height, frame->scale);
+	int32_t size =
+		(panel_width < panel_height ? panel_width : panel_height) / 3;
+	int32_t maximum = to_pixels(112, frame->scale);
+	if (size > maximum) {
+		size = maximum;
+	}
+	if (size < 12) {
+		return;
+	}
+
+	int32_t center_x = to_pixels(
+		frame->panel.x + frame->panel.width / 2, frame->scale);
+	int32_t center_y = to_pixels(
+		frame->panel.y + frame->panel.height / 2, frame->scale);
+	int32_t body_width = size;
+	int32_t body_height = size * 5 / 8;
+	int32_t body_x = center_x - body_width / 2;
+	int32_t body_y = center_y - body_height / 2 + size / 12;
+	int32_t stroke = to_pixels(3, frame->scale);
+	if (stroke < 1) {
+		stroke = 1;
+	}
+	struct matuwall_color icon = frame->spinner;
+	if (icon.a == 0) {
+		icon = frame->ring;
+	}
+	if (icon.a == 0) {
+		icon = (struct matuwall_color){0xf2, 0xf2, 0xf2, 0xff};
+	}
+	uint32_t color = matuwall_color_argb(icon);
+	bool light = (uint32_t)icon.r * 299 + (uint32_t)icon.g * 587 +
+			     (uint32_t)icon.b * 114 >
+		     128000;
+	uint32_t mark = light ? 0xff181825 : 0xfff2f2f2;
+
+	matuwall_draw_rounded_rect(buffer, &clip, body_x, body_y, body_width,
+		body_height, size / 14, color);
+	matuwall_draw_rounded_rect(buffer, &clip, body_x + size / 10,
+		body_y - size / 7, size * 2 / 5, size / 5, size / 20, color);
+
+	int32_t mark_width = stroke * 2;
+	int32_t mark_x = center_x - mark_width / 2;
+	matuwall_draw_rounded_rect(buffer, &clip, mark_x,
+		body_y + body_height / 4, mark_width, body_height / 3,
+		mark_width / 2, mark);
+	matuwall_draw_rounded_rect(buffer, &clip, mark_x,
+		body_y + body_height * 3 / 4, mark_width, mark_width,
+		mark_width / 2, mark);
+}
+
 enum tile_position {
 	TILE_BEFORE,
 	TILE_VISIBLE,
@@ -353,6 +408,10 @@ void matuwall_frame_draw(
 		matuwall_draw_clear(buffer, 0);
 	}
 	draw_panel(buffer, frame, panel_radius);
+	if (frame->directory_unavailable) {
+		draw_directory_unavailable(buffer, frame);
+		return;
+	}
 
 	struct matuwall_clip clip = content_clip(buffer, frame);
 

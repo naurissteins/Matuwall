@@ -51,17 +51,19 @@ bool matuwall_app_init(struct matuwall_app *app,
 	}
 
 	if (app->config.directory[0] == '\0') {
-		matuwall_log_error(
-			"wallpapers", "no directory set (is HOME set?)");
-		return false;
-	}
-	if (!matuwall_dirscan_run(&app->scan, app->config.directory)) {
+		app->scan.unavailable = true;
+		matuwall_log_error("wallpapers",
+			"directory unavailable: path is "
+			"unresolved (is HOME set?)");
+	} else if (!matuwall_dirscan_run(&app->scan, app->config.directory)) {
 		return false;
 	}
 	matuwall_grid_init(&app->grid, app->scan.count);
-	matuwall_log_info("wallpapers", "found %zu image%s in %s",
-		app->scan.count, app->scan.count == 1 ? "" : "s",
-		app->config.directory);
+	if (!app->scan.unavailable) {
+		matuwall_log_info("wallpapers", "found %zu image%s in %s",
+			app->scan.count, app->scan.count == 1 ? "" : "s",
+			app->config.directory);
+	}
 
 	app->display = wl_display_connect(NULL);
 	if (app->display == NULL) {

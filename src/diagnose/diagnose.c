@@ -123,13 +123,15 @@ static void report_directory(
 	struct diagnose_report *report, const char *directory) {
 	if (directory[0] == '\0') {
 		report_line(report, DIAG_ERROR, "wallpapers",
-			"directory is unresolved (is HOME set?)");
+			"directory unavailable: path is unresolved (is HOME "
+			"set?)");
 		return;
 	}
 	DIR *dir = opendir(directory);
 	if (dir == NULL) {
 		char shown[PATH_MAX];
-		report_line(report, DIAG_ERROR, "wallpapers", "%s: %s",
+		report_line(report, DIAG_ERROR, "wallpapers",
+			"directory unavailable: %s: %s",
 			clean(directory, shown, sizeof(shown)),
 			strerror(errno));
 		return;
