@@ -43,6 +43,7 @@ struct matuwall_frame {
 	uint32_t preview_width;
 	uint32_t preview_height;
 	bool directory_unavailable;
+	bool edge_peek;
 	double scale;
 	uint32_t background;
 	uint32_t panel_radius;
