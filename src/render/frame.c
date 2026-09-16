@@ -153,6 +153,35 @@ struct tile_geometry {
 	int32_t border;
 };
 
+static struct matuwall_clip tile_visibility_clip(
+	const struct matuwall_frame *frame,
+	const struct matuwall_clip *effects) {
+	struct matuwall_clip clip = *effects;
+	if (frame->edge_peek) {
+		return clip;
+	}
+
+	int32_t left =
+		scaled(frame->panel.x + frame->layout->margin, frame->scale);
+	int32_t top =
+		scaled(frame->panel.y + frame->layout->margin, frame->scale);
+	int32_t right = scaled(
+		frame->panel.x + frame->panel.width - frame->layout->margin,
+		frame->scale);
+	int32_t bottom = scaled(
+		frame->panel.y + frame->panel.height - frame->layout->margin,
+		frame->scale);
+	if (left < right) {
+		clip.x0 = left > clip.x0 ? left : clip.x0;
+		clip.x1 = right < clip.x1 ? right : clip.x1;
+	}
+	if (top < bottom) {
+		clip.y0 = top > clip.y0 ? top : clip.y0;
+		clip.y1 = bottom < clip.y1 ? bottom : clip.y1;
+	}
+	return clip;
+}
+
 static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	const struct matuwall_clip *clip, int64_t slot, double focus,
 	struct tile_geometry *geometry) {
@@ -171,18 +200,19 @@ static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	int32_t top = scaled(y, frame->scale);
 	int32_t right = scaled(x + width, frame->scale);
 	int32_t bottom = scaled(y + height, frame->scale);
+	struct matuwall_clip visibility = tile_visibility_clip(frame, clip);
 	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-		if (left >= clip->x1) {
+		if (left >= visibility.x1) {
 			return TILE_AFTER;
 		}
-		if (right <= clip->x0) {
+		if (right <= visibility.x0) {
 			return TILE_BEFORE;
 		}
 	} else {
-		if (top >= clip->y1) {
+		if (top >= visibility.y1) {
 			return TILE_AFTER;
 		}
-		if (bottom <= clip->y0) {
+		if (bottom <= visibility.y0) {
 			return TILE_BEFORE;
 		}
 	}

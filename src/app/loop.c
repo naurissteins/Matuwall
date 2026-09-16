@@ -126,6 +126,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.preview_width = app->preview.image.width,
 		.preview_height = app->preview.image.height,
 		.directory_unavailable = app->scan.unavailable,
+		.edge_peek = app->config.edge_peek,
 		.scale = scale,
 		.background = matuwall_color_argb(app->config.background),
 		.panel_radius = app->config.panel_radius,

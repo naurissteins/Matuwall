@@ -163,6 +163,11 @@ line. Comments are not allowed inside an array.
 	Orthogonal arrows and Page Up/Page Down do nothing; Home/End still jump to
 	the ends.
 
+*edge_peek*
+	Let neighboring thumbnails extend into the panel margin. Defaults to _false_,
+	so carousel and regular grid edges stay clean. Set to _true_ to enable the
+	edge-peek effect.
+
 Matuwall keeps the configured tile size, spacing, and margin while fitting the
 grid, and always displays at least one tile.
 
@@ -245,6 +250,7 @@ shadow_width = 12
 ring_width = 0
 visible_rows = 1
 carousel = true
+edge_peek = false
 
 [thumbnail]
 width  = 300

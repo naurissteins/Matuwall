@@ -77,6 +77,10 @@ visible_rows = 1
 # wraps continuously, repeating thumbnails as needed to keep the strip full.
 carousel = true
 
+# Let neighboring thumbnails peek into the panel margin. Disabled by default
+# so carousel and grid edges stay clean.
+edge_peek = false
+
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing
 # them regenerates thumbnails at the new size.

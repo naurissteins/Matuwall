@@ -66,6 +66,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 			.radius = 20},
 		.visible_rows = 1,
 		.carousel = true,
+		.edge_peek = false,
 		.panel_radius = 40,
 		.border_width = 0,
 		.shadow_width = 12,
@@ -312,6 +313,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "carousel") == 0) {
 			apply_bool(&cfg->carousel, v, line,
 				"carousel must be true or false");
+			return true;
+		}
+		if (strcmp(key, "edge_peek") == 0) {
+			apply_bool(&cfg->edge_peek, v, line,
+				"edge_peek must be true or false");
 			return true;
 		}
 	} else if (strcmp(section, "thumbnail") == 0) {
