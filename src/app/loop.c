@@ -134,6 +134,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.border_width = app->config.border_width,
 		.shadow = matuwall_color_argb(app->config.shadow),
 		.shadow_width = app->config.shadow_width,
+		.focus_scale = 1.0 + (double)app->config.zoom_percent / 100.0,
 		.ring = app->config.ring,
 		.ring_width = app->config.ring_width,
 		.spinner = app->config.spinner,

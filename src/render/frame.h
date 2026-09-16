@@ -51,6 +51,8 @@ struct matuwall_frame {
 	uint32_t border_width;
 	uint32_t shadow;
 	uint32_t shadow_width;
+	// Maximum focus scale keeps the content clip stable during transitions
+	double focus_scale;
 	struct matuwall_color ring;
 	uint32_t ring_width;
 	struct matuwall_color spinner;
