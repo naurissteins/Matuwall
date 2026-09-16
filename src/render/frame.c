@@ -231,6 +231,17 @@ static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	return TILE_VISIBLE;
 }
 
+static bool tile_crosses_clip(const struct matuwall_frame *frame,
+	const struct matuwall_clip *clip,
+	const struct tile_geometry *geometry) {
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		return geometry->left < clip->x0 ||
+		       geometry->left + geometry->width > clip->x1;
+	}
+	return geometry->top < clip->y0 ||
+	       geometry->top + geometry->height > clip->y1;
+}
+
 static void draw_tile(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	size_t index, const struct tile_geometry *geometry, bool bilinear) {
@@ -394,14 +405,21 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 			continue;
 		}
 		double focus = frame->focuses[i].scale;
-		struct matuwall_clip tile_clip =
-			slot == frame->carousel_slot
-				? *clip
-				: tile_visibility_clip(frame, clip);
 		struct tile_geometry geometry;
-		if (tile_geometry(frame, &tile_clip, slot, focus, &geometry) !=
+		if (tile_geometry(frame, clip, slot, focus, &geometry) !=
 			TILE_VISIBLE) {
 			continue;
+		}
+		struct matuwall_clip tile_clip = *clip;
+		if (slot != frame->carousel_slot && !frame->edge_peek) {
+			struct matuwall_clip viewport =
+				tile_visibility_clip(frame, clip);
+			struct tile_geometry base;
+			if (tile_geometry(frame, clip, slot, 1.0, &base) ==
+					TILE_VISIBLE &&
+				tile_crosses_clip(frame, &viewport, &base)) {
+				tile_clip = viewport;
+			}
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
