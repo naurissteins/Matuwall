@@ -171,11 +171,11 @@ static struct matuwall_clip tile_visibility_clip(
 	int32_t bottom = scaled(
 		frame->panel.y + frame->panel.height - frame->layout->margin,
 		frame->scale);
-	if (left < right) {
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL && left < right) {
 		clip.x0 = left > clip.x0 ? left : clip.x0;
 		clip.x1 = right < clip.x1 ? right : clip.x1;
 	}
-	if (top < bottom) {
+	if (frame->layout->flow != MATUWALL_FLOW_HORIZONTAL && top < bottom) {
 		clip.y0 = top > clip.y0 ? top : clip.y0;
 		clip.y1 = bottom < clip.y1 ? bottom : clip.y1;
 	}
@@ -200,19 +200,18 @@ static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	int32_t top = scaled(y, frame->scale);
 	int32_t right = scaled(x + width, frame->scale);
 	int32_t bottom = scaled(y + height, frame->scale);
-	struct matuwall_clip visibility = tile_visibility_clip(frame, clip);
 	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-		if (left >= visibility.x1) {
+		if (left >= clip->x1) {
 			return TILE_AFTER;
 		}
-		if (right <= visibility.x0) {
+		if (right <= clip->x0) {
 			return TILE_BEFORE;
 		}
 	} else {
-		if (top >= visibility.y1) {
+		if (top >= clip->y1) {
 			return TILE_AFTER;
 		}
-		if (bottom <= visibility.y0) {
+		if (bottom <= clip->y0) {
 			return TILE_BEFORE;
 		}
 	}
@@ -281,13 +280,30 @@ static void draw_tile(struct matuwall_buffer *buffer,
 }
 
 static void draw_shadow(struct matuwall_buffer *buffer,
-	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	const struct matuwall_frame *frame, const struct matuwall_clip *effects,
+	const struct matuwall_clip *tile_clip,
 	const struct tile_geometry *geometry, double focus) {
 	int32_t width = scaled(frame->shadow_width * focus, frame->scale);
 	if (frame->shadow_width > 0 && width < 1) {
 		width = 1;
 	}
-	matuwall_draw_rounded_shadow(buffer, clip, geometry->left,
+	struct matuwall_clip shadow_clip = *effects;
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		if (geometry->left < tile_clip->x0) {
+			shadow_clip.x0 = tile_clip->x0;
+		}
+		if (geometry->left + geometry->width > tile_clip->x1) {
+			shadow_clip.x1 = tile_clip->x1;
+		}
+	} else {
+		if (geometry->top < tile_clip->y0) {
+			shadow_clip.y0 = tile_clip->y0;
+		}
+		if (geometry->top + geometry->height > tile_clip->y1) {
+			shadow_clip.y1 = tile_clip->y1;
+		}
+	}
+	matuwall_draw_rounded_shadow(buffer, &shadow_clip, geometry->left,
 		geometry->top, geometry->width, geometry->height,
 		geometry->radius, width, frame->shadow);
 }
@@ -340,6 +356,7 @@ static size_t slot_index(const struct matuwall_frame *frame, int64_t slot) {
 static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	bool shadows) {
+	struct matuwall_clip tile_clip = tile_visibility_clip(frame, clip);
 	int64_t first;
 	int64_t last;
 	slot_bounds(frame, &first, &last);
@@ -347,7 +364,7 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 		size_t index = slot_index(frame, slot);
 		struct tile_geometry geometry;
 		enum tile_position position =
-			tile_geometry(frame, clip, slot, 1.0, &geometry);
+			tile_geometry(frame, &tile_clip, slot, 1.0, &geometry);
 		if (position == TILE_AFTER) {
 			break;
 		}
@@ -355,9 +372,11 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 			continue;
 		}
 		if (shadows) {
-			draw_shadow(buffer, frame, clip, &geometry, 1.0);
+			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
+				1.0);
 		} else {
-			draw_tile(buffer, frame, clip, index, &geometry, false);
+			draw_tile(buffer, frame, &tile_clip, index, &geometry,
+				false);
 		}
 		if (slot == INT64_MAX) {
 			break;
@@ -375,15 +394,20 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 			continue;
 		}
 		double focus = frame->focuses[i].scale;
+		struct matuwall_clip tile_clip =
+			slot == frame->carousel_slot
+				? *clip
+				: tile_visibility_clip(frame, clip);
 		struct tile_geometry geometry;
-		if (tile_geometry(frame, clip, slot, focus, &geometry) !=
+		if (tile_geometry(frame, &tile_clip, slot, focus, &geometry) !=
 			TILE_VISIBLE) {
 			continue;
 		}
 		if (shadows) {
-			draw_shadow(buffer, frame, clip, &geometry, focus);
+			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
+				focus);
 		}
-		draw_tile(buffer, frame, clip, index, &geometry, true);
+		draw_tile(buffer, frame, &tile_clip, index, &geometry, true);
 	}
 }
 
