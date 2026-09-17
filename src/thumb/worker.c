@@ -13,17 +13,11 @@
 #define MAX_WORKERS 4
 
 struct job {
-	enum matuwall_job_kind kind;
-	size_t index;
+	struct matuwall_thumb_result result;
 	char *path;
 	uint32_t target_w;
 	uint32_t target_h;
 	struct job *next;
-};
-
-struct result {
-	struct matuwall_thumb_result data;
-	struct result *next;
 };
 
 struct job_list {
@@ -42,7 +36,7 @@ struct matuwall_worker_pool {
 	pthread_cond_t wakeup;
 	struct job *jobs_head;
 	struct job *jobs_tail;
-	struct result *results;
+	struct job *results;
 	bool stopping;
 
 	int event_fd;
@@ -60,7 +54,7 @@ static bool produce(
 	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
 	// Output-sized previews would bloat the cache for one keypress of value
-	bool cached = job->kind == MATUWALL_JOB_THUMB;
+	bool cached = job->result.kind == MATUWALL_JOB_THUMB;
 
 	char key[640];
 	bool have_key = cached && matuwall_cache_key(job->path, job->target_w,
@@ -110,11 +104,10 @@ static struct job *take_job(struct matuwall_worker_pool *pool) {
 	return job;
 }
 
-static void publish_result(
-	struct matuwall_worker_pool *pool, struct result *res) {
+static void publish_result(struct matuwall_worker_pool *pool, struct job *job) {
 	pthread_mutex_lock(&pool->mutex);
-	res->next = pool->results;
-	pool->results = res;
+	job->next = pool->results;
+	pool->results = job;
 	pthread_mutex_unlock(&pool->mutex);
 
 	uint64_t one = 1;
@@ -133,22 +126,17 @@ static void *worker_main(void *arg) {
 		}
 		pthread_mutex_unlock(&pool->mutex);
 
-		struct result *res = calloc(1, sizeof(*res));
-		if (res != NULL) {
-			res->data.kind = job->kind;
-			res->data.index = job->index;
-			struct matuwall_image img;
-			if (produce(job, &img, &res->data.cache_hit)) {
-				res->data.ok = true;
-				res->data.pixels = img.pixels;
-				res->data.width = img.width;
-				res->data.height = img.height;
-			}
-			publish_result(pool, res);
+		struct matuwall_image img;
+		if (produce(job, &img, &job->result.cache_hit)) {
+			job->result.ok = true;
+			job->result.pixels = img.pixels;
+			job->result.width = img.width;
+			job->result.height = img.height;
 		}
 
 		free(job->path);
-		free(job);
+		job->path = NULL;
+		publish_result(pool, job);
 		pthread_mutex_lock(&pool->mutex);
 	}
 	pthread_mutex_unlock(&pool->mutex);
@@ -199,8 +187,8 @@ static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	if (job == NULL) {
 		return NULL;
 	}
-	job->kind = kind;
-	job->index = index;
+	job->result.kind = kind;
+	job->result.index = index;
 	job->target_w = target_w;
 	job->target_h = target_h;
 	job->path = strdup(path);
@@ -240,7 +228,7 @@ static void drop_queued_previews(struct matuwall_worker_pool *pool) {
 
 	while (*cursor != NULL) {
 		struct job *job = *cursor;
-		if (job->kind != MATUWALL_JOB_PREVIEW) {
+		if (job->result.kind != MATUWALL_JOB_PREVIEW) {
 			prev = job;
 			cursor = &job->next;
 			continue;
@@ -288,10 +276,11 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	struct job *job = pool->jobs_head;
 	while (job != NULL) {
 		struct job *next = job->next;
-		if (job->kind == MATUWALL_JOB_PREVIEW) {
+		if (job->result.kind == MATUWALL_JOB_PREVIEW) {
 			job_list_append(&previews, job);
-		} else if ((job->index >= first && job->index < end) ||
-			   job->index < wrap_end) {
+		} else if ((job->result.index >= first &&
+				   job->result.index < end) ||
+			   job->result.index < wrap_end) {
 			job_list_append(&visible, job);
 		} else {
 			job_list_append(&remaining, job);
@@ -335,24 +324,24 @@ void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	}
 
 	pthread_mutex_lock(&pool->mutex);
-	struct result *list = pool->results;
+	struct job *list = pool->results;
 	pool->results = NULL;
 	pthread_mutex_unlock(&pool->mutex);
 
 	// Reverse to restore submission order for a tidy fill
-	struct result *ordered = NULL;
+	struct job *ordered = NULL;
 	while (list != NULL) {
-		struct result *next = list->next;
+		struct job *next = list->next;
 		list->next = ordered;
 		ordered = list;
 		list = next;
 	}
 
 	while (ordered != NULL) {
-		struct result *res = ordered;
+		struct job *job = ordered;
 		ordered = ordered->next;
-		cb(user_data, &res->data);
-		free(res);
+		cb(user_data, &job->result);
+		free(job);
 	}
 }
 
@@ -374,12 +363,12 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 		free(job);
 		job = next;
 	}
-	struct result *res = pool->results;
-	while (res != NULL) {
-		struct result *next = res->next;
-		free(res->data.pixels);
-		free(res);
-		res = next;
+	job = pool->results;
+	while (job != NULL) {
+		struct job *next = job->next;
+		free(job->result.pixels);
+		free(job);
+		job = next;
 	}
 
 	if (pool->event_fd >= 0) {
