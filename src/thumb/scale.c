@@ -50,9 +50,13 @@ static uint32_t average_box(const struct matuwall_image *src, uint32_t sx0,
 bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	uint32_t out_h, struct matuwall_image *out) {
 	*out = (struct matuwall_image){0};
-	if (src->pixels == NULL || out_w == 0 || out_h == 0) {
+	if (src->pixels == NULL ||
+		!matuwall_image_dimensions_ok(src->width, src->height) ||
+		!matuwall_image_dimensions_ok(out_w, out_h) ||
+		(size_t)out_w > SIZE_MAX / sizeof(uint32_t) / out_h) {
 		return false;
 	}
+	size_t pixel_count = (size_t)out_w * out_h;
 
 	uint32_t cx;
 	uint32_t cy;
@@ -61,7 +65,7 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	matuwall_cover_crop(
 		src->width, src->height, out_w, out_h, &cx, &cy, &cw, &ch);
 
-	uint32_t *pixels = malloc((size_t)out_w * out_h * sizeof(uint32_t));
+	uint32_t *pixels = malloc(pixel_count * sizeof(uint32_t));
 	if (pixels == NULL) {
 		return false;
 	}
