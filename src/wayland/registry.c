@@ -25,31 +25,45 @@ static void handle_global(void *data, struct wl_registry *registry,
 	struct matuwall_registry *reg = data;
 
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
-		reg->compositor = wl_registry_bind(registry, name,
-			&wl_compositor_interface,
-			min_u32(version, COMPOSITOR_MAX_VERSION));
+		if (reg->compositor == NULL) {
+			reg->compositor = wl_registry_bind(registry, name,
+				&wl_compositor_interface,
+				min_u32(version, COMPOSITOR_MAX_VERSION));
+		}
 	} else if (strcmp(interface, wl_shm_interface.name) == 0) {
-		reg->shm = wl_registry_bind(
-			registry, name, &wl_shm_interface, SHM_VERSION);
+		if (reg->shm == NULL) {
+			reg->shm = wl_registry_bind(
+				registry, name, &wl_shm_interface, SHM_VERSION);
+		}
 	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
-		reg->seat = wl_registry_bind(registry, name, &wl_seat_interface,
-			min_u32(version, SEAT_MAX_VERSION));
+		if (reg->seat == NULL) {
+			reg->seat = wl_registry_bind(registry, name,
+				&wl_seat_interface,
+				min_u32(version, SEAT_MAX_VERSION));
+		}
 	} else if (reg->requested_output_name != NULL &&
 		   strcmp(interface, wl_output_interface.name) == 0) {
 		matuwall_outputs_bind(&reg->outputs, registry, name, version);
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
-		reg->layer_shell = wl_registry_bind(registry, name,
-			&zwlr_layer_shell_v1_interface,
-			min_u32(version, LAYER_SHELL_MAX_VERSION));
+		if (reg->layer_shell == NULL) {
+			reg->layer_shell = wl_registry_bind(registry, name,
+				&zwlr_layer_shell_v1_interface,
+				min_u32(version, LAYER_SHELL_MAX_VERSION));
+		}
 	} else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
-		reg->viewporter = wl_registry_bind(registry, name,
-			&wp_viewporter_interface, VIEWPORTER_VERSION);
+		if (reg->viewporter == NULL) {
+			reg->viewporter = wl_registry_bind(registry, name,
+				&wp_viewporter_interface, VIEWPORTER_VERSION);
+		}
 	} else if (strcmp(interface,
 			   wp_fractional_scale_manager_v1_interface.name) ==
 		   0) {
-		reg->fractional_scale_manager = wl_registry_bind(registry, name,
-			&wp_fractional_scale_manager_v1_interface,
-			FRACTIONAL_SCALE_VERSION);
+		if (reg->fractional_scale_manager == NULL) {
+			reg->fractional_scale_manager = wl_registry_bind(
+				registry, name,
+				&wp_fractional_scale_manager_v1_interface,
+				FRACTIONAL_SCALE_VERSION);
+		}
 	}
 }
 
