@@ -70,19 +70,61 @@ bool matuwall_bilinear_sampler_init(struct matuwall_bilinear_sampler *sampler,
 uint32_t matuwall_bilinear_sample(
 	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
 	uint32_t y) {
-	struct sample_axis sx =
-		sample_axis(sampler->start_x + (int64_t)x * sampler->step_x,
-			sampler->width);
+	struct matuwall_bilinear_row row;
+	matuwall_bilinear_row_init(&row, sampler, x, y);
+	return matuwall_bilinear_row_next(&row);
+}
+
+void matuwall_bilinear_row_init(struct matuwall_bilinear_row *row,
+	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
+	uint32_t y) {
 	struct sample_axis sy =
 		sample_axis(sampler->start_y + (int64_t)y * sampler->step_y,
 			sampler->height);
+	*row = (struct matuwall_bilinear_row){
+		.sampler = sampler,
+		.top = sampler->pixels + (size_t)sy.first * sampler->width,
+		.bottom = sampler->pixels + (size_t)sy.second * sampler->width,
+		.position = sampler->start_x + (int64_t)x * sampler->step_x,
+		.y_fraction = sy.fraction,
+	};
+}
 
-	const uint32_t *top =
-		sampler->pixels + (size_t)sy.first * sampler->width;
-	const uint32_t *bottom =
-		sampler->pixels + (size_t)sy.second * sampler->width;
-	uint32_t upper = lerp_pixel(top[sx.first], top[sx.second], sx.fraction);
-	uint32_t lower =
-		lerp_pixel(bottom[sx.first], bottom[sx.second], sx.fraction);
-	return lerp_pixel(upper, lower, sy.fraction);
+uint32_t matuwall_bilinear_row_next(struct matuwall_bilinear_row *row) {
+	struct sample_axis sx = sample_axis(row->position, row->sampler->width);
+	row->position += row->sampler->step_x;
+	uint32_t upper = lerp_pixel(
+		row->top[sx.first], row->top[sx.second], sx.fraction);
+	uint32_t lower = lerp_pixel(
+		row->bottom[sx.first], row->bottom[sx.second], sx.fraction);
+	return lerp_pixel(upper, lower, row->y_fraction);
+}
+
+void matuwall_bilinear_axes_init(
+	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
+	struct matuwall_bilinear_axis *axes, uint32_t count) {
+	int64_t position = sampler->start_x + (int64_t)x * sampler->step_x;
+	for (uint32_t i = 0; i < count; i++) {
+		struct sample_axis axis = sample_axis(position, sampler->width);
+		axes[i] = (struct matuwall_bilinear_axis){
+			.first = axis.first,
+			.fraction = axis.fraction,
+		};
+		position += sampler->step_x;
+	}
+}
+
+void matuwall_bilinear_row_span(struct matuwall_bilinear_row *row,
+	const struct matuwall_bilinear_axis *axes, uint32_t *dst,
+	uint32_t count) {
+	for (uint32_t i = 0; i < count; i++) {
+		uint32_t first = axes[i].first;
+		uint32_t second = first + (first + 1 < row->sampler->width);
+		uint32_t upper = lerp_pixel(
+			row->top[first], row->top[second], axes[i].fraction);
+		uint32_t lower = lerp_pixel(row->bottom[first],
+			row->bottom[second], axes[i].fraction);
+		dst[i] = lerp_pixel(upper, lower, row->y_fraction);
+	}
+	row->position += (int64_t)count * row->sampler->step_x;
 }
