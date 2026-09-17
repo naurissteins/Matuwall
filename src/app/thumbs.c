@@ -145,17 +145,66 @@ static void refresh_current_visible_pending(struct matuwall_app *app) {
 	refresh_visible_pending(app, first, end, wrap_end);
 }
 
+static void submit_index(struct matuwall_app *app, size_t index) {
+	if (index >= app->thumb_count ||
+		app->thumbs[index].state != MATUWALL_THUMB_UNLOADED) {
+		return;
+	}
+	if (matuwall_worker_submit(
+		    app->workers, index, app->scan.paths[index])) {
+		app->thumbs[index].state = MATUWALL_THUMB_PENDING;
+		app->pending++;
+		return;
+	}
+	app->thumbs[index].state = MATUWALL_THUMB_FAILED;
+	app->thumb_failed++;
+	matuwall_log_warn(
+		"thumbnail", "could not queue %s", app->scan.paths[index]);
+}
+
 static void submit_range(struct matuwall_app *app, size_t first, size_t end) {
 	for (size_t i = first; i < end; i++) {
-		if (matuwall_worker_submit(
-			    app->workers, i, app->scan.paths[i])) {
-			app->pending++;
-		} else {
-			app->thumbs[i].state = MATUWALL_THUMB_FAILED;
-			app->thumb_failed++;
-			matuwall_log_warn("thumbnail", "could not queue %s",
-				app->scan.paths[i]);
+		submit_index(app, i);
+	}
+}
+
+static void submit_grid_lookahead(
+	struct matuwall_app *app, size_t first, size_t end, size_t count) {
+	for (size_t offset = 0; offset < count; offset++) {
+		if (end + offset < app->scan.count) {
+			submit_index(app, end + offset);
 		}
+		if (offset < first) {
+			submit_index(app, first - offset - 1);
+		}
+	}
+}
+
+static void submit_carousel_lookahead(struct matuwall_app *app, size_t first,
+	size_t end, size_t wrap_end, size_t count) {
+	size_t after = wrap_end > 0 || end == app->scan.count ? wrap_end : end;
+	size_t before = first == 0 ? app->scan.count - 1 : first - 1;
+	for (size_t offset = 0; offset < count; offset++) {
+		submit_index(app, after);
+		submit_index(app, before);
+		after = after + 1 == app->scan.count ? 0 : after + 1;
+		before = before == 0 ? app->scan.count - 1 : before - 1;
+	}
+}
+
+static void submit_visible_window(
+	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end) {
+	submit_range(app, first, end);
+	submit_range(app, 0, wrap_end);
+	size_t visible = end - first + wrap_end;
+	if (visible >= app->scan.count) {
+		return;
+	}
+	// One viewport each way keeps the next navigation step warm
+	if (app->layout.flow == MATUWALL_FLOW_GRID) {
+		submit_grid_lookahead(app, first, end, visible);
+	} else {
+		submit_carousel_lookahead(app, first, end, wrap_end, visible);
 	}
 }
 
@@ -185,14 +234,7 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	visible_ranges(app, &first, &end, &wrap_end);
-	submit_range(app, first, end);
-	if (wrap_end > 0) {
-		submit_range(app, 0, wrap_end);
-		submit_range(app, wrap_end, first);
-	} else {
-		submit_range(app, 0, first);
-		submit_range(app, end, app->scan.count);
-	}
+	submit_visible_window(app, first, end, wrap_end);
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
 	app->thumb_priority_wrap_end = wrap_end;
@@ -210,6 +252,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	visible_ranges(app, &first, &end, &wrap_end);
+	submit_visible_window(app, first, end, wrap_end);
 	refresh_visible_pending(app, first, end, wrap_end);
 	if (app->thumb_priority_set && first == app->thumb_priority_first &&
 		end == app->thumb_priority_end &&
@@ -237,14 +280,19 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 		app->workers = NULL;
 	}
 	if (app->thumb_count > 0) {
-		size_t pending = app->thumb_count - app->thumb_cache_hits -
-				 app->thumb_decoded - app->thumb_failed;
+		size_t unrequested = 0;
+		for (size_t i = 0; i < app->thumb_count; i++) {
+			unrequested +=
+				app->thumbs[i].state == MATUWALL_THUMB_UNLOADED;
+		}
+		size_t unfinished = app->pending;
 		matuwall_log_info("thumbnail",
 			"summary: %zu cache hit%s, %zu decoded, %zu failed, "
-			"%zu unfinished",
+			"%zu unrequested, %zu unfinished",
 			app->thumb_cache_hits,
 			app->thumb_cache_hits == 1 ? "" : "s",
-			app->thumb_decoded, app->thumb_failed, pending);
+			app->thumb_decoded, app->thumb_failed, unrequested,
+			unfinished);
 	}
 	if (app->thumbs != NULL) {
 		for (size_t i = 0; i < app->thumb_count; i++) {

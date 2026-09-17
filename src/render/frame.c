@@ -277,7 +277,9 @@ static void draw_tile(struct matuwall_buffer *buffer,
 	matuwall_draw_rounded_rect(buffer, clip, geometry->left + border,
 		geometry->top + border, geometry->width - border * 2,
 		geometry->height - border * 2, inner_radius, frame->tile);
-	bool pending = thumb == NULL || thumb->state == MATUWALL_THUMB_PENDING;
+	bool pending = thumb == NULL ||
+		       thumb->state == MATUWALL_THUMB_UNLOADED ||
+		       thumb->state == MATUWALL_THUMB_PENDING;
 	if (pending) {
 		int32_t shorter = geometry->width < geometry->height
 					  ? geometry->width

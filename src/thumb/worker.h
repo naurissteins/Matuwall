@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 enum matuwall_thumb_state {
+	MATUWALL_THUMB_UNLOADED,
 	MATUWALL_THUMB_PENDING,
 	MATUWALL_THUMB_READY,
 	MATUWALL_THUMB_FAILED,
