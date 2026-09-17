@@ -49,16 +49,39 @@ static void on_result(
 	app->layer.needs_repaint = true;
 }
 
-// Thumbnail target size in physical pixels, scaled to the current output
-static void thumbnail_target(
+// Fit the physical target inside the output without changing its aspect
+static bool thumbnail_target(
 	const struct matuwall_app *app, uint32_t *tw, uint32_t *th) {
 	uint32_t pw;
 	uint32_t ph;
 	matuwall_layer_buffer_size(&app->layer, &pw, &ph);
+	if (pw == 0 || ph == 0) {
+		return false;
+	}
+
 	double scale =
 		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
-	*tw = (uint32_t)(app->layout.tile_width * scale + 0.5);
-	*th = (uint32_t)(app->layout.tile_height * scale + 0.5);
+	double width = app->layout.tile_width * scale;
+	double height = app->layout.tile_height * scale;
+	double fit = 1.0;
+	if (width > pw) {
+		fit = (double)pw / width;
+	}
+	if (height * fit > ph) {
+		fit = (double)ph / height;
+	}
+
+	width *= fit;
+	height *= fit;
+	*tw = width >= 1.0 ? (uint32_t)(width + 0.5) : 1;
+	*th = height >= 1.0 ? (uint32_t)(height + 0.5) : 1;
+	if (*tw > pw) {
+		*tw = pw;
+	}
+	if (*th > ph) {
+		*th = ph;
+	}
+	return true;
 }
 
 static void visible_ranges(const struct matuwall_app *app, size_t *first,
@@ -229,8 +252,8 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 
 	uint32_t tw;
 	uint32_t th;
-	thumbnail_target(app, &tw, &th);
-	if (!matuwall_thumb_store_set_target(app, tw, th)) {
+	if (!thumbnail_target(app, &tw, &th) ||
+		!matuwall_thumb_store_set_target(app, tw, th)) {
 		matuwall_log_error(
 			"thumbnail", "invalid thumbnail target size");
 		return;
