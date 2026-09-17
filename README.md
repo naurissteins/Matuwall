@@ -90,31 +90,6 @@ Run `matuwall --help` for every option.
 > [!IMPORTANT]
 > Command-line options do not change the config file
 
-Navigation transition:
-
-```toml
-[animation]
-navigation_ms = 410
-zoom_percent = 10
-```
-
-Centered carousel:
-
-```toml
-[grid]
-carousel = true
-edge_peek = false
-```
-
-At `top`, `bottom`, or `center`, the strip is horizontal and uses only
-Left/Right. At `left` or `right`, it is vertical and uses only Up/Down. The
-selected thumbnail stays centered while the strip moves. The carousel is
-circular: moving past the last wallpaper continues at the first, and repeated
-items fill the strip when necessary. `columns` limits the number of visible
-thumbnails; `visible_rows` is ignored in this mode.
-Set `edge_peek = true` to let neighboring thumbnails show in the panel margin.
-It is disabled by default in both carousel and grid layouts.
-
 ## Controls
 - Arrows or `h` `j` `k` `l`
 - `Page Up`, `Page Down` | Move one page |
@@ -131,9 +106,6 @@ Config file is optional. It is read from `~/.config/matuwall/config.toml` or `$X
 
 See [`config/example.toml`](config/example.toml) for comments and `matuwall(5)`
 for the full reference.
-
-If something is not working as expected, run `matuwall --diagnose` to see the
-diagnostic log and any error messages.
 
 ## Backends
 

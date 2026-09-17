@@ -227,8 +227,8 @@ static bool pump_events(struct matuwall_app *app) {
 	}
 
 	int timeout = matuwall_seat_repeat_timeout(&app->seat);
-	// Pulse the loading dot while any thumbnail is still pending
-	if (app->pending > 0) {
+	// Pulse only while an on-screen thumbnail is pending
+	if (app->visible_pending > 0) {
 		timeout = sooner(timeout, MATUWALL_SPINNER_INTERVAL_MS);
 	}
 	timeout = sooner(
@@ -283,8 +283,8 @@ static bool pump_events(struct matuwall_app *app) {
 
 	matuwall_seat_dispatch_repeat(&app->seat);
 	matuwall_app_preview_tick(app, matuwall_now_ms());
-	// Keep the pulse advancing while tiles are still loading
-	if (app->pending > 0) {
+	// Keep the pulse advancing while visible tiles are still loading
+	if (app->visible_pending > 0) {
 		app->layer.needs_repaint = true;
 	}
 	matuwall_layer_collect_idle(&app->layer);
