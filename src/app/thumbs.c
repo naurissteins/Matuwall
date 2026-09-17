@@ -115,6 +115,36 @@ static void visible_ranges(const struct matuwall_app *app, size_t *first,
 	*wrap_end = 0;
 }
 
+static size_t pending_in_range(
+	const struct matuwall_app *app, size_t first, size_t end) {
+	if (end > app->thumb_count) {
+		end = app->thumb_count;
+	}
+	size_t pending = 0;
+	for (size_t i = first; i < end; i++) {
+		pending += app->thumbs[i].state == MATUWALL_THUMB_PENDING;
+	}
+	return pending;
+}
+
+static void refresh_visible_pending(
+	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end) {
+	if (app->thumbs == NULL) {
+		app->visible_pending = 0;
+		return;
+	}
+	app->visible_pending = pending_in_range(app, first, end) +
+			       pending_in_range(app, 0, wrap_end);
+}
+
+static void refresh_current_visible_pending(struct matuwall_app *app) {
+	size_t first;
+	size_t end;
+	size_t wrap_end;
+	visible_ranges(app, &first, &end, &wrap_end);
+	refresh_visible_pending(app, first, end, wrap_end);
+}
+
 static void submit_range(struct matuwall_app *app, size_t first, size_t end) {
 	for (size_t i = first; i < end; i++) {
 		if (matuwall_worker_submit(
@@ -167,10 +197,12 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	app->thumb_priority_end = end;
 	app->thumb_priority_wrap_end = wrap_end;
 	app->thumb_priority_set = true;
+	refresh_visible_pending(app, first, end, wrap_end);
 }
 
 void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	if (app->workers == NULL) {
+		app->visible_pending = 0;
 		return;
 	}
 
@@ -178,6 +210,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	visible_ranges(app, &first, &end, &wrap_end);
+	refresh_visible_pending(app, first, end, wrap_end);
 	if (app->thumb_priority_set && first == app->thumb_priority_first &&
 		end == app->thumb_priority_end &&
 		wrap_end == app->thumb_priority_wrap_end) {
@@ -194,6 +227,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 void matuwall_app_thumbs_drain(struct matuwall_app *app) {
 	if (app->workers != NULL) {
 		matuwall_worker_drain(app->workers, on_result, app);
+		refresh_current_visible_pending(app);
 	}
 }
 
@@ -223,6 +257,8 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 	app->thumb_priority_first = 0;
 	app->thumb_priority_end = 0;
 	app->thumb_priority_set = false;
+	app->pending = 0;
+	app->visible_pending = 0;
 	app->thumb_cache_hits = 0;
 	app->thumb_decoded = 0;
 	app->thumb_failed = 0;
