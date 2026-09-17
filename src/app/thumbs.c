@@ -6,8 +6,12 @@
 
 #include "app/app.h"
 #include "app/preview.h"
+#include "app/thumb_store.h"
 #include "thumb/worker.h"
 #include "util/log.h"
+
+static void accept_thumbnail_result(
+	struct matuwall_app *app, const struct matuwall_thumb_result *result);
 
 static void on_result(
 	void *user_data, const struct matuwall_thumb_result *result) {
@@ -32,15 +36,7 @@ static void on_result(
 	}
 
 	if (result->ok) {
-		thumb->state = MATUWALL_THUMB_READY;
-		thumb->pixels = result->pixels;
-		thumb->width = result->width;
-		thumb->height = result->height;
-		if (result->cache_hit) {
-			app->thumb_cache_hits++;
-		} else {
-			app->thumb_decoded++;
-		}
+		accept_thumbnail_result(app, result);
 	} else {
 		thumb->state = MATUWALL_THUMB_FAILED;
 		app->thumb_failed++;
@@ -113,6 +109,15 @@ static void visible_ranges(const struct matuwall_app *app, size_t *first,
 	size_t remaining = app->scan.count - *first;
 	*end = *first + (count < remaining ? count : remaining);
 	*wrap_end = 0;
+}
+
+static void accept_thumbnail_result(
+	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
+	size_t first;
+	size_t end;
+	size_t wrap_end;
+	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_accept(app, result, first, end, wrap_end);
 }
 
 static size_t pending_in_range(
@@ -201,10 +206,11 @@ static void submit_visible_window(
 		return;
 	}
 	// One viewport each way keeps the next navigation step warm
+	size_t lookahead = matuwall_thumb_store_lookahead(app, visible);
 	if (app->layout.flow == MATUWALL_FLOW_GRID) {
-		submit_grid_lookahead(app, first, end, visible);
+		submit_grid_lookahead(app, first, end, lookahead);
 	} else {
-		submit_carousel_lookahead(app, first, end, wrap_end, visible);
+		submit_carousel_lookahead(app, first, end, wrap_end, lookahead);
 	}
 }
 
@@ -224,6 +230,11 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	uint32_t tw;
 	uint32_t th;
 	thumbnail_target(app, &tw, &th);
+	if (!matuwall_thumb_store_set_target(app, tw, th)) {
+		matuwall_log_error(
+			"thumbnail", "invalid thumbnail target size");
+		return;
+	}
 	app->workers = matuwall_worker_pool_start(tw, th);
 	if (app->workers == NULL) {
 		matuwall_log_error("thumbnail", "failed to start workers");
@@ -234,6 +245,7 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
 	submit_visible_window(app, first, end, wrap_end);
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
@@ -252,6 +264,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
 	submit_visible_window(app, first, end, wrap_end);
 	refresh_visible_pending(app, first, end, wrap_end);
 	if (app->thumb_priority_set && first == app->thumb_priority_first &&
@@ -288,11 +301,13 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 		size_t unfinished = app->pending;
 		matuwall_log_info("thumbnail",
 			"summary: %zu cache hit%s, %zu decoded, %zu failed, "
-			"%zu unrequested, %zu unfinished",
+			"%zu unrequested, %zu unfinished, %zu evicted, "
+			"%zu KiB peak resident",
 			app->thumb_cache_hits,
 			app->thumb_cache_hits == 1 ? "" : "s",
 			app->thumb_decoded, app->thumb_failed, unrequested,
-			unfinished);
+			unfinished, app->thumb_evicted,
+			app->thumb_resident_peak_bytes / 1024);
 	}
 	if (app->thumbs != NULL) {
 		for (size_t i = 0; i < app->thumb_count; i++) {
@@ -307,6 +322,10 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 	app->thumb_priority_set = false;
 	app->pending = 0;
 	app->visible_pending = 0;
+	app->thumb_target_bytes = 0;
+	app->thumb_resident_bytes = 0;
+	app->thumb_resident_peak_bytes = 0;
+	app->thumb_evicted = 0;
 	app->thumb_cache_hits = 0;
 	app->thumb_decoded = 0;
 	app->thumb_failed = 0;
