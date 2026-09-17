@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-static void cover_crop(uint32_t src_w, uint32_t src_h, uint32_t out_w,
+void matuwall_cover_crop(uint32_t src_w, uint32_t src_h, uint32_t out_w,
 	uint32_t out_h, uint32_t *cx, uint32_t *cy, uint32_t *cw,
 	uint32_t *ch) {
 	if ((uint64_t)src_w * out_h > (uint64_t)out_w * src_h) {
@@ -58,7 +58,8 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	uint32_t cy;
 	uint32_t cw;
 	uint32_t ch;
-	cover_crop(src->width, src->height, out_w, out_h, &cx, &cy, &cw, &ch);
+	matuwall_cover_crop(
+		src->width, src->height, out_w, out_h, &cx, &cy, &cw, &ch);
 
 	uint32_t *pixels = malloc((size_t)out_w * out_h * sizeof(uint32_t));
 	if (pixels == NULL) {
