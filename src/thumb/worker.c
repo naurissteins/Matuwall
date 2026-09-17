@@ -71,13 +71,20 @@ static bool produce(
 	}
 
 	struct matuwall_image decoded;
-	if (!matuwall_image_decode(
-		    &decoded, job->path, job->target_w, job->target_h)) {
+	enum matuwall_decode_purpose purpose =
+		cached ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
+	if (!matuwall_image_decode(&decoded, job->path, job->target_w,
+		    job->target_h, purpose)) {
 		return false;
 	}
-	bool scaled = matuwall_scale_cover(
-		&decoded, job->target_w, job->target_h, out);
-	matuwall_image_free(&decoded);
+	bool scaled = true;
+	if (decoded.width == job->target_w && decoded.height == job->target_h) {
+		*out = decoded;
+	} else {
+		scaled = matuwall_scale_cover(
+			&decoded, job->target_w, job->target_h, out);
+		matuwall_image_free(&decoded);
+	}
 	if (!scaled) {
 		return false;
 	}

@@ -10,11 +10,16 @@ struct matuwall_image {
 	uint32_t *pixels;
 };
 
+enum matuwall_decode_purpose {
+	MATUWALL_DECODE_THUMBNAIL,
+	MATUWALL_DECODE_PREVIEW,
+};
+
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height);
 
-// JPEG uses the target as a lower bound; other formats decode fully
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
-	uint32_t target_w, uint32_t target_h);
+	uint32_t target_w, uint32_t target_h,
+	enum matuwall_decode_purpose purpose);
 
 void matuwall_image_free(struct matuwall_image *img);
 

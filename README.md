@@ -85,7 +85,7 @@ matuwall --no-hooks                              // apply without running hooks
 matuwall --hook 'matugen image {path}'           // replace hooks for one run
 ```
 
-Run `matuwall --help` for every option.
+Run `matuwall --help` for every option
 
 > [!IMPORTANT]
 > Command-line options do not change the config file
@@ -98,7 +98,7 @@ Run `matuwall --help` for every option.
 - `Enter` | Apply and exit |
 - `Escape` | Cancel and exit |
 
-In carousel mode, orthogonal arrows and page movement are disabled.
+In carousel mode, orthogonal arrows and page movement are disabled!
 
 ## Configure
 
