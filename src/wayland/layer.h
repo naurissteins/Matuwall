@@ -47,8 +47,8 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	struct matuwall_layer *layer, struct wl_shm *shm,
 	struct matuwall_buffer **buffer);
 
-bool matuwall_layer_commit_frame(
-	struct matuwall_layer *layer, bool continue_frames);
+bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
+	bool continue_frames, const struct matuwall_damage *damage);
 
 // Release surplus buffers once no repaint is waiting
 void matuwall_layer_collect_idle(struct matuwall_layer *layer);

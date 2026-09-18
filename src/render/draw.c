@@ -50,23 +50,39 @@ static int32_t clamp_radius(int32_t radius, int32_t width, int32_t height) {
 	return radius < 0 ? 0 : radius;
 }
 
-struct matuwall_clip matuwall_clip_buffer(
-	const struct matuwall_buffer *buffer) {
-	return (struct matuwall_clip){
-		.x1 = (int32_t)buffer->width,
-		.y1 = (int32_t)buffer->height,
-	};
+static bool clip_to_buffer(
+	struct matuwall_clip *clip, const struct matuwall_buffer *buffer) {
+	if (clip->x0 < 0) {
+		clip->x0 = 0;
+	}
+	if (clip->y0 < 0) {
+		clip->y0 = 0;
+	}
+	if (clip->x1 > (int32_t)buffer->width) {
+		clip->x1 = (int32_t)buffer->width;
+	}
+	if (clip->y1 > (int32_t)buffer->height) {
+		clip->y1 = (int32_t)buffer->height;
+	}
+	return clip->x0 < clip->x1 && clip->y0 < clip->y1;
 }
 
-void matuwall_draw_clear(struct matuwall_buffer *buffer, uint32_t color) {
+void matuwall_draw_clear_clipped(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, uint32_t color) {
 	// A fresh mapping is already zero; writing it just faults in every
 	// page, which on a full-output surface dominates the first frame
 	if (color == 0 && buffer->fresh) {
 		return;
 	}
-	size_t count = (size_t)buffer->width * buffer->height;
-	for (size_t i = 0; i < count; i++) {
-		buffer->data[i] = color;
+	struct matuwall_clip clipped = *clip;
+	if (!clip_to_buffer(&clipped, buffer)) {
+		return;
+	}
+	for (int32_t y = clipped.y0; y < clipped.y1; y++) {
+		uint32_t *row = buffer->data + (size_t)y * buffer->width;
+		for (int32_t x = clipped.x0; x < clipped.x1; x++) {
+			row[x] = color;
+		}
 	}
 }
 
@@ -323,17 +339,27 @@ void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
 // Fixed-point source stepping keeps the full-screen blit off the divider
 #define COVER_SHIFT 16
 
-void matuwall_draw_image_cover(struct matuwall_buffer *buffer,
-	const uint32_t *src, uint32_t src_w, uint32_t src_h) {
+void matuwall_draw_image_cover_clipped(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, const uint32_t *src, uint32_t src_w,
+	uint32_t src_h) {
 	if (src == NULL || src_w == 0 || src_h == 0 || buffer->width == 0 ||
 		buffer->height == 0) {
+		return;
+	}
+	struct matuwall_clip clipped = *clip;
+	if (!clip_to_buffer(&clipped, buffer)) {
 		return;
 	}
 
 	// The scaler already covers the buffer exactly in the common case
 	if (src_w == buffer->width && src_h == buffer->height) {
-		memcpy(buffer->data, src,
-			(size_t)src_w * src_h * sizeof(uint32_t));
+		size_t count = (size_t)(clipped.x1 - clipped.x0);
+		for (int32_t y = clipped.y0; y < clipped.y1; y++) {
+			memcpy(buffer->data + (size_t)y * buffer->width +
+					clipped.x0,
+				src + (size_t)y * src_w + clipped.x0,
+				count * sizeof(uint32_t));
+		}
 		return;
 	}
 
@@ -358,17 +384,18 @@ void matuwall_draw_image_cover(struct matuwall_buffer *buffer,
 	uint32_t off_y = (src_h - crop_h) / 2;
 	uint64_t step_x = ((uint64_t)crop_w << COVER_SHIFT) / buffer->width;
 
-	for (uint32_t y = 0; y < buffer->height; y++) {
-		uint32_t sy = off_y +
-			      (uint32_t)((uint64_t)y * crop_h / buffer->height);
+	for (int32_t y = clipped.y0; y < clipped.y1; y++) {
+		uint32_t sy = off_y + (uint32_t)((uint64_t)(uint32_t)y *
+						 crop_h / buffer->height);
 		if (sy >= src_h) {
 			sy = src_h - 1;
 		}
 		const uint32_t *src_row = src + (size_t)sy * src_w;
-		uint32_t *dst_row = buffer->data + (size_t)y * buffer->width;
+		uint32_t *dst_row =
+			buffer->data + (size_t)(uint32_t)y * buffer->width;
 
-		uint64_t pos = 0;
-		for (uint32_t x = 0; x < buffer->width; x++) {
+		uint64_t pos = (uint64_t)(uint32_t)clipped.x0 * step_x;
+		for (int32_t x = clipped.x0; x < clipped.x1; x++) {
 			uint32_t sx = off_x + (uint32_t)(pos >> COVER_SHIFT);
 			pos += step_x;
 			if (sx >= src_w) {
