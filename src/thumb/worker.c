@@ -1,6 +1,7 @@
 #include "thumb/worker.h"
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -36,11 +37,15 @@ struct matuwall_worker_pool {
 	struct job *jobs_head;
 	struct job *jobs_tail;
 	struct job *results;
-	bool stopping;
+	atomic_bool stopping;
 
 	int event_fd;
 	struct matuwall_cache *cache;
 };
+
+static bool stop_requested(const struct matuwall_worker_pool *pool) {
+	return atomic_load_explicit(&pool->stopping, memory_order_relaxed);
+}
 
 static size_t worker_count(void) {
 	long online = sysconf(_SC_NPROCESSORS_ONLN);
@@ -53,6 +58,9 @@ static size_t worker_count(void) {
 static bool produce(const struct matuwall_worker_pool *pool,
 	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
+	if (stop_requested(pool)) {
+		return false;
+	}
 	// Output-sized previews would bloat the cache for one keypress of value
 	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
 
@@ -61,6 +69,10 @@ static bool produce(const struct matuwall_worker_pool *pool,
 			matuwall_cache_key(pool->cache, job->path,
 				job->target_w, job->target_h, key, sizeof(key));
 	if (have_key && matuwall_cache_read(key, out)) {
+		if (stop_requested(pool)) {
+			matuwall_image_free(out);
+			return false;
+		}
 		*cache_hit = true;
 		return true;
 	}
@@ -69,18 +81,22 @@ static bool produce(const struct matuwall_worker_pool *pool,
 	enum matuwall_decode_purpose purpose =
 		thumbnail ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
 	if (!matuwall_image_decode(&decoded, job->path, job->target_w,
-		    job->target_h, purpose)) {
+		    job->target_h, purpose, &pool->stopping)) {
 		return false;
 	}
 	bool scaled = true;
 	if (decoded.width == job->target_w && decoded.height == job->target_h) {
 		*out = decoded;
 	} else {
-		scaled = matuwall_scale_cover(
-			&decoded, job->target_w, job->target_h, out);
+		scaled = matuwall_scale_cover(&decoded, job->target_w,
+			job->target_h, out, &pool->stopping);
 		matuwall_image_free(&decoded);
 	}
 	if (!scaled) {
+		return false;
+	}
+	if (stop_requested(pool)) {
+		matuwall_image_free(out);
 		return false;
 	}
 
@@ -91,10 +107,10 @@ static bool produce(const struct matuwall_worker_pool *pool,
 }
 
 static struct job *take_job(struct matuwall_worker_pool *pool) {
-	while (pool->jobs_head == NULL && !pool->stopping) {
+	while (pool->jobs_head == NULL && !stop_requested(pool)) {
 		pthread_cond_wait(&pool->wakeup, &pool->mutex);
 	}
-	if (pool->stopping) {
+	if (stop_requested(pool)) {
 		return NULL;
 	}
 	struct job *job = pool->jobs_head;
@@ -150,6 +166,7 @@ struct matuwall_worker_pool *matuwall_worker_pool_start(
 	}
 	pool->target_w = target_w;
 	pool->target_h = target_h;
+	atomic_init(&pool->stopping, false);
 	pthread_mutex_init(&pool->mutex, NULL);
 	pthread_cond_init(&pool->wakeup, NULL);
 
@@ -342,7 +359,7 @@ void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 
 void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	pthread_mutex_lock(&pool->mutex);
-	pool->stopping = true;
+	atomic_store_explicit(&pool->stopping, true, memory_order_relaxed);
 	pthread_cond_broadcast(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 
