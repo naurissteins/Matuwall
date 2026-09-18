@@ -26,6 +26,10 @@ struct cache_header {
 	uint32_t format;
 };
 
+struct matuwall_cache {
+	char directory[512];
+};
+
 // --- key derivation ---
 
 static uint64_t fnv1a(uint64_t hash, const void *data, size_t len) {
@@ -51,8 +55,9 @@ bool matuwall_cache_dir(char *out, size_t out_size) {
 		       home) < out_size;
 }
 
-bool matuwall_cache_key(const char *source_path, uint32_t target_w,
-	uint32_t target_h, char *out, size_t out_size) {
+bool matuwall_cache_key(const struct matuwall_cache *cache,
+	const char *source_path, uint32_t target_w, uint32_t target_h,
+	char *out, size_t out_size) {
 	struct stat info;
 	if (stat(source_path, &info) != 0) {
 		return false;
@@ -65,11 +70,7 @@ bool matuwall_cache_key(const char *source_path, uint32_t target_w,
 	hash = fnv1a(hash, &target_w, sizeof(target_w));
 	hash = fnv1a(hash, &target_h, sizeof(target_h));
 
-	char dir[512];
-	if (!matuwall_cache_dir(dir, sizeof(dir))) {
-		return false;
-	}
-	return (size_t)snprintf(out, out_size, "%s/%016llx", dir,
+	return (size_t)snprintf(out, out_size, "%s/%016llx", cache->directory,
 		       (unsigned long long)hash) < out_size;
 }
 
@@ -139,12 +140,7 @@ bool matuwall_cache_read(const char *key, struct matuwall_image *img) {
 
 // --- write ---
 
-static bool make_cache_dir(void) {
-	char dir[512];
-	if (!matuwall_cache_dir(dir, sizeof(dir))) {
-		return false;
-	}
-
+static bool make_cache_dir(char *dir) {
 	for (char *p = dir + 1; *p != '\0'; p++) {
 		if (*p != '/') {
 			continue;
@@ -158,11 +154,23 @@ static bool make_cache_dir(void) {
 	return mkdir(dir, 0755) == 0 || errno == EEXIST;
 }
 
-void matuwall_cache_write(const char *key, const struct matuwall_image *img) {
-	if (!make_cache_dir()) {
-		return;
+struct matuwall_cache *matuwall_cache_create(void) {
+	struct matuwall_cache *cache = calloc(1, sizeof(*cache));
+	if (cache == NULL ||
+		!matuwall_cache_dir(
+			cache->directory, sizeof(cache->directory)) ||
+		!make_cache_dir(cache->directory)) {
+		free(cache);
+		return NULL;
 	}
+	return cache;
+}
 
+void matuwall_cache_destroy(struct matuwall_cache *cache) {
+	free(cache);
+}
+
+void matuwall_cache_write(const char *key, const struct matuwall_image *img) {
 	char tmp[576];
 	if ((size_t)snprintf(tmp, sizeof(tmp), "%s.tmpXXXXXX", key) >=
 		sizeof(tmp)) {

@@ -5,10 +5,16 @@
 
 #include "thumb/decode.h"
 
+struct matuwall_cache;
+
 bool matuwall_cache_dir(char *out, size_t out_size);
 
-bool matuwall_cache_key(const char *source_path, uint32_t target_w,
-	uint32_t target_h, char *out, size_t out_size);
+struct matuwall_cache *matuwall_cache_create(void);
+void matuwall_cache_destroy(struct matuwall_cache *cache);
+
+bool matuwall_cache_key(const struct matuwall_cache *cache,
+	const char *source_path, uint32_t target_w, uint32_t target_h,
+	char *out, size_t out_size);
 
 bool matuwall_cache_read(const char *key, struct matuwall_image *img);
 
