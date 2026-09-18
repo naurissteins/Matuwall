@@ -387,15 +387,44 @@ static bool focused(const struct matuwall_frame *frame, int64_t slot) {
 	return false;
 }
 
-static void slot_bounds(
-	const struct matuwall_frame *frame, int64_t *first, int64_t *last) {
+static int64_t grid_first_slot(
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip) {
+	if (frame->scale <= 0.0) {
+		return 0;
+	}
+	uint32_t columns =
+		frame->layout->columns == 0 ? 1 : frame->layout->columns;
+	double step =
+		(double)frame->layout->tile_height + frame->layout->spacing;
+	if (step <= 0.0) {
+		return 0;
+	}
+	double clip_top = (double)clip->y0 / frame->scale;
+	double boundary = (clip_top - frame->panel.y - frame->layout->margin +
+				  frame->scroll - frame->layout->tile_height) /
+			  step;
+	if (!(boundary > 0.0)) {
+		return 0;
+	}
+
+	// Keep one row before the exact visibility boundary for rounding
+	double row = floor(boundary);
+	size_t last_row = (frame->item_count - 1) / columns;
+	if (row > (double)last_row) {
+		return (int64_t)frame->item_count;
+	}
+	return (int64_t)((size_t)row * columns);
+}
+
+static void slot_bounds(const struct matuwall_frame *frame,
+	const struct matuwall_clip *clip, int64_t *first, int64_t *last) {
 	if (frame->item_count == 0) {
 		*first = 1;
 		*last = 0;
 		return;
 	}
 	if (frame->layout->flow == MATUWALL_FLOW_GRID) {
-		*first = 0;
+		*first = grid_first_slot(frame, clip);
 		*last = (int64_t)(frame->item_count - 1);
 		return;
 	}
@@ -429,7 +458,7 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 	struct matuwall_clip tile_clip = tile_visibility_clip(frame, clip);
 	int64_t first;
 	int64_t last;
-	slot_bounds(frame, &first, &last);
+	slot_bounds(frame, &tile_clip, &first, &last);
 	for (int64_t slot = first; slot <= last; slot++) {
 		size_t index = slot_index(frame, slot);
 		struct tile_geometry geometry;
