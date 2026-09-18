@@ -2,6 +2,10 @@
 
 #include <stdlib.h>
 
+static bool stop_requested(const atomic_bool *stop) {
+	return stop != NULL && atomic_load_explicit(stop, memory_order_relaxed);
+}
+
 void matuwall_cover_crop(uint32_t src_w, uint32_t src_h, uint32_t out_w,
 	uint32_t out_h, uint32_t *cx, uint32_t *cy, uint32_t *cw,
 	uint32_t *ch) {
@@ -48,12 +52,13 @@ static uint32_t average_box(const struct matuwall_image *src, uint32_t sx0,
 }
 
 bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
-	uint32_t out_h, struct matuwall_image *out) {
+	uint32_t out_h, struct matuwall_image *out, const atomic_bool *stop) {
 	*out = (struct matuwall_image){0};
 	if (src->pixels == NULL ||
 		!matuwall_image_dimensions_ok(src->width, src->height) ||
 		!matuwall_image_dimensions_ok(out_w, out_h) ||
-		(size_t)out_w > SIZE_MAX / sizeof(uint32_t) / out_h) {
+		(size_t)out_w > SIZE_MAX / sizeof(uint32_t) / out_h ||
+		stop_requested(stop)) {
 		return false;
 	}
 	size_t pixel_count = (size_t)out_w * out_h;
@@ -71,6 +76,10 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	}
 
 	for (uint32_t oy = 0; oy < out_h; oy++) {
+		if (stop_requested(stop)) {
+			free(pixels);
+			return false;
+		}
 		uint32_t sy0 = cy + (uint32_t)((uint64_t)oy * ch / out_h);
 		uint32_t sy1 = cy + (uint32_t)((uint64_t)(oy + 1) * ch / out_h);
 		if (sy1 <= sy0) {

@@ -17,6 +17,10 @@
 #define MAX_THUMBNAIL_PIXELS (1u << 24)
 #define WEBP_FILE_LIMIT (64UL * 1024 * 1024)
 
+static bool stop_requested(const atomic_bool *stop) {
+	return stop != NULL && atomic_load_explicit(stop, memory_order_relaxed);
+}
+
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height) {
 	if (width == 0 || height == 0 || width > MAX_DIMENSION ||
 		height > MAX_DIMENSION) {
@@ -78,7 +82,8 @@ static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 }
 
 static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose) {
+	uint32_t target_h, enum matuwall_decode_purpose purpose,
+	const atomic_bool *stop) {
 	struct jpeg_decompress_struct cinfo = {0};
 	struct jpeg_guard guard;
 	cinfo.err = jpeg_std_error(&guard.base);
@@ -120,6 +125,11 @@ static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	}
 
 	while (cinfo.output_scanline < height) {
+		if (stop_requested(stop)) {
+			jpeg_destroy_decompress(&cinfo);
+			matuwall_image_free(img);
+			return false;
+		}
 		JSAMPROW row =
 			(JSAMPROW)(img->pixels +
 				   (size_t)cinfo.output_scanline * width);
@@ -223,13 +233,14 @@ static void normalize_png(png_structp png, png_infop info) {
 
 static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 	uint32_t width, uint32_t height, enum matuwall_decode_purpose purpose,
-	struct png_decode_buffers *buffers) {
+	int passes, struct png_decode_buffers *buffers,
+	const atomic_bool *stop) {
 	if (!decode_dimensions_ok(width, height, purpose)) {
 		return false;
 	}
 	img->width = width;
 	img->height = height;
-	img->pixels = malloc((size_t)width * height * sizeof(uint32_t));
+	img->pixels = calloc((size_t)width * height, sizeof(uint32_t));
 	buffers->rows =
 		(png_bytep *)malloc((size_t)height * sizeof(*buffers->rows));
 	if (img->pixels == NULL || buffers->rows == NULL) {
@@ -238,7 +249,14 @@ static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 	for (uint32_t y = 0; y < height; y++) {
 		buffers->rows[y] = (png_bytep)(img->pixels + (size_t)y * width);
 	}
-	png_read_image(png, buffers->rows);
+	for (int pass = 0; pass < passes; pass++) {
+		for (uint32_t y = 0; y < height; y++) {
+			if (stop_requested(stop)) {
+				png_longjmp(png, 1);
+			}
+			png_read_row(png, buffers->rows[y], NULL);
+		}
+	}
 	png_read_end(png, NULL);
 
 	free((void *)buffers->rows);
@@ -249,7 +267,7 @@ static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	uint32_t width, uint32_t height, uint32_t target_w, uint32_t target_h,
 	enum matuwall_decode_purpose purpose,
-	struct png_decode_buffers *buffers) {
+	struct png_decode_buffers *buffers, const atomic_bool *stop) {
 	if (!decode_dimensions_ok(target_w, target_h, purpose)) {
 		return false;
 	}
@@ -280,6 +298,9 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 			(size_t)target_w * 3 * sizeof(uint64_t));
 		for (uint32_t sy = sy0; sy < sy1; sy++) {
 			while (next_y <= sy) {
+				if (stop_requested(stop)) {
+					png_longjmp(png, 1);
+				}
 				png_read_row(png, buffers->row, NULL);
 				loaded_y = next_y++;
 			}
@@ -294,6 +315,9 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	}
 
 	while (next_y < height) {
+		if (stop_requested(stop)) {
+			png_longjmp(png, 1);
+		}
 		png_read_row(png, buffers->row, NULL);
 		next_y++;
 	}
@@ -302,7 +326,8 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 }
 
 static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose) {
+	uint32_t target_h, enum matuwall_decode_purpose purpose,
+	const atomic_bool *stop) {
 	png_structp png =
 		png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	png_infop info = png != NULL ? png_create_info_struct(png) : NULL;
@@ -339,18 +364,20 @@ static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	normalize_png(png, info);
 	bool interlaced =
 		png_get_interlace_type(png, info) != PNG_INTERLACE_NONE;
+	int passes = 1;
 	if (interlaced) {
-		png_set_interlace_handling(png);
+		passes = png_set_interlace_handling(png);
 	}
 	png_read_update_info(png, info);
 	if (png_get_rowbytes(png, info) != (size_t)width * sizeof(uint32_t)) {
 		png_longjmp(png, 1);
 	}
 
-	bool ok = interlaced ? decode_interlaced_png(png, img, width, height,
-				       purpose, buffers)
-			     : decode_png_rows(png, img, width, height,
-				       target_w, target_h, purpose, buffers);
+	bool ok = interlaced
+			  ? decode_interlaced_png(png, img, width, height,
+				    purpose, passes, buffers, stop)
+			  : decode_png_rows(png, img, width, height, target_w,
+				    target_h, purpose, buffers, stop);
 	png_buffers_free(buffers);
 	free(buffers);
 	png_destroy_read_struct(&png, &info, NULL);
@@ -415,7 +442,8 @@ static bool configure_webp(WebPDecoderConfig *config, const uint8_t *data,
 }
 
 static bool decode_webp(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose) {
+	uint32_t target_h, enum matuwall_decode_purpose purpose,
+	const atomic_bool *stop) {
 	uint8_t *data = NULL;
 	size_t data_size;
 	WebPDecoderConfig config;
@@ -441,12 +469,18 @@ static bool decode_webp(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	config.output.u.RGBA.stride = (int)stride;
 	config.output.u.RGBA.size = out_size;
 
-	VP8StatusCode status = WebPDecode(data, data_size, &config);
-	WebPFreeDecBuffer(&config.output);
-	if (status != VP8_STATUS_OK) {
+	if (stop_requested(stop)) {
+		WebPFreeDecBuffer(&config.output);
 		free(data);
-		free(img->pixels);
-		img->pixels = NULL;
+		matuwall_image_free(img);
+		return false;
+	}
+	VP8StatusCode status = WebPDecode(data, data_size, &config);
+	bool stopped = stop_requested(stop);
+	WebPFreeDecBuffer(&config.output);
+	if (status != VP8_STATUS_OK || stopped) {
+		free(data);
+		matuwall_image_free(img);
 		return false;
 	}
 
@@ -474,9 +508,10 @@ static bool is_webp(const uint8_t *sig, size_t n) {
 
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h,
-	enum matuwall_decode_purpose purpose) {
+	enum matuwall_decode_purpose purpose, const atomic_bool *stop) {
 	*img = (struct matuwall_image){0};
-	if (!decode_dimensions_ok(target_w, target_h, purpose)) {
+	if (!decode_dimensions_ok(target_w, target_h, purpose) ||
+		stop_requested(stop)) {
 		return false;
 	}
 
@@ -494,11 +529,11 @@ bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 
 	bool ok;
 	if (is_png(sig, got)) {
-		ok = decode_png(fp, img, target_w, target_h, purpose);
+		ok = decode_png(fp, img, target_w, target_h, purpose, stop);
 	} else if (is_jpeg(sig, got)) {
-		ok = decode_jpeg(fp, img, target_w, target_h, purpose);
+		ok = decode_jpeg(fp, img, target_w, target_h, purpose, stop);
 	} else if (is_webp(sig, got)) {
-		ok = decode_webp(fp, img, target_w, target_h, purpose);
+		ok = decode_webp(fp, img, target_w, target_h, purpose, stop);
 	} else {
 		ok = false;
 	}
