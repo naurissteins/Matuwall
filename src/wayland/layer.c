@@ -252,8 +252,15 @@ void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	*pixel_height = layer->height * (uint32_t)scale;
 }
 
-static bool present(struct matuwall_layer *layer, bool continue_frames) {
+static bool present(struct matuwall_layer *layer, bool continue_frames,
+	const struct matuwall_damage *damage) {
 	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
+	if (damage == NULL || damage->x0 < 0 || damage->y0 < 0 ||
+		damage->x1 > (int32_t)buffer->width ||
+		damage->y1 > (int32_t)buffer->height ||
+		damage->x0 >= damage->x1 || damage->y0 >= damage->y1) {
+		return false;
+	}
 	if (continue_frames && layer->frame_callback == NULL) {
 		layer->frame_callback = wl_surface_frame(layer->wl_surface);
 		if (layer->frame_callback == NULL) {
@@ -275,8 +282,8 @@ static bool present(struct matuwall_layer *layer, bool continue_frames) {
 	}
 
 	wl_surface_attach(layer->wl_surface, buffer->wl_buffer, 0, 0);
-	wl_surface_damage_buffer(layer->wl_surface, 0, 0,
-		(int32_t)buffer->width, (int32_t)buffer->height);
+	wl_surface_damage_buffer(layer->wl_surface, damage->x0, damage->y0,
+		damage->x1 - damage->x0, damage->y1 - damage->y0);
 	wl_surface_commit(layer->wl_surface);
 
 	matuwall_buffer_pool_submitted(&layer->buffer_pool);
@@ -306,12 +313,12 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 		&layer->buffer_pool, shm, pixel_width, pixel_height, out);
 }
 
-bool matuwall_layer_commit_frame(
-	struct matuwall_layer *layer, bool continue_frames) {
+bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
+	bool continue_frames, const struct matuwall_damage *damage) {
 	if (layer->buffer_pool.drawing == NULL) {
 		return false;
 	}
-	return present(layer, continue_frames);
+	return present(layer, continue_frames, damage);
 }
 
 void matuwall_layer_destroy(struct matuwall_layer *layer) {

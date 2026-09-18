@@ -8,6 +8,13 @@
 struct wl_buffer;
 struct wl_shm;
 
+struct matuwall_damage {
+	int32_t x0;
+	int32_t y0;
+	int32_t x1;
+	int32_t y1;
+};
+
 struct matuwall_buffer {
 	struct wl_buffer *wl_buffer;
 	uint32_t *data;
@@ -18,6 +25,10 @@ struct matuwall_buffer {
 	bool released;
 	// Untouched since mmap, so every pixel is still zero
 	bool fresh;
+	// Last rendered scene state advances independently per buffer
+	bool frame_valid;
+	uint64_t backdrop_generation;
+	struct matuwall_damage overlay_damage;
 	struct matuwall_buffer *next;
 };
 

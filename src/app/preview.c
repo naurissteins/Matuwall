@@ -87,6 +87,7 @@ void matuwall_app_preview_result(
 		.height = result->height,
 		.pixels = result->pixels,
 	};
+	preview->generation++;
 	preview->shown = result->index;
 	app->layer.needs_repaint = true;
 }

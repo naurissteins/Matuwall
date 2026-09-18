@@ -60,7 +60,7 @@ struct matuwall_frame {
 	uint8_t spinner_alpha;
 };
 
-void matuwall_frame_draw(
-	struct matuwall_buffer *buffer, const struct matuwall_frame *frame);
+struct matuwall_damage matuwall_frame_draw(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, uint64_t backdrop_generation);
 
 #endif

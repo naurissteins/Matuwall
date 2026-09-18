@@ -21,6 +21,7 @@ struct matuwall_preview {
 	int64_t due_ms;
 	uint32_t target_w;
 	uint32_t target_h;
+	uint64_t generation;
 	bool enabled;
 };
 
