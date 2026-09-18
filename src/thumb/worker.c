@@ -2,7 +2,6 @@
 
 #include <pthread.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
 
@@ -14,7 +13,7 @@
 
 struct job {
 	struct matuwall_thumb_result result;
-	char *path;
+	const char *path;
 	uint32_t target_w;
 	uint32_t target_h;
 	struct job *next;
@@ -134,8 +133,6 @@ static void *worker_main(void *arg) {
 			job->result.height = img.height;
 		}
 
-		free(job->path);
-		job->path = NULL;
 		publish_result(pool, job);
 		pthread_mutex_lock(&pool->mutex);
 	}
@@ -191,11 +188,7 @@ static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	job->result.index = index;
 	job->target_w = target_w;
 	job->target_h = target_h;
-	job->path = strdup(path);
-	if (job->path == NULL) {
-		free(job);
-		return NULL;
-	}
+	job->path = path;
 	return job;
 }
 
@@ -237,7 +230,6 @@ static void drop_queued_previews(struct matuwall_worker_pool *pool) {
 		if (pool->jobs_tail == job) {
 			pool->jobs_tail = prev;
 		}
-		free(job->path);
 		free(job);
 	}
 }
@@ -359,7 +351,6 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	struct job *job = pool->jobs_head;
 	while (job != NULL) {
 		struct job *next = job->next;
-		free(job->path);
 		free(job);
 		job = next;
 	}
