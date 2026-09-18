@@ -31,7 +31,6 @@ static void handle_frame_done(
 
 	wl_callback_destroy(callback);
 	layer->frame_callback = NULL;
-	layer->needs_repaint = true;
 }
 
 static const struct wl_callback_listener frame_listener = {
@@ -262,7 +261,7 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 		damage->x0 >= damage->x1 || damage->y0 >= damage->y1) {
 		return false;
 	}
-	if (continue_frames && layer->frame_callback == NULL) {
+	if (layer->frame_callback == NULL) {
 		layer->frame_callback = wl_surface_frame(layer->wl_surface);
 		if (layer->frame_callback == NULL) {
 			return false;
@@ -288,7 +287,7 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 	wl_surface_commit(layer->wl_surface);
 
 	matuwall_buffer_pool_submitted(&layer->buffer_pool);
-	layer->needs_repaint = false;
+	layer->needs_repaint = continue_frames;
 	matuwall_layer_collect_idle(layer);
 	return true;
 }
