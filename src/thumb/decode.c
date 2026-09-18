@@ -148,15 +148,6 @@ static void png_buffers_free(struct png_decode_buffers *buffers) {
 	buffers->sums = NULL;
 }
 
-static void rgba_to_argb(uint32_t *pixels, size_t count) {
-	for (size_t i = 0; i < count; i++) {
-		uint8_t *p = (uint8_t *)&pixels[i];
-		uint8_t r = p[0];
-		p[0] = p[2];
-		p[2] = r;
-	}
-}
-
 static void scale_range(uint32_t origin, uint32_t extent, uint32_t output,
 	uint32_t index, uint32_t *start, uint32_t *end) {
 	*start = origin + (uint32_t)((uint64_t)index * extent / output);
@@ -177,9 +168,9 @@ static void accumulate_png_row(const png_byte *row, uint64_t *sums,
 		scale_range(crop_x, crop_w, target_w, ox, &sx0, &sx1);
 		for (uint32_t sx = sx0; sx < sx1; sx++) {
 			const uint8_t *p = row + (size_t)sx * 4;
-			sums[ox] += p[2];
+			sums[ox] += p[0];
 			sums[target_w + ox] += p[1];
-			sums[target_w * 2 + ox] += p[0];
+			sums[target_w * 2 + ox] += p[2];
 		}
 	}
 }
@@ -224,7 +215,10 @@ static void normalize_png(png_structp png, png_infop info) {
 		color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
 		png_set_gray_to_rgb(png);
 	}
-	png_set_add_alpha(png, 0xff, PNG_FILLER_AFTER);
+	// Decode directly to opaque little-endian ARGB8888 bytes
+	png_set_strip_alpha(png);
+	png_set_bgr(png);
+	png_set_filler(png, 0xff, PNG_FILLER_AFTER);
 }
 
 static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
@@ -249,8 +243,6 @@ static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 
 	free((void *)buffers->rows);
 	buffers->rows = NULL;
-	rgba_to_argb(img->pixels, (size_t)width * height);
-	force_opaque(img->pixels, (size_t)width * height);
 	return true;
 }
 
