@@ -48,6 +48,7 @@ static void handle_configure(void *data,
 
 	if (width != layer->width || height != layer->height) {
 		layer->needs_repaint = true;
+		layer->layout_dirty = true;
 	}
 	layer->width = width;
 	layer->height = height;

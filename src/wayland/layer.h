@@ -26,6 +26,7 @@ struct matuwall_layer {
 
 	bool configured;
 	bool needs_repaint;
+	bool layout_dirty;
 	bool closed;
 
 	struct wl_callback *frame_callback;

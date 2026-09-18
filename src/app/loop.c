@@ -87,6 +87,7 @@ static void refresh_panel(struct matuwall_app *app) {
 			app->grid.first_row);
 	}
 	matuwall_app_thumbs_prioritize_visible(app);
+	app->layer.layout_dirty = false;
 }
 
 // Draw only when something actually changed
@@ -263,8 +264,9 @@ static bool pump_events(struct matuwall_app *app) {
 	if (wl_display_dispatch_pending(app->display) < 0) {
 		return false;
 	}
-	// A configure may have resized the surface under the panel
-	refresh_panel(app);
+	if (app->layer.layout_dirty) {
+		refresh_panel(app);
+	}
 
 	if ((pfd[1].revents & POLLIN) != 0) {
 		bool replace_requested;
