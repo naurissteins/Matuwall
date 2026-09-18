@@ -39,6 +39,7 @@ struct matuwall_worker_pool {
 	bool stopping;
 
 	int event_fd;
+	struct matuwall_cache *cache;
 };
 
 static size_t worker_count(void) {
@@ -49,15 +50,16 @@ static size_t worker_count(void) {
 	return online < MAX_WORKERS ? (size_t)online : MAX_WORKERS;
 }
 
-static bool produce(
+static bool produce(const struct matuwall_worker_pool *pool,
 	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
 	// Output-sized previews would bloat the cache for one keypress of value
-	bool cached = job->result.kind == MATUWALL_JOB_THUMB;
+	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
 
 	char key[640];
-	bool have_key = cached && matuwall_cache_key(job->path, job->target_w,
-					  job->target_h, key, sizeof(key));
+	bool have_key = thumbnail && pool->cache != NULL &&
+			matuwall_cache_key(pool->cache, job->path,
+				job->target_w, job->target_h, key, sizeof(key));
 	if (have_key && matuwall_cache_read(key, out)) {
 		*cache_hit = true;
 		return true;
@@ -65,7 +67,7 @@ static bool produce(
 
 	struct matuwall_image decoded;
 	enum matuwall_decode_purpose purpose =
-		cached ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
+		thumbnail ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
 	if (!matuwall_image_decode(&decoded, job->path, job->target_w,
 		    job->target_h, purpose)) {
 		return false;
@@ -126,7 +128,7 @@ static void *worker_main(void *arg) {
 		pthread_mutex_unlock(&pool->mutex);
 
 		struct matuwall_image img;
-		if (produce(job, &img, &job->result.cache_hit)) {
+		if (produce(pool, job, &img, &job->result.cache_hit)) {
 			job->result.ok = true;
 			job->result.pixels = img.pixels;
 			job->result.width = img.width;
@@ -158,6 +160,7 @@ struct matuwall_worker_pool *matuwall_worker_pool_start(
 		free(pool);
 		return NULL;
 	}
+	pool->cache = matuwall_cache_create();
 
 	size_t want = worker_count();
 	for (size_t i = 0; i < want; i++) {
@@ -365,6 +368,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	if (pool->event_fd >= 0) {
 		close(pool->event_fd);
 	}
+	matuwall_cache_destroy(pool->cache);
 	pthread_cond_destroy(&pool->wakeup);
 	pthread_mutex_destroy(&pool->mutex);
 	free(pool);
