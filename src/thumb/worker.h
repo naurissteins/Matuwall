@@ -45,6 +45,7 @@ struct matuwall_worker_pool *matuwall_worker_pool_start(
 
 int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool);
 
+// Paths passed to either submit function are borrowed until pool stop
 bool matuwall_worker_submit(
 	struct matuwall_worker_pool *pool, size_t index, const char *path);
 
