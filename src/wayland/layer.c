@@ -153,6 +153,7 @@ static uint32_t anchor_for(enum matuwall_position position) {
 bool matuwall_layer_create(struct matuwall_layer *layer,
 	const struct matuwall_registry *reg, struct wl_output *output) {
 	*layer = (struct matuwall_layer){
+		.compositor = reg->compositor,
 		.buffer_scale = 1,
 	};
 
@@ -252,13 +253,51 @@ void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	*pixel_height = layer->height * (uint32_t)scale;
 }
 
+static bool update_opaque_region(struct matuwall_layer *layer, bool opaque) {
+	if (!opaque) {
+		if (layer->opaque) {
+			wl_surface_set_opaque_region(layer->wl_surface, NULL);
+			layer->opaque = false;
+			layer->opaque_width = 0;
+			layer->opaque_height = 0;
+		}
+		return true;
+	}
+	if (layer->opaque && layer->opaque_width == layer->width &&
+		layer->opaque_height == layer->height) {
+		return true;
+	}
+	if (layer->compositor == NULL || layer->width == 0 ||
+		layer->height == 0 || layer->width > INT32_MAX ||
+		layer->height > INT32_MAX) {
+		return false;
+	}
+
+	struct wl_region *region =
+		wl_compositor_create_region(layer->compositor);
+	if (region == NULL) {
+		return false;
+	}
+	wl_region_add(
+		region, 0, 0, (int32_t)layer->width, (int32_t)layer->height);
+	wl_surface_set_opaque_region(layer->wl_surface, region);
+	wl_region_destroy(region);
+	layer->opaque = true;
+	layer->opaque_width = layer->width;
+	layer->opaque_height = layer->height;
+	return true;
+}
+
 static bool present(struct matuwall_layer *layer, bool continue_frames,
-	const struct matuwall_damage *damage) {
+	bool opaque, const struct matuwall_damage *damage) {
 	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
 	if (damage == NULL || damage->x0 < 0 || damage->y0 < 0 ||
 		damage->x1 > (int32_t)buffer->width ||
 		damage->y1 > (int32_t)buffer->height ||
 		damage->x0 >= damage->x1 || damage->y0 >= damage->y1) {
+		return false;
+	}
+	if (!update_opaque_region(layer, opaque)) {
 		return false;
 	}
 	if (layer->frame_callback == NULL) {
@@ -314,11 +353,12 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 }
 
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
-	bool continue_frames, const struct matuwall_damage *damage) {
+	bool continue_frames, bool opaque,
+	const struct matuwall_damage *damage) {
 	if (layer->buffer_pool.drawing == NULL) {
 		return false;
 	}
-	return present(layer, continue_frames, damage);
+	return present(layer, continue_frames, opaque, damage);
 }
 
 void matuwall_layer_destroy(struct matuwall_layer *layer) {
@@ -345,5 +385,7 @@ void matuwall_layer_destroy(struct matuwall_layer *layer) {
 
 	// The surface no longer references client-side buffer objects
 	matuwall_buffer_pool_destroy(&layer->buffer_pool);
+	layer->compositor = NULL;
 	layer->configured = false;
+	layer->opaque = false;
 }

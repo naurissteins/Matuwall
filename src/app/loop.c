@@ -164,7 +164,9 @@ static bool render_if_needed(struct matuwall_app *app) {
 	}
 	struct matuwall_damage damage =
 		matuwall_frame_draw(buffer, &frame, app->preview.generation);
-	if (!matuwall_layer_commit_frame(&app->layer, visual.active, &damage)) {
+	bool opaque = frame.backdrop && frame.preview != NULL;
+	if (!matuwall_layer_commit_frame(
+		    &app->layer, visual.active, opaque, &damage)) {
 		matuwall_log_error("render", "failed to commit a frame");
 		return false;
 	}

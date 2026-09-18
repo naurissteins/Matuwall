@@ -14,6 +14,8 @@ struct wp_viewport;
 struct wp_fractional_scale_v1;
 
 struct matuwall_layer {
+	// Non-owning, the registry outlives the layer
+	struct wl_compositor *compositor;
 	struct wl_surface *wl_surface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct wp_viewport *viewport;
@@ -23,10 +25,13 @@ struct matuwall_layer {
 	uint32_t height;
 	uint32_t fractional_scale;
 	int32_t buffer_scale;
+	uint32_t opaque_width;
+	uint32_t opaque_height;
 
 	bool configured;
 	bool needs_repaint;
 	bool layout_dirty;
+	bool opaque;
 	bool closed;
 
 	struct wl_callback *frame_callback;
@@ -49,9 +54,10 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	struct matuwall_buffer **buffer);
 
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
-	bool continue_frames, const struct matuwall_damage *damage);
+	bool continue_frames, bool opaque,
+	const struct matuwall_damage *damage);
 
-// Release surplus buffers once no repaint is waiting
+// release surplus buffers once no repaint is waiting
 void matuwall_layer_collect_idle(struct matuwall_layer *layer);
 
 void matuwall_layer_destroy(struct matuwall_layer *layer);
