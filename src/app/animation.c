@@ -76,11 +76,19 @@ static bool adjacent(const struct matuwall_layout *layout, int64_t previous,
 	return (dy == 0 && dx == step_x) || (dx == 0 && dy == step_y);
 }
 
+static int64_t slot_row(int64_t slot, uint32_t columns) {
+	int64_t row = slot / columns;
+	if (slot < 0 && slot % columns != 0) {
+		row--;
+	}
+	return row;
+}
+
 static bool neighboring_row(const struct matuwall_layout *layout,
 	int64_t previous, int64_t selected) {
 	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
-	int64_t previous_row = previous / columns;
-	int64_t selected_row = selected / columns;
+	int64_t previous_row = slot_row(previous, columns);
+	int64_t selected_row = slot_row(selected, columns);
 	uint64_t distance = previous_row > selected_row
 				    ? (uint64_t)(previous_row - selected_row)
 				    : (uint64_t)(selected_row - previous_row);
