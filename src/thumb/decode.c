@@ -125,15 +125,15 @@ static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	}
 
 	while (cinfo.output_scanline < height) {
-		if (stop_requested(stop)) {
+		JSAMPROW row =
+			(JSAMPROW)(img->pixels +
+				   (size_t)cinfo.output_scanline * width);
+		if (stop_requested(stop) ||
+			jpeg_read_scanlines(&cinfo, &row, 1) != 1) {
 			jpeg_destroy_decompress(&cinfo);
 			matuwall_image_free(img);
 			return false;
 		}
-		JSAMPROW row =
-			(JSAMPROW)(img->pixels +
-				   (size_t)cinfo.output_scanline * width);
-		jpeg_read_scanlines(&cinfo, &row, 1);
 	}
 
 	jpeg_finish_decompress(&cinfo);
