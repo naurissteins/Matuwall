@@ -258,11 +258,20 @@ void matuwall_seat_dispatch_repeat(struct matuwall_seat *seat) {
 	if (seat->repeat_key == 0 || seat->repeat_rate <= 0) {
 		return;
 	}
-	if (matuwall_now_ms() < seat->repeat_at_ms) {
+	int64_t now = matuwall_now_ms();
+	if (now < seat->repeat_at_ms) {
 		return;
 	}
 
-	seat->repeat_at_ms += MS_PER_SECOND / seat->repeat_rate;
+	int interval = MS_PER_SECOND / seat->repeat_rate;
+	if (interval < 1) {
+		interval = 1;
+	}
+	seat->repeat_at_ms += interval;
+	// Discard missed repeats instead of replaying a burst after a stall
+	if (seat->repeat_at_ms <= now) {
+		seat->repeat_at_ms = now + interval;
+	}
 	if (seat->handler.key != NULL) {
 		seat->handler.key(seat->user_data, seat->repeat_sym);
 	}
