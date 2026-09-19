@@ -217,6 +217,8 @@ Each value is a color, as _"#rrggbb"_ or _"#rrggbbaa"_.
 	Hooks are spawned detached and are not waited on, so a slow generator never
 	delays the picker's exit. A command that fails to start logs a warning; its
 	exit status is otherwise ignored. Up to 16 hooks are run.
+	Each command template is limited to 511 bytes before _{path}_ expansion;
+	longer entries are warned about and skipped.
 
 # EXAMPLE
 

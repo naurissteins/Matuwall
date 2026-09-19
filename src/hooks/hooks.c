@@ -112,7 +112,13 @@ static void spawn_detached(char *const argv[]) {
 
 static void run_one(const char *command, const char *path) {
 	char tmpl[MATUWALL_HOOK_MAX];
-	memcpy(tmpl, command, strlen(command) + 1);
+	size_t length = strnlen(command, sizeof(tmpl));
+	if (length == sizeof(tmpl)) {
+		matuwall_log_warn(
+			"hook", "command template is too long; skipped");
+		return;
+	}
+	memcpy(tmpl, command, length + 1);
 
 	char *raw[HOOK_MAX_ARGS];
 	size_t n = tokenize(tmpl, raw, HOOK_MAX_ARGS);
