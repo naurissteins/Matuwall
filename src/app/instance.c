@@ -19,6 +19,7 @@
 
 #define INSTANCE_WAIT_MS 5000u
 #define INSTANCE_RETRY_MS 10
+#define INSTANCE_REPLACE_MS 250
 
 static uint64_t display_hash(void) {
 	const char *display = getenv("WAYLAND_DISPLAY");
@@ -234,7 +235,8 @@ static bool build_socket_path(
 }
 
 static bool wait_for_lease(struct matuwall_instance *instance) {
-	int64_t deadline = matuwall_now_ms() + INSTANCE_WAIT_MS;
+	int64_t next_request = matuwall_now_ms();
+	int64_t deadline = next_request + INSTANCE_WAIT_MS;
 	bool replacement_requested = false;
 	for (;;) {
 		int locked = try_lock(instance->lock_fd);
@@ -247,15 +249,20 @@ static bool wait_for_lease(struct matuwall_instance *instance) {
 		if (locked > 0) {
 			break;
 		}
-		if (request_replace(instance->socket_path)) {
-			replacement_requested = true;
-		}
-		if (matuwall_now_ms() >= deadline) {
+		int64_t now = matuwall_now_ms();
+		if (now >= deadline) {
 			matuwall_log_error("instance",
 				"the existing picker did not close within %u "
 				"ms",
 				INSTANCE_WAIT_MS);
 			return false;
+		}
+		// Retry for a late listener or a new lease owner
+		if (now >= next_request) {
+			if (request_replace(instance->socket_path)) {
+				replacement_requested = true;
+			}
+			next_request = now + INSTANCE_REPLACE_MS;
 		}
 		if (poll(NULL, 0, INSTANCE_RETRY_MS) < 0 && errno != EINTR) {
 			matuwall_log_error("instance",
