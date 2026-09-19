@@ -222,6 +222,9 @@ invocation with its requested options.
 *Escape*
 	Cancel without applying and exit.
 
+Key repeat follows the compositor's settings. Missed repeats after a stall are
+discarded so navigation resumes without a catch-up burst.
+
 # MOUSE
 
 Mouse interaction is disabled by default. Set _input.mouse_ to _true_ to enable
