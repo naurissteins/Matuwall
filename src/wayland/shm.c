@@ -1,5 +1,6 @@
 #include "wayland/shm.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -113,7 +114,11 @@ void matuwall_buffer_destroy(struct matuwall_buffer *buffer) {
 	buffer->released = true;
 }
 
-static void free_buffer(struct matuwall_buffer *buffer) {
+static void free_buffer(
+	struct matuwall_buffer_pool *pool, struct matuwall_buffer *buffer) {
+	if (pool->drawing == buffer) {
+		pool->drawing = NULL;
+	}
 	matuwall_buffer_destroy(buffer);
 	free(buffer);
 }
@@ -130,7 +135,7 @@ static void collect_stale(
 			continue;
 		}
 		*cursor = buffer->next;
-		free_buffer(buffer);
+		free_buffer(pool, buffer);
 	}
 }
 
@@ -171,6 +176,7 @@ enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 }
 
 void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool) {
+	assert(pool->drawing != NULL);
 	pool->drawing->released = false;
 	pool->drawing->fresh = false;
 	pool->drawing = NULL;
@@ -201,7 +207,7 @@ void matuwall_buffer_pool_collect_idle(
 			continue;
 		}
 		*cursor = buffer->next;
-		free_buffer(buffer);
+		free_buffer(pool, buffer);
 	}
 }
 
@@ -209,7 +215,7 @@ void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool) {
 	while (pool->buffers != NULL) {
 		struct matuwall_buffer *buffer = pool->buffers;
 		pool->buffers = buffer->next;
-		free_buffer(buffer);
+		free_buffer(pool, buffer);
 	}
 	pool->drawing = NULL;
 }

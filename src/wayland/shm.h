@@ -40,6 +40,7 @@ enum matuwall_buffer_acquire {
 
 struct matuwall_buffer_pool {
 	struct matuwall_buffer *buffers;
+	// Borrowed from buffers until submission or reclamation
 	struct matuwall_buffer *drawing;
 };
 
@@ -56,6 +57,7 @@ enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 	struct matuwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
 	uint32_t height, struct matuwall_buffer **buffer);
 
+// Requires a live drawing buffer from a successful acquire
 void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool);
 
 void matuwall_buffer_pool_collect_idle(
