@@ -18,8 +18,8 @@ static bool wait_for_configure(struct matuwall_app *app) {
 		return false;
 	}
 	if (!app->layer.configured) {
-		matuwall_log_error(
-			"wayland", "compositor never configured the surface");
+		matuwall_log_error("wayland",
+			"compositor did not provide usable surface dimensions");
 		return false;
 	}
 	return true;
