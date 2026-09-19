@@ -23,6 +23,9 @@ struct matuwall_layer {
 
 	uint32_t width;
 	uint32_t height;
+	// Client choice when a configure leaves a dimension unspecified
+	uint32_t requested_width;
+	uint32_t requested_height;
 	uint32_t fractional_scale;
 	int32_t buffer_scale;
 	uint32_t opaque_width;

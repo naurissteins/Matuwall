@@ -45,6 +45,18 @@ static void handle_configure(void *data,
 	struct matuwall_layer *layer = data;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
+	if (width == 0) {
+		width = layer->requested_width != 0 ? layer->requested_width
+						    : layer->width;
+	}
+	if (height == 0) {
+		height = layer->requested_height != 0 ? layer->requested_height
+						      : layer->height;
+	}
+	if (width == 0 || height == 0) {
+		layer->configured = false;
+		return;
+	}
 	if (width != layer->width || height != layer->height) {
 		layer->needs_repaint = true;
 		layer->layout_dirty = true;
@@ -224,6 +236,8 @@ void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
 		break;
 	}
 
+	layer->requested_width = width;
+	layer->requested_height = height;
 	layer->configured = false;
 	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
 	zwlr_layer_surface_v1_set_anchor(
