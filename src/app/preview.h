@@ -10,7 +10,7 @@
 
 struct matuwall_app;
 
-// Output-sized backdrop with one displayed image and one outstanding decode
+// Capped backdrop with one displayed image and one outstanding decode
 struct matuwall_preview {
 	struct matuwall_image image;
 	size_t shown;

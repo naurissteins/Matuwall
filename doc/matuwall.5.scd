@@ -70,11 +70,15 @@ line. Comments are not allowed inside an array.
 	the newest selection waits for that decode to finish; the existing backdrop,
 	if any, stays visible while it loads.
 
-	The displayed backdrop costs one output-sized image in memory (about 33 MB
-	at 3840x2160, 15 MB at 2560x1440) plus a larger drawing surface. Decoding
-	can temporarily use more memory. Preview adds a few milliseconds to the
-	first frame. Set it to _true_ to enable the full-screen preview instead of
-	the default panel-sized window.
+	Preview images keep the output aspect ratio but use at most 4096 pixels on
+	their long edge. This bounds memory on larger outputs and does not resize or
+	alter the original wallpaper passed to the backend.
+
+	The displayed backdrop costs about 32 MiB at 3840x2160, 14 MiB at
+	2560x1440, and 36 MiB on a 16:9 8K output after the preview cap, plus an
+	output-sized drawing surface. Decoding can temporarily use more memory.
+	Preview adds a few milliseconds to the first frame. Set it to _true_ to
+	enable the full-screen preview instead of the default panel-sized window.
 
 *close_on_focus_loss*
 	Close Matuwall when keyboard focus leaves its surface. Defaults to _false_.
