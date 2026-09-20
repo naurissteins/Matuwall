@@ -10,14 +10,14 @@
 
 struct matuwall_app;
 
-// Output-sized backdrop for the current selection. Only one image is held at
-// a time; it is the largest allocation in the process
+// Output-sized backdrop with one displayed image and one outstanding decode
 struct matuwall_preview {
 	struct matuwall_image image;
 	size_t shown;
 	size_t wanted;
+	// One submitted preview until its result is drained
 	size_t in_flight;
-	// Monotonic ms deadline for the dwell, or 0 when nothing is waiting
+	// Dwell deadline stays pending while an older preview runs
 	int64_t due_ms;
 	uint32_t target_w;
 	uint32_t target_h;
