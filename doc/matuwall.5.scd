@@ -66,10 +66,15 @@ line. Comments are not allowed inside an array.
 	finishes decoding the surface stays transparent, so the real desktop shows
 	through.
 
-	The backdrop costs one output-sized image in memory (about 33 MB at 3840x2160,
-	15 MB at 2560x1440) plus a larger drawing surface, and adds a few
-	milliseconds to the first frame. Set it to _true_ to enable the full-screen
-	preview instead of the default panel-sized window.
+	Only one preview decodes at a time. If selection changes during a decode,
+	the newest selection waits for that decode to finish; the existing backdrop,
+	if any, stays visible while it loads.
+
+	The displayed backdrop costs one output-sized image in memory (about 33 MB
+	at 3840x2160, 15 MB at 2560x1440) plus a larger drawing surface. Decoding
+	can temporarily use more memory. Preview adds a few milliseconds to the
+	first frame. Set it to _true_ to enable the full-screen preview instead of
+	the default panel-sized window.
 
 *close_on_focus_loss*
 	Close Matuwall when keyboard focus leaves its surface. Defaults to _false_.

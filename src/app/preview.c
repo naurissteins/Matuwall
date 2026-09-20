@@ -42,7 +42,9 @@ void matuwall_app_preview_select(
 int matuwall_app_preview_timeout(
 	const struct matuwall_app *app, int64_t now_ms) {
 	const struct matuwall_preview *preview = &app->preview;
-	if (!preview->enabled || preview->due_ms == 0) {
+	// The result fd wakes us to retry a blocked dwell deadline
+	if (!preview->enabled || preview->due_ms == 0 ||
+		preview->in_flight != SIZE_MAX) {
 		return -1;
 	}
 	int64_t left = preview->due_ms - now_ms;
@@ -52,13 +54,12 @@ int matuwall_app_preview_timeout(
 void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 	struct matuwall_preview *preview = &app->preview;
 	if (!preview->enabled || preview->due_ms == 0 ||
-		now_ms < preview->due_ms) {
+		now_ms < preview->due_ms || preview->in_flight != SIZE_MAX) {
 		return;
 	}
 	preview->due_ms = 0;
 
-	if (app->workers == NULL || preview->wanted == preview->shown ||
-		preview->wanted == preview->in_flight) {
+	if (app->workers == NULL || preview->wanted == preview->shown) {
 		return;
 	}
 	if (matuwall_worker_submit_preview(app->workers, preview->wanted,
