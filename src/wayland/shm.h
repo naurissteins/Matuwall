@@ -44,15 +44,6 @@ struct matuwall_buffer_pool {
 	struct matuwall_buffer *drawing;
 };
 
-bool matuwall_buffer_create(struct matuwall_buffer *buffer, struct wl_shm *shm,
-	uint32_t width, uint32_t height);
-
-// Fill every pixel with one premultiplied ARGB8888 color
-void matuwall_buffer_fill(struct matuwall_buffer *buffer, uint32_t color);
-
-// Unmap the pixels and destroy the wl_buffer. Idempotent
-void matuwall_buffer_destroy(struct matuwall_buffer *buffer);
-
 enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 	struct matuwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
 	uint32_t height, struct matuwall_buffer **buffer);

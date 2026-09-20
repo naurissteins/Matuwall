@@ -39,8 +39,8 @@ static bool buffer_size(uint32_t width, uint32_t height, uint32_t *stride_out,
 	return true;
 }
 
-bool matuwall_buffer_create(struct matuwall_buffer *buffer, struct wl_shm *shm,
-	uint32_t width, uint32_t height) {
+static bool matuwall_buffer_create(struct matuwall_buffer *buffer,
+	struct wl_shm *shm, uint32_t width, uint32_t height) {
 	*buffer = (struct matuwall_buffer){0};
 
 	uint32_t stride;
@@ -94,14 +94,7 @@ bool matuwall_buffer_create(struct matuwall_buffer *buffer, struct wl_shm *shm,
 	return true;
 }
 
-void matuwall_buffer_fill(struct matuwall_buffer *buffer, uint32_t color) {
-	size_t count = buffer->size / BYTES_PER_PIXEL;
-	for (size_t i = 0; i < count; i++) {
-		buffer->data[i] = color;
-	}
-}
-
-void matuwall_buffer_destroy(struct matuwall_buffer *buffer) {
+static void matuwall_buffer_destroy(struct matuwall_buffer *buffer) {
 	if (buffer->wl_buffer != NULL) {
 		wl_buffer_destroy(buffer->wl_buffer);
 		buffer->wl_buffer = NULL;
