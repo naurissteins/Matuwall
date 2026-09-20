@@ -192,7 +192,8 @@ invocation with its requested options.
 
 *--clear-cache*
 	Remove cached thumbnails and exit without opening the picker. Wallpapers and
-	configuration are not touched.
+	configuration are not touched. Older cache formats regenerate on demand,
+	so clearing the cache after an upgrade is optional.
 
 *--diagnose*
 	Check the current Matuwall setup and print a compact report without opening

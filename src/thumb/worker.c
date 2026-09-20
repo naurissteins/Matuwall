@@ -64,11 +64,11 @@ static bool produce(const struct matuwall_worker_pool *pool,
 	// Output-sized previews would bloat the cache for one keypress of value
 	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
 
-	char key[640];
+	struct matuwall_cache_key key;
 	bool have_key = thumbnail && pool->cache != NULL &&
 			matuwall_cache_key(pool->cache, job->path,
-				job->target_w, job->target_h, key, sizeof(key));
-	if (have_key && matuwall_cache_read(key, out)) {
+				job->target_w, job->target_h, &key);
+	if (have_key && matuwall_cache_read(&key, out)) {
 		if (stop_requested(pool)) {
 			matuwall_image_free(out);
 			return false;
@@ -101,7 +101,7 @@ static bool produce(const struct matuwall_worker_pool *pool,
 	}
 
 	if (have_key) {
-		matuwall_cache_write(key, out);
+		matuwall_cache_write(&key, out);
 	}
 	return true;
 }
