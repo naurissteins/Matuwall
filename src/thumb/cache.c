@@ -13,8 +13,7 @@
 #define CACHE_VERSION 1u
 #define CACHE_FORMAT_ARGB8888 0u
 
-// Same bound the decoder enforces; never map more than this
-#define MAX_DIMENSION 16384u
+// Keep cached pixel allocations within the decoder's maximum
 #define MAX_PIXELS (1u << 26)
 
 struct cache_header {
