@@ -29,17 +29,6 @@ static double lerp(double from, double to, double progress) {
 	return from + (to - from) * progress;
 }
 
-static struct matuwall_animation_rect lerp_rect(
-	struct matuwall_animation_rect from, struct matuwall_animation_rect to,
-	double progress) {
-	return (struct matuwall_animation_rect){
-		.x = lerp(from.x, to.x, progress),
-		.y = lerp(from.y, to.y, progress),
-		.width = lerp(from.width, to.width, progress),
-		.height = lerp(from.height, to.height, progress),
-	};
-}
-
 static double progress_at(
 	const struct matuwall_animation *animation, int64_t now_ms) {
 	if (animation->kind == MATUWALL_ANIMATION_NONE ||
@@ -140,9 +129,8 @@ void matuwall_animation_init(struct matuwall_animation *animation,
 void matuwall_animation_snap(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
 	size_t selected, int64_t selected_slot, uint32_t first_row) {
-	animation->from_ring = scale_rect(
+	animation->to_ring = scale_rect(
 		item_rect(layout, selected_slot), animation->focus_scale);
-	animation->to_ring = animation->from_ring;
 	animation->from_scroll =
 		matuwall_layout_scroll(layout, panel, selected_slot, first_row);
 	animation->to_scroll = animation->from_scroll;
@@ -169,27 +157,14 @@ void matuwall_animation_sample(const struct matuwall_animation *animation,
 	sample->scroll =
 		lerp(animation->from_scroll, animation->to_scroll, eased);
 
-	if (animation->kind == MATUWALL_ANIMATION_HANDOFF && progress < 1.0) {
-		double fade = smoothstep(progress);
-		sample->rings[0] = (struct matuwall_animation_ring){
-			.rect = animation->from_ring,
-			.alpha = (uint8_t)lround((1.0 - fade) * 255.0),
-		};
-		sample->rings[1] = (struct matuwall_animation_ring){
-			.rect = animation->to_ring,
-			.alpha = (uint8_t)lround(fade * 255.0),
-		};
-		sample->ring_count = 2;
-	} else {
-		sample->rings[0] = (struct matuwall_animation_ring){
-			.rect = animation->kind == MATUWALL_ANIMATION_GLIDE
-					? lerp_rect(animation->from_ring,
-						  animation->to_ring, eased)
-					: animation->to_ring,
-			.alpha = 255,
-		};
-		sample->ring_count = 1;
-	}
+	double ring_alpha = animation->kind == MATUWALL_ANIMATION_FADE_IN
+				    ? smoothstep(progress)
+				    : 1.0;
+	sample->rings[0] = (struct matuwall_animation_ring){
+		.rect = animation->to_ring,
+		.alpha = (uint8_t)lround(ring_alpha * 255.0),
+	};
+	sample->ring_count = 1;
 
 	if (sample->active) {
 		add_focus(sample, animation->from_focus, animation->from_slot,
@@ -215,9 +190,6 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 
 	struct matuwall_animation_sample current;
 	matuwall_animation_sample(animation, now_ms, &current);
-	struct matuwall_animation_rect current_ring =
-		current.ring_count == 1 ? current.rings[0].rect
-					: animation->to_ring;
 	struct matuwall_animation_rect target = scale_rect(
 		item_rect(layout, selected_slot), animation->focus_scale);
 	double target_scroll =
@@ -234,28 +206,13 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 	animation->to_slot = selected_slot;
 	animation->from_focus_scale = previous_scale;
 	animation->to_focus_scale = selected_scale;
-	if (adjacent(layout, previous_slot, selected_slot)) {
-		animation->from_ring = current_ring;
+	if (adjacent(layout, previous_slot, selected_slot) ||
+		neighboring_row(layout, previous_slot, selected_slot)) {
 		animation->from_scroll = current.scroll;
-		animation->kind = MATUWALL_ANIMATION_GLIDE;
 	} else {
-		if (neighboring_row(layout, previous_slot, selected_slot)) {
-			animation->from_ring = current_ring;
-			animation->from_scroll = current.scroll;
-		} else {
-			// Preserve the old ring position across distant jumps
-			if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-				current_ring.x +=
-					target_scroll - current.scroll;
-			} else {
-				current_ring.y +=
-					target_scroll - current.scroll;
-			}
-			animation->from_ring = current_ring;
-			animation->from_scroll = target_scroll;
-		}
-		animation->kind = MATUWALL_ANIMATION_HANDOFF;
+		animation->from_scroll = target_scroll;
 	}
+	animation->kind = MATUWALL_ANIMATION_FADE_IN;
 }
 
 double matuwall_animation_scroll(
