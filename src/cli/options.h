@@ -82,6 +82,8 @@ bool matuwall_cli_parse(int argc, char *argv[],
 	struct matuwall_cli_options *options, char *err, size_t err_size);
 void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	struct matuwall_config *config);
+void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
+	const struct matuwall_config *config);
 void matuwall_cli_usage(FILE *out);
 
 #endif
