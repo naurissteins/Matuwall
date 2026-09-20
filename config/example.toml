@@ -1,114 +1,109 @@
 # Matuwall configuration
 # Place this file at $XDG_CONFIG_HOME/matuwall/config.toml
 # (or ~/.config/matuwall/config.toml). Every key is optional, and the values
-# below are the defaults. A missing file runs with these same defaults.
+# below are the defaults. A missing file runs with these same defaults
 
 [general]
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
 directory = "~/Pictures/Wallpapers"
 
-# Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto".
-# "auto" probes sweetbg then awww and picks the first one actually running.
+# Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto"
+# "auto" probes sweetbg then awww and picks the first one actually running
 backend = "awww"
 
 [window]
-# Show the selected wallpaper full-screen behind the grid. Nothing is applied
-# until you press Enter. Costs one output-sized image in memory; set to false
-# for a panel-sized window with no backdrop.
+# Show the selected wallpaper full-screen behind the grid
 preview = false
 
-# Close when keyboard focus moves away from Matuwall. Set to false to keep the
-# picker open while using another output.
+# Close when keyboard focus moves away from Matuwall
 close_on_focus_loss = false
 
-# Placement on screen: "center", "left", "right", "top", or "bottom". With
-# preview on, this places the panel inside the full-screen surface.
+# Placement on screen: "center", "left", "right", "top" or "bottom"
 position = "bottom"
 
-# Panel color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha).
+# Panel color as "#rrggbb" (opaque) or "#rrggbbaa" (with alpha)
 background = "#11111b"
 
-# Gap in pixels between the tiles and the panel edge.
+# Gap in pixels between the tiles and the panel edge
 margin = 34
 
-# Gap in pixels between an edge-positioned panel and the monitor edge.
+# Gap in pixels between an edge positioned panel and monitor edge
 edge_margin = 24
 
-# Panel corner radius in pixels.
+# Panel corner radius in pixels
 radius = 40
 
 [input]
-# Enable hover selection, wheel navigation, and left-click apply. Disabled by
-# default so Matuwall is controlled only from the keyboard.
+# Enable hover selection, wheel navigation and left-click apply
 mouse = false
 
 [animation]
-# Duration of navigation transitions in milliseconds. Zero disables them.
+# Duration of navigation transitions in milliseconds. Set to zero to disable
 navigation_ms = 410
 
-# Selected-thumbnail enlargement in percent. Zero disables it.
+# Selected thumbnail enlargement in percent. Set to zero to disable it
 zoom_percent = 10
 
 [grid]
-# Maximum number of tile columns. Fewer are used on narrow outputs.
+# Maximum number of tile columns. Fewer are used on narrow outputs
 columns = 5
 
-# Gap in pixels between tiles.
+# Gap in pixels between tiles
 spacing = 16
 
-# Tile corner radius in pixels.
+# Tile corner radius in pixels
 radius = 20
 
-# Thumbnail border width in pixels. Zero disables the border.
+# Thumbnail border width in pixels. Set to zero to disable the border
 border_width = 0
 
-# Soft shadow width outside thumbnail edges. Zero disables the shadow.
+# Soft shadow width outside thumbnail edges. Set to zero to disable the shadow
 shadow_width = 12
 
-# Selection ring width in pixels. Zero disables the ring.
+# Selection ring width in pixels. Set to zero to disable the ring
 ring_width = 0
 
-# Maximum rows kept visible. Fewer are used on short outputs.
+# Maximum rows kept visible. Fewer are used on short outputs
 visible_rows = 1
 
 # Turn the grid into a centered carousel. Top, bottom, and center use a
-# horizontal row; left and right use a vertical column. In this mode columns
+# horizontal row, left and right use a vertical column. In this mode columns
 # controls the maximum visible tiles and visible_rows is ignored. Navigation
-# wraps continuously, repeating thumbnails as needed to keep the strip full.
+# wraps continuously, repeating thumbnails as needed to keep the strip full
 carousel = true
 
 # Let neighboring thumbnails peek into the panel margin. Disabled by default
-# so carousel and grid edges stay clean.
+# so carousel and grid edges stay clean
 edge_peek = false
 
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing
-# them regenerates thumbnails at the new size.
+# them regenerates thumbnails at the new size
 width = 300
 height = 169
 
 [colors]
-# Placeholder tile shown until a thumbnail is ready.
+# Placeholder tile shown until a thumbnail is ready
 tile = "#313244ff"
 
-# Border drawn inside every thumbnail.
+# Border drawn inside every thumbnail
 border = "#585b70ff"
 
-# Shadow fading outward from thumbnail edges.
+# Shadow fading outward from thumbnail edges
 shadow = "#00000066"
 
-# Selection ring around the focused tile.
+# Selection ring around the focused tile
 ring = "#f2cdcdff"
 
-# Loading dot pulsing on tiles that are still decoding.
+# Loading dot pulsing on tiles that are still decoding
 spinner = "#cdd0e6ff"
 
 [hooks]
 # Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme.
 # {path} expands to the absolute wallpaper path. Each command is split on
 # whitespace and run directly (no shell), so shell syntax like pipes, globs, or
-# quotes has no effect; {path} is always passed as a single argument, so spaces
-# in a filename are safe. Hooks run detached and are not waited on.
+# quotes has no effect! {path} is always passed as a single argument, so spaces
+# in a filename are safe. Hooks run detached and are not waited on
 # on_apply = [
 #   "matugen image {path}",
 #   "wal -i {path} -n",

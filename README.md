@@ -13,19 +13,19 @@ Simple, fast and lightweight wallpaper picker for Wayland
 
 
 > [!IMPORTANT]
-> Matuwall is a C rewrite of the original GTK and Python application
+> Matuwall is a C rewrite of my original GTK/Python application
 
 ---
 
 ## 🔥 Features
-
-- Asynchronous JPEG, PNG, and WebP thumbnails with a fast on-disk cache
-- Full-screen wallpaper previews without applying the selection
-- Configurable grid layout, colors, thumbnail edge shadows, placement, output and fractional scaling
-- Optional centered carousel layout for horizontal or vertical scrolling
-- Native `sweetbg` and `awww` backends with automatic detection
-- Keyboard-only by default, with optional mouse controls
-- Safe, detached post-apply hooks for tools such as Matugen and Pywal
+- Nativelly supports `sweetbg` and `awww` daemons
+- Opens before image decoding starts
+- Loads thumbnails asynchronously
+- Uses a fast raw thumbnail cache
+- Supports regular grid and carousel layouts
+- Handles fractional scaling and multiple outputs
+- Full-screen wallpaper previews without applying
+- Hooks for tools such as `Matugen` and `Pywal`
 
 ## Install
 
@@ -34,7 +34,11 @@ Simple, fast and lightweight wallpaper picker for Wayland
 On Arch Linux, install Matuwall from the AUR:
 
 ```bash
-yay -S matuwall
+# prebuilt release package (recommended)
+yay -S matuwall-bin
+
+# or latest git build
+yay -S matuwall-git
 ```
 
 ## Build from source
@@ -44,10 +48,9 @@ ninja -C build
 sudo ninja -C build install
 ```
 
-Build from source requires a C11 compiler, Meson and Ninja. `scdoc` is optional and only needed
-to build the man page
+Check the [installation wiki](https://github.com/naurissteins/Matuwall/wiki/Installation) for more information
 
-## Run
+## CLI Commands
 
 ```kdl
 matuwall                                         // use the config or built-in defaults
@@ -85,40 +88,37 @@ matuwall --no-hooks                              // apply without running hooks
 matuwall --hook 'matugen image {path}'           // replace hooks for one run
 ```
 
+### Few examples
+
+```bash
+# Preview with carousel, bottom position
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b auto -c 5 -w 280 --height 150 -p bottom --background "#181825cc"    
+
+# Preview with carousel, left position
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b auto -c 3 -w 480 --height 250 -p left  --background "#181825cc"  
+
+# Preview with no carousel, center position
+matuwall -d ~/Pictures/Wallpapers --preview --no-carousel -b auto -c 3 -r 5 -w 280 --height 150 -p center  --background "#181825cc"
+```
+
+See full [CLI reference](https://github.com/naurissteins/Matuwall/wiki/CLI-Reference)
+
 Run `matuwall --help` for every option
 
 > [!IMPORTANT]
 > Command-line options do not change the config file
 
-## Controls
-- Arrows or `h` `j` `k` `l`
-- `Page Up`, `Page Down` | Move one page |
-- `Home`, `g` | First wallpaper |
-- `End`, `G` | Last wallpaper |
-- `Enter` | Apply and exit |
-- `Escape` | Cancel and exit |
-
-In carousel mode, orthogonal arrows and page movement are disabled!
-
 ## Configure
 
-Config file is optional. It is read from `~/.config/matuwall/config.toml` or `$XDG_CONFIG_HOME/matuwall/config.toml`.
+If you don't want to use CLI commands, you can simply configure matuwall via a config file: `~/.config/matuwall/config.toml` or `$XDG_CONFIG_HOME/matuwall/config.toml`
+You can also use both CLI and config file together. Set fundamental configs via config file and overrides via CLI
 
-See [`config/example.toml`](config/example.toml) for comments and `matuwall(5)`
-for the full reference.
+See example config [`config/example.toml`](config/example.toml)
 
-## Backends
+## Wallpaper daemons
 
 The built-in default is `awww`. Set `backend = "sweetbg"` or use `-b sweetbg`
 to select sweetbg instead.
-
-| Value | Command |
-| --- | --- |
-| `sweetbg` | `sweetbg img <path>` |
-| `awww` | `awww img -- <path>` |
-| `auto` | First running backend: sweetbg, then awww |
-
-Wallpaper paths are passed as arguments, never through a shell.
 
 ## Hooks
 
@@ -127,19 +127,15 @@ path
 
 ```toml
 [hooks]
-on_apply = ["matugen image {path}"]
+on_apply = ["matugen image {path} --source-color-index 1"]
 ```
 
-Hooks run detached and never through a shell. Pipes, globs, variables, and
+Hooks run detached and never through a shell. Pipes, globs, variables and
 shell quoting are not supported
 
 ```sh
 matuwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
-
-The first `--hook` replaces the configured list and later occurrences append.
-Hook options are processed left to right, so `--no-hooks` clears any `--hook`
-options before it while a later `--hook` starts a new list.
 
 ## Maintenance
 
@@ -148,10 +144,6 @@ matuwall --diagnose      # check config, Wayland, backends, hooks and paths
 matuwall --clear-cache   # remove thumbnails only
 ```
 
-| Data | Default path |
-| --- | --- |
-| Last selection | `~/.local/state/matuwall/last-selection` |
-| Logs | `~/.local/state/matuwall/matuwall.log` |
-| Thumbnails | `~/.cache/matuwall/thumbs/` |
+Last selection `~/.local/state/matuwall/last-selection`, logs `~/.local/state/matuwall/matuwall.log`, and cached thumbnails `~/.cache/matuwall/thumbs/`
 
 Logs are limited to 256 KiB each, the current log and two rotations are kept
