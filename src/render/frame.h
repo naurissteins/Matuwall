@@ -30,7 +30,7 @@ struct matuwall_frame {
 	size_t item_count;
 	int64_t carousel_slot;
 	double scroll;
-	struct matuwall_frame_ring rings[2];
+	struct matuwall_frame_ring rings[1];
 	size_t ring_count;
 	struct matuwall_frame_focus focuses[2];
 	size_t focus_count;

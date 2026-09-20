@@ -27,7 +27,7 @@ struct matuwall_animation_focus {
 
 struct matuwall_animation_sample {
 	double scroll;
-	struct matuwall_animation_ring rings[2];
+	struct matuwall_animation_ring rings[1];
 	size_t ring_count;
 	struct matuwall_animation_focus focuses[2];
 	size_t focus_count;
@@ -36,8 +36,7 @@ struct matuwall_animation_sample {
 
 enum matuwall_animation_kind {
 	MATUWALL_ANIMATION_NONE,
-	MATUWALL_ANIMATION_GLIDE,
-	MATUWALL_ANIMATION_HANDOFF,
+	MATUWALL_ANIMATION_FADE_IN,
 };
 
 // Visual state only; grid selection remains authoritative
@@ -46,7 +45,6 @@ struct matuwall_animation {
 	int64_t started_ms;
 	double from_scroll;
 	double to_scroll;
-	struct matuwall_animation_rect from_ring;
 	struct matuwall_animation_rect to_ring;
 	double focus_scale;
 	size_t from_focus;
