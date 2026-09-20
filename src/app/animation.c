@@ -156,7 +156,7 @@ void matuwall_animation_snap(struct matuwall_animation *animation,
 	animation->initialized = true;
 }
 
-void matuwall_animation_sample(struct matuwall_animation *animation,
+void matuwall_animation_sample(const struct matuwall_animation *animation,
 	int64_t now_ms, struct matuwall_animation_sample *sample) {
 	*sample = (struct matuwall_animation_sample){0};
 	if (!animation->initialized) {
@@ -200,15 +200,6 @@ void matuwall_animation_sample(struct matuwall_animation *animation,
 	} else {
 		add_focus(sample, animation->to_focus, animation->to_slot,
 			animation->focus_scale);
-	}
-	if (!sample->active) {
-		animation->from_ring = animation->to_ring;
-		animation->from_scroll = animation->to_scroll;
-		animation->from_focus = animation->to_focus;
-		animation->from_slot = animation->to_slot;
-		animation->from_focus_scale = animation->focus_scale;
-		animation->to_focus_scale = animation->focus_scale;
-		animation->kind = MATUWALL_ANIMATION_NONE;
 	}
 }
 
@@ -268,7 +259,7 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 }
 
 double matuwall_animation_scroll(
-	struct matuwall_animation *animation, int64_t now_ms) {
+	const struct matuwall_animation *animation, int64_t now_ms) {
 	struct matuwall_animation_sample sample;
 	matuwall_animation_sample(animation, now_ms, &sample);
 	return sample.scroll;

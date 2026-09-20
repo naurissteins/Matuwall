@@ -55,6 +55,7 @@ struct matuwall_animation {
 	int64_t to_slot;
 	double from_focus_scale;
 	double to_focus_scale;
+	// Transition type, not liveness; progress determines completion
 	enum matuwall_animation_kind kind;
 	bool initialized;
 };
@@ -71,10 +72,10 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 	size_t previous, int64_t previous_slot, size_t selected,
 	int64_t selected_slot, uint32_t first_row, int64_t now_ms);
 
-void matuwall_animation_sample(struct matuwall_animation *animation,
+void matuwall_animation_sample(const struct matuwall_animation *animation,
 	int64_t now_ms, struct matuwall_animation_sample *sample);
 
 double matuwall_animation_scroll(
-	struct matuwall_animation *animation, int64_t now_ms);
+	const struct matuwall_animation *animation, int64_t now_ms);
 
 #endif
