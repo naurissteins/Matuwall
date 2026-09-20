@@ -4,9 +4,33 @@
 
 #include "app/app.h"
 
+#define PREVIEW_LONG_EDGE_MAX 4096u
 // Settle time before a decode is worth starting; holding an arrow key must not
 // queue one full-resolution decode per step
 #define PREVIEW_DWELL_MS 60
+
+static void cap_preview_target(uint32_t *width, uint32_t *height) {
+	if (*width <= PREVIEW_LONG_EDGE_MAX &&
+		*height <= PREVIEW_LONG_EDGE_MAX) {
+		return;
+	}
+
+	if (*width >= *height) {
+		uint32_t scaled =
+			(uint32_t)(((uint64_t)*height * PREVIEW_LONG_EDGE_MAX +
+					   *width / 2) /
+				   *width);
+		*width = PREVIEW_LONG_EDGE_MAX;
+		*height = scaled > 0 ? scaled : 1;
+	} else {
+		uint32_t scaled =
+			(uint32_t)(((uint64_t)*width * PREVIEW_LONG_EDGE_MAX +
+					   *height / 2) /
+				   *height);
+		*width = scaled > 0 ? scaled : 1;
+		*height = PREVIEW_LONG_EDGE_MAX;
+	}
+}
 
 void matuwall_app_preview_init(struct matuwall_app *app) {
 	struct matuwall_preview *preview = &app->preview;
@@ -20,12 +44,14 @@ void matuwall_app_preview_init(struct matuwall_app *app) {
 		return;
 	}
 
-	// Physical pixels: the backdrop covers the buffer one to one
+	// Bound retained backdrop pixels while preserving the output aspect
 	matuwall_layer_buffer_size(
 		&app->layer, &preview->target_w, &preview->target_h);
 	if (preview->target_w == 0 || preview->target_h == 0) {
 		preview->enabled = false;
+		return;
 	}
+	cap_preview_target(&preview->target_w, &preview->target_h);
 }
 
 void matuwall_app_preview_select(
