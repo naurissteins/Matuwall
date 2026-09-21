@@ -3,6 +3,8 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # re-publish assets for an existing tag without re-tagging
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -66,9 +68,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "Matuwall $GITHUB_REF_NAME" \
-            --generate-notes \
-            --verify-tag \
-            build-release/meson-dist/*.tar.xz \
-            build-release/meson-dist/*.tar.xz.sha256sum
+          assets=(build-release/meson-dist/*.tar.xz
+                  build-release/meson-dist/*.tar.xz.sha256sum)
+          # Re-runs replace the assets instead of failing on an existing release
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber "${assets[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Matuwall $GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag \
+              "${assets[@]}"
+          fi
