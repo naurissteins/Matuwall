@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    permissions:
+      # Needed to create the release and upload assets
+      contents: write
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git meson ninja pkgconf \
+            wayland wayland-protocols libxkbcommon \
+            libpng libjpeg-turbo libwebp scdoc github-cli
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # meson dist and release notes need the full history
+          fetch-depth: 0
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Verify the tag matches meson.build
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          project="$(meson introspect --projectinfo meson.build | grep -oP '"version":\s*"\K[^"]+' | head -1)"
+          if [ "$tag" != "$project" ]; then
+            printf 'tag %s does not match project version %s\n' "$tag" "$project" >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          meson setup build-release --werror -Dbuildtype=release
+          ninja -C build-release
+
+      - name: Create source tarball
+        run: meson dist -C build-release --no-tests --formats xztar
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Matuwall $GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag \
+            build-release/meson-dist/*.tar.xz \
+            build-release/meson-dist/*.tar.xz.sha256sum
