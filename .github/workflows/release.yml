@@ -45,11 +45,22 @@ jobs:
 
       - name: Build
         run: |
-          meson setup build-release --werror -Dbuildtype=release
+          meson setup build-release --werror -Dbuildtype=release --prefix=/usr
           ninja -C build-release
 
       - name: Create source tarball
         run: meson dist -C build-release --no-tests --formats xztar
+
+      - name: Create binary tarball
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="matuwall-$version-x86_64-linux.tar.xz"
+          stage="$(mktemp -d)"
+          DESTDIR="$stage" meson install -C build-release --strip
+          # Archive the usr/ prefix itself so it unpacks straight over /
+          tar -C "$stage" -cJf "build-release/meson-dist/$name" usr
+          cd build-release/meson-dist
+          sha256sum "$name" > "$name.sha256sum"
 
       - name: Publish
         env:
