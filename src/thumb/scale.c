@@ -51,6 +51,47 @@ static uint32_t average_box(const struct matuwall_image *src, uint32_t sx0,
 	return 0xff000000u | rr << 16 | gr << 8 | br;
 }
 
+// One source span per output pixel along an axis
+struct span {
+	uint32_t start;
+	uint32_t count;
+};
+
+static struct span axis_span(
+	uint32_t origin, uint32_t extent, uint32_t output, uint32_t index) {
+	uint32_t start = origin + (uint32_t)((uint64_t)index * extent / output);
+	uint32_t end =
+		origin + (uint32_t)((uint64_t)(index + 1) * extent / output);
+	if (end <= start) {
+		end = start + 1;
+	}
+	if (end > origin + extent) {
+		end = origin + extent;
+	}
+	return (struct span){.start = start, .count = end - start};
+}
+
+static void scale_row(const struct matuwall_image *src,
+	const struct span *columns, bool single_column, struct span rows,
+	uint32_t *dst_row, uint32_t out_w) {
+	// A 1x1 box is the source pixel; averaging it changes nothing
+	if (single_column && rows.count == 1) {
+		const uint32_t *src_row =
+			src->pixels + (size_t)rows.start * src->width;
+		for (uint32_t ox = 0; ox < out_w; ox++) {
+			dst_row[ox] =
+				0xff000000u |
+				(src_row[columns[ox].start] & 0x00ffffffu);
+		}
+		return;
+	}
+	for (uint32_t ox = 0; ox < out_w; ox++) {
+		dst_row[ox] = average_box(src, columns[ox].start,
+			columns[ox].start + columns[ox].count, rows.start,
+			rows.start + rows.count);
+	}
+}
+
 bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	uint32_t out_h, struct matuwall_image *out, const atomic_bool *stop) {
 	*out = (struct matuwall_image){0};
@@ -70,40 +111,31 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	matuwall_cover_crop(
 		src->width, src->height, out_w, out_h, &cx, &cy, &cw, &ch);
 
+	// Column spans never vary by row, so they are derived once
+	struct span *columns = malloc((size_t)out_w * sizeof(*columns));
 	uint32_t *pixels = malloc(pixel_count * sizeof(uint32_t));
-	if (pixels == NULL) {
+	if (columns == NULL || pixels == NULL) {
+		free(columns);
+		free(pixels);
 		return false;
+	}
+	bool single_column = true;
+	for (uint32_t ox = 0; ox < out_w; ox++) {
+		columns[ox] = axis_span(cx, cw, out_w, ox);
+		single_column = single_column && columns[ox].count == 1;
 	}
 
 	for (uint32_t oy = 0; oy < out_h; oy++) {
 		if (stop_requested(stop)) {
+			free(columns);
 			free(pixels);
 			return false;
 		}
-		uint32_t sy0 = cy + (uint32_t)((uint64_t)oy * ch / out_h);
-		uint32_t sy1 = cy + (uint32_t)((uint64_t)(oy + 1) * ch / out_h);
-		if (sy1 <= sy0) {
-			sy1 = sy0 + 1;
-		}
-		if (sy1 > cy + ch) {
-			sy1 = cy + ch;
-		}
-
-		uint32_t *dst_row = pixels + (size_t)oy * out_w;
-		for (uint32_t ox = 0; ox < out_w; ox++) {
-			uint32_t sx0 =
-				cx + (uint32_t)((uint64_t)ox * cw / out_w);
-			uint32_t sx1 = cx + (uint32_t)((uint64_t)(ox + 1) * cw /
-						       out_w);
-			if (sx1 <= sx0) {
-				sx1 = sx0 + 1;
-			}
-			if (sx1 > cx + cw) {
-				sx1 = cx + cw;
-			}
-			dst_row[ox] = average_box(src, sx0, sx1, sy0, sy1);
-		}
+		scale_row(src, columns, single_column,
+			axis_span(cy, ch, out_h, oy),
+			pixels + (size_t)oy * out_w, out_w);
 	}
+	free(columns);
 
 	out->width = out_w;
 	out->height = out_h;
