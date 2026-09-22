@@ -2,10 +2,12 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
 
 #include "util/log.h"
 
@@ -128,4 +130,25 @@ void matuwall_dirscan_finish(struct matuwall_dirscan *scan) {
 	}
 	free((void *)scan->paths);
 	*scan = (struct matuwall_dirscan){0};
+}
+
+// scan stays stat-free, one selected entry is checked on the way out
+bool matuwall_dirscan_resolve(const char *path, char *resolved) {
+	if (realpath(path, resolved) == NULL) {
+		matuwall_log_error("wallpapers", "cannot resolve %s: %s", path,
+			strerror(errno));
+		return false;
+	}
+	struct stat st;
+	if (stat(resolved, &st) != 0) {
+		matuwall_log_error("wallpapers", "cannot read %s: %s", resolved,
+			strerror(errno));
+		return false;
+	}
+	if (!S_ISREG(st.st_mode)) {
+		matuwall_log_error(
+			"wallpapers", "%s is not a regular file", resolved);
+		return false;
+	}
+	return true;
 }
