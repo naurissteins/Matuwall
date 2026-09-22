@@ -51,13 +51,7 @@ static uint32_t average_box(const struct matuwall_image *src, uint32_t sx0,
 	return 0xff000000u | rr << 16 | gr << 8 | br;
 }
 
-// One source span per output pixel along an axis
-struct span {
-	uint32_t start;
-	uint32_t count;
-};
-
-static struct span axis_span(
+struct matuwall_span matuwall_axis_span(
 	uint32_t origin, uint32_t extent, uint32_t output, uint32_t index) {
 	uint32_t start = origin + (uint32_t)((uint64_t)index * extent / output);
 	uint32_t end =
@@ -68,12 +62,12 @@ static struct span axis_span(
 	if (end > origin + extent) {
 		end = origin + extent;
 	}
-	return (struct span){.start = start, .count = end - start};
+	return (struct matuwall_span){.start = start, .count = end - start};
 }
 
 static void scale_row(const struct matuwall_image *src,
-	const struct span *columns, bool single_column, struct span rows,
-	uint32_t *dst_row, uint32_t out_w) {
+	const struct matuwall_span *columns, bool single_column,
+	struct matuwall_span rows, uint32_t *dst_row, uint32_t out_w) {
 	// A 1x1 box is the source pixel; averaging it changes nothing
 	if (single_column && rows.count == 1) {
 		const uint32_t *src_row =
@@ -112,7 +106,8 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 		src->width, src->height, out_w, out_h, &cx, &cy, &cw, &ch);
 
 	// Column spans never vary by row, so they are derived once
-	struct span *columns = malloc((size_t)out_w * sizeof(*columns));
+	struct matuwall_span *columns =
+		malloc((size_t)out_w * sizeof(*columns));
 	uint32_t *pixels = malloc(pixel_count * sizeof(uint32_t));
 	if (columns == NULL || pixels == NULL) {
 		free(columns);
@@ -121,7 +116,7 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 	}
 	bool single_column = true;
 	for (uint32_t ox = 0; ox < out_w; ox++) {
-		columns[ox] = axis_span(cx, cw, out_w, ox);
+		columns[ox] = matuwall_axis_span(cx, cw, out_w, ox);
 		single_column = single_column && columns[ox].count == 1;
 	}
 
@@ -132,7 +127,7 @@ bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
 			return false;
 		}
 		scale_row(src, columns, single_column,
-			axis_span(cy, ch, out_h, oy),
+			matuwall_axis_span(cy, ch, out_h, oy),
 			pixels + (size_t)oy * out_w, out_w);
 	}
 	free(columns);
