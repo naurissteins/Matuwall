@@ -83,7 +83,14 @@ static bool matuwall_buffer_create(struct matuwall_buffer *buffer,
 		return false;
 	}
 
-	wl_buffer_add_listener(buffer->wl_buffer, &buffer_listener, buffer);
+	// without release event the buffer could never be reused
+	if (wl_buffer_add_listener(
+		    buffer->wl_buffer, &buffer_listener, buffer) < 0) {
+		wl_buffer_destroy(buffer->wl_buffer);
+		buffer->wl_buffer = NULL;
+		munmap(data, size);
+		return false;
+	}
 	buffer->data = data;
 	buffer->size = size;
 	buffer->width = width;

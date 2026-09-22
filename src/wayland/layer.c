@@ -319,8 +319,13 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 		if (layer->frame_callback == NULL) {
 			return false;
 		}
-		wl_callback_add_listener(
-			layer->frame_callback, &frame_listener, layer);
+		// without done event frame pacing would never reopen
+		if (wl_callback_add_listener(layer->frame_callback,
+			    &frame_listener, layer) < 0) {
+			wl_callback_destroy(layer->frame_callback);
+			layer->frame_callback = NULL;
+			return false;
+		}
 	}
 
 	if (layer->viewport != NULL && layer->fractional_scale > 0) {

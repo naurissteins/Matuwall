@@ -332,7 +332,22 @@ static enum parse_result parse_override(int option, const char *value,
 	}
 }
 
-static enum parse_result parse_control(int option, const char *token,
+// cache and diagnose actions never mix with overrides, getopt_long also
+// accepts their abbreviations, so argc is the only reliable "alone" test
+static enum parse_result parse_alone(int option, int argc,
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	bool clear = option == OPTION_CLEAR_CACHE;
+	if (argc != 2) {
+		snprintf(err, err_size, "%s must be used alone",
+			clear ? "--clear-cache" : "--diagnose");
+		return PARSE_ERROR;
+	}
+	options->action =
+		clear ? MATUWALL_CLI_CLEAR_CACHE : MATUWALL_CLI_DIAGNOSE;
+	return PARSE_DONE;
+}
+
+static enum parse_result parse_control(int option, int argc, const char *token,
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
 	case 'h':
@@ -342,11 +357,8 @@ static enum parse_result parse_control(int option, const char *token,
 		options->action = MATUWALL_CLI_VERSION;
 		return PARSE_DONE;
 	case OPTION_CLEAR_CACHE:
-		snprintf(err, err_size, "--clear-cache must be used alone");
-		return PARSE_ERROR;
 	case OPTION_DIAGNOSE:
-		snprintf(err, err_size, "--diagnose must be used alone");
-		return PARSE_ERROR;
+		return parse_alone(option, argc, options, err, err_size);
 	case ':':
 		snprintf(err, err_size, "option '%s' requires a value", token);
 		return PARSE_ERROR;
@@ -362,15 +374,6 @@ static enum parse_result parse_control(int option, const char *token,
 bool matuwall_cli_parse(int argc, char *argv[],
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	*options = (struct matuwall_cli_options){0};
-
-	if (argc == 2 && strcmp(argv[1], "--clear-cache") == 0) {
-		options->action = MATUWALL_CLI_CLEAR_CACHE;
-		return true;
-	}
-	if (argc == 2 && strcmp(argv[1], "--diagnose") == 0) {
-		options->action = MATUWALL_CLI_DIAGNOSE;
-		return true;
-	}
 
 	opterr = 0;
 	optind = 1;
@@ -391,7 +394,7 @@ bool matuwall_cli_parse(int argc, char *argv[],
 		}
 
 		result = parse_control(
-			option, argv[optind - 1], options, err, err_size);
+			option, argc, argv[optind - 1], options, err, err_size);
 		if (result == PARSE_ERROR) {
 			return false;
 		}

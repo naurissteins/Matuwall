@@ -88,11 +88,14 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 	if (app->workers == NULL || preview->wanted == preview->shown) {
 		return;
 	}
-	if (matuwall_worker_submit_preview(app->workers, preview->wanted,
+	// only a job allocation can fail, re-arm so the backdrop catches up
+	if (!matuwall_worker_submit_preview(app->workers, preview->wanted,
 		    app->scan.paths[preview->wanted], preview->target_w,
 		    preview->target_h)) {
-		preview->in_flight = preview->wanted;
+		preview->due_ms = now_ms + PREVIEW_DWELL_MS;
+		return;
 	}
+	preview->in_flight = preview->wanted;
 }
 
 void matuwall_app_preview_result(
