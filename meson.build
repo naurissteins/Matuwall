@@ -1,7 +1,7 @@
 project(
 	'matuwall',
 	'c',
-	version: '0.2.0',
+	version: '0.2.1',
 	meson_version: '>= 0.60.0',
 	default_options: [
 		'c_std=c11',
