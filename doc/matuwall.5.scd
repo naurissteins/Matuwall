@@ -22,8 +22,8 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 ## [general]
 
 *directory*
-	Wallpaper directory. _~_ expands to _$HOME_. Defaults to
-	_"~/Pictures/Wallpapers"_.
+	Wallpaper directory. _~_ expands to _$HOME_; relative paths use the current
+	directory. Defaults to _"~/Pictures/Wallpapers"_.
 
 *backend*
 	Wallpaper backend: _"awww"_, _"sweetbg"_, or _"auto"_. Defaults to

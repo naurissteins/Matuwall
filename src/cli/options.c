@@ -135,7 +135,7 @@ static bool parse_path_override(const char *name, const char *value, char *out,
 	if (!matuwall_config_expand_path(value, out, out_size)) {
 		snprintf(err, err_size,
 			"invalid %s '%s': path is empty, too long, or "
-			"HOME is unset",
+			"cannot be resolved",
 			name, value);
 		return false;
 	}

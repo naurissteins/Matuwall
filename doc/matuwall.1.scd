@@ -58,7 +58,8 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 	parse successfully.
 
 *-d* _DIRECTORY_, *--directory* _DIRECTORY_
-	Scan _DIRECTORY_ for wallpapers. _~_ expands to _$HOME_.
+	Scan _DIRECTORY_ for wallpapers. _~_ expands to _$HOME_; relative paths use
+	the current directory.
 
 *--height* _HEIGHT_
 	Set _thumbnail.height_ to an integer from 1 to 16384.
