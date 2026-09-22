@@ -158,17 +158,24 @@ static void png_buffers_free(struct png_decode_buffers *buffers) {
 	*buffers = (struct png_decode_buffers){0};
 }
 
+// rows are packed RGB, sums stay in B, G, R planes for write_png_row
 static void accumulate_png_row(const png_byte *row, uint64_t *sums,
 	const struct matuwall_span *columns, uint32_t target_w) {
 	for (uint32_t ox = 0; ox < target_w; ox++) {
-		uint32_t sx0 = columns[ox].start;
-		uint32_t sx1 = sx0 + columns[ox].count;
-		for (uint32_t sx = sx0; sx < sx1; sx++) {
-			const uint8_t *p = row + (size_t)sx * 4;
-			sums[ox] += p[0];
-			sums[target_w + ox] += p[1];
-			sums[target_w * 2 + ox] += p[2];
+		const png_byte *p = row + (size_t)columns[ox].start * 3;
+		const png_byte *end = p + (size_t)columns[ox].count * 3;
+		// locals, since byte loads may alias sums, span fits 32 bits
+		uint32_t r = 0;
+		uint32_t g = 0;
+		uint32_t b = 0;
+		for (; p < end; p += 3) {
+			r += p[0];
+			g += p[1];
+			b += p[2];
 		}
+		sums[ox] += b;
+		sums[target_w + ox] += g;
+		sums[target_w * 2 + ox] += r;
 	}
 }
 
@@ -199,7 +206,7 @@ static void write_png_row(uint32_t *dst, const uint64_t *sums,
 	}
 }
 
-static void normalize_png(png_structp png, png_infop info) {
+static void normalize_png(png_structp png, png_infop info, bool argb) {
 	int bit_depth = png_get_bit_depth(png, info);
 	int color_type = png_get_color_type(png, info);
 	if (bit_depth == 16) {
@@ -218,10 +225,12 @@ static void normalize_png(png_structp png, png_infop info) {
 		color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
 		png_set_gray_to_rgb(png);
 	}
-	// Decode directly to opaque little-endian ARGB8888 bytes
 	png_set_strip_alpha(png);
-	png_set_bgr(png);
-	png_set_filler(png, 0xff, PNG_FILLER_AFTER);
+	// w0hole image decode lands in opaque ARGB8888, streaming keeps RGB
+	if (argb) {
+		png_set_bgr(png);
+		png_set_filler(png, 0xff, PNG_FILLER_AFTER);
+	}
 }
 
 static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
@@ -274,7 +283,7 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	img->width = target_w;
 	img->height = target_h;
 	img->pixels = malloc((size_t)target_w * target_h * sizeof(uint32_t));
-	buffers->row = malloc((size_t)width * 4);
+	buffers->row = malloc((size_t)width * 3);
 	buffers->sums = calloc((size_t)target_w * 3, sizeof(uint64_t));
 	buffers->columns = malloc((size_t)target_w * sizeof(*buffers->columns));
 	if (img->pixels == NULL || buffers->row == NULL ||
@@ -361,15 +370,16 @@ static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 		return false;
 	}
 
-	normalize_png(png, info);
 	bool interlaced =
 		png_get_interlace_type(png, info) != PNG_INTERLACE_NONE;
+	normalize_png(png, info, interlaced);
 	int passes = 1;
 	if (interlaced) {
 		passes = png_set_interlace_handling(png);
 	}
 	png_read_update_info(png, info);
-	if (png_get_rowbytes(png, info) != (size_t)width * sizeof(uint32_t)) {
+	size_t pixel_bytes = interlaced ? sizeof(uint32_t) : 3;
+	if (png_get_rowbytes(png, info) != (size_t)width * pixel_bytes) {
 		png_longjmp(png, 1);
 	}
 
