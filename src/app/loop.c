@@ -212,13 +212,20 @@ static bool pump_events(struct matuwall_app *app) {
 		}
 	}
 
-	if (wl_display_flush(app->display) < 0 && errno != EAGAIN) {
-		wl_display_cancel_read(app->display);
-		return false;
+	// full socket keeps requests queued, wake on POLLOUT to retry
+	short display_events = POLLIN;
+	if (wl_display_flush(app->display) < 0) {
+		if (errno != EAGAIN) {
+			wl_display_cancel_read(app->display);
+			matuwall_log_error("wayland", "cannot send requests");
+			return false;
+		}
+		display_events |= POLLOUT;
 	}
 
 	struct pollfd pfd[3] = {
-		{.fd = wl_display_get_fd(app->display), .events = POLLIN},
+		{.fd = wl_display_get_fd(app->display),
+			.events = display_events},
 		{.fd = matuwall_instance_fd(&app->instance), .events = POLLIN},
 	};
 	nfds_t nfds = 2;
