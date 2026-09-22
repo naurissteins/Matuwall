@@ -85,21 +85,6 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 	}
 }
 
-// Expand a leading ~ to $HOME; other paths are copied verbatim
-bool matuwall_config_expand_path(const char *in, char *out, size_t out_size) {
-	int n;
-	if (in[0] == '~' && (in[1] == '/' || in[1] == '\0')) {
-		const char *home = getenv("HOME");
-		if (home == NULL) {
-			return false;
-		}
-		n = snprintf(out, out_size, "%s%s", home, in + 1);
-	} else {
-		n = snprintf(out, out_size, "%s", in);
-	}
-	return n > 0 && (size_t)n < out_size;
-}
-
 // --- schema application ---
 
 static void warn(int line, const char *detail) {
