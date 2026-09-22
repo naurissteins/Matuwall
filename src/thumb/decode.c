@@ -147,35 +147,22 @@ struct png_decode_buffers {
 	png_bytep *rows;
 	png_bytep row;
 	uint64_t *sums;
+	struct matuwall_span *columns;
 };
 
 static void png_buffers_free(struct png_decode_buffers *buffers) {
 	free((void *)buffers->rows);
 	free(buffers->row);
 	free(buffers->sums);
-	buffers->rows = NULL;
-	buffers->row = NULL;
-	buffers->sums = NULL;
-}
-
-static void scale_range(uint32_t origin, uint32_t extent, uint32_t output,
-	uint32_t index, uint32_t *start, uint32_t *end) {
-	*start = origin + (uint32_t)((uint64_t)index * extent / output);
-	*end = origin + (uint32_t)((uint64_t)(index + 1) * extent / output);
-	if (*end <= *start) {
-		*end = *start + 1;
-	}
-	if (*end > origin + extent) {
-		*end = origin + extent;
-	}
+	free(buffers->columns);
+	*buffers = (struct png_decode_buffers){0};
 }
 
 static void accumulate_png_row(const png_byte *row, uint64_t *sums,
-	uint32_t crop_x, uint32_t crop_w, uint32_t target_w) {
+	const struct matuwall_span *columns, uint32_t target_w) {
 	for (uint32_t ox = 0; ox < target_w; ox++) {
-		uint32_t sx0;
-		uint32_t sx1;
-		scale_range(crop_x, crop_w, target_w, ox, &sx0, &sx1);
+		uint32_t sx0 = columns[ox].start;
+		uint32_t sx1 = sx0 + columns[ox].count;
 		for (uint32_t sx = sx0; sx < sx1; sx++) {
 			const uint8_t *p = row + (size_t)sx * 4;
 			sums[ox] += p[0];
@@ -185,18 +172,24 @@ static void accumulate_png_row(const png_byte *row, uint64_t *sums,
 	}
 }
 
-static void write_png_row(uint32_t *dst, const uint64_t *sums, uint32_t crop_w,
-	uint32_t target_w, uint32_t source_rows) {
+static void write_png_row(uint32_t *dst, const uint64_t *sums,
+	const struct matuwall_span *columns, uint32_t target_w,
+	uint32_t source_rows) {
 	if (source_rows == 0) {
 		return;
 	}
 	for (uint32_t ox = 0; ox < target_w; ox++) {
-		uint32_t sx0;
-		uint32_t sx1;
-		scale_range(0, crop_w, target_w, ox, &sx0, &sx1);
-		uint64_t count = (uint64_t)(sx1 - sx0) * source_rows;
+		uint64_t count = (uint64_t)columns[ox].count * source_rows;
 		if (count == 0) {
 			dst[ox] = 0xff000000u;
+			continue;
+		}
+		// A 1x1 box is the source pixel, skip the divisions
+		if (count == 1) {
+			dst[ox] = 0xff000000u |
+				  (uint32_t)sums[target_w * 2 + ox] << 16 |
+				  (uint32_t)sums[target_w + ox] << 8 |
+				  (uint32_t)sums[ox];
 			continue;
 		}
 		dst[ox] = 0xff000000u |
@@ -283,17 +276,24 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	img->pixels = malloc((size_t)target_w * target_h * sizeof(uint32_t));
 	buffers->row = malloc((size_t)width * 4);
 	buffers->sums = calloc((size_t)target_w * 3, sizeof(uint64_t));
+	buffers->columns = malloc((size_t)target_w * sizeof(*buffers->columns));
 	if (img->pixels == NULL || buffers->row == NULL ||
-		buffers->sums == NULL) {
+		buffers->sums == NULL || buffers->columns == NULL) {
 		png_longjmp(png, 1);
+	}
+	// column spans never vary by row, so they are derived once
+	for (uint32_t ox = 0; ox < target_w; ox++) {
+		buffers->columns[ox] =
+			matuwall_axis_span(crop_x, crop_w, target_w, ox);
 	}
 
 	uint32_t next_y = 0;
 	uint32_t loaded_y = UINT32_MAX;
 	for (uint32_t oy = 0; oy < target_h; oy++) {
-		uint32_t sy0;
-		uint32_t sy1;
-		scale_range(crop_y, crop_h, target_h, oy, &sy0, &sy1);
+		struct matuwall_span rows =
+			matuwall_axis_span(crop_y, crop_h, target_h, oy);
+		uint32_t sy0 = rows.start;
+		uint32_t sy1 = sy0 + rows.count;
 		memset(buffers->sums, 0,
 			(size_t)target_w * 3 * sizeof(uint64_t));
 		for (uint32_t sy = sy0; sy < sy1; sy++) {
@@ -307,11 +307,11 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 			if (loaded_y != sy) {
 				png_longjmp(png, 1);
 			}
-			accumulate_png_row(buffers->row, buffers->sums, crop_x,
-				crop_w, target_w);
+			accumulate_png_row(buffers->row, buffers->sums,
+				buffers->columns, target_w);
 		}
 		write_png_row(img->pixels + (size_t)oy * target_w,
-			buffers->sums, crop_w, target_w, sy1 - sy0);
+			buffers->sums, buffers->columns, target_w, rows.count);
 	}
 
 	while (next_y < height) {

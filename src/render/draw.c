@@ -156,6 +156,13 @@ static double rounded_rect_distance(int32_t px, int32_t py, double x, double y,
 	if (inside > 0.0) {
 		inside = 0.0;
 	}
+	// Only corners need a hypotenuse; sqrt(a * a) is exactly a
+	if (outside_y == 0.0) {
+		return outside_x + inside - radius;
+	}
+	if (outside_x == 0.0) {
+		return outside_y + inside - radius;
+	}
 	return sqrt(outside_x * outside_x + outside_y * outside_y) + inside -
 	       radius;
 }
