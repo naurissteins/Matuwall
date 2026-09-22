@@ -1,6 +1,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 #include "app/app.h"
 #include "cli/options.h"
@@ -23,6 +26,18 @@ static int clear_cache(void) {
 			removed == 1 ? "" : "s");
 	}
 	return 0;
+}
+
+// Pin the glibc mmap threshold so freed image buffers go back to the kernel;
+// the adaptive default parks them in per-worker arenas instead
+#define IMAGE_MMAP_THRESHOLD (1024 * 1024)
+
+static void tune_allocator(void) {
+#ifdef __GLIBC__
+	if (mallopt(M_MMAP_THRESHOLD, IMAGE_MMAP_THRESHOLD) != 1) {
+		matuwall_log_warn("memory", "cannot pin the mmap threshold");
+	}
+#endif
 }
 
 static bool load_config(const struct matuwall_cli_options *options,
@@ -71,6 +86,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	matuwall_log_start(MATUWALL_VERSION);
+	tune_allocator();
 	struct matuwall_config config;
 	if (!load_config(&options, &config, err, sizeof(err))) {
 		matuwall_log_finish();

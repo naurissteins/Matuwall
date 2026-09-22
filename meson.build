@@ -76,6 +76,7 @@ executable(
 	'src/hooks/hooks.c',
 	'src/render/draw.c',
 	'src/render/frame.c',
+	'src/render/image.c',
 	'src/render/sample.c',
 	'src/render/spinner.c',
 	'src/scan/dirscan.c',
