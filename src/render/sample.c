@@ -31,19 +31,17 @@ static struct sample_axis sample_axis(int64_t position, uint32_t size) {
 	};
 }
 
-static uint32_t lerp_channel(uint32_t from, uint32_t to, uint32_t fraction) {
-	return (from * (SAMPLE_ONE - fraction) + to * fraction + SAMPLE_HALF) >>
-	       SAMPLE_SHIFT;
-}
-
+// Two channels per multiply: an 8-bit weight keeps each 16-bit lane below
+// 65536, so no carry crosses into the neighbouring channel
 static uint32_t lerp_pixel(uint32_t from, uint32_t to, uint32_t fraction) {
-	uint32_t a = lerp_channel(from >> 24, to >> 24, fraction);
-	uint32_t r =
-		lerp_channel((from >> 16) & 0xff, (to >> 16) & 0xff, fraction);
-	uint32_t g =
-		lerp_channel((from >> 8) & 0xff, (to >> 8) & 0xff, fraction);
-	uint32_t b = lerp_channel(from & 0xff, to & 0xff, fraction);
-	return a << 24 | r << 16 | g << 8 | b;
+	uint32_t weight = (fraction + 0x80) >> 8;
+	uint32_t keep = 256 - weight;
+	uint32_t rb = ((from & 0x00ff00ff) * keep + (to & 0x00ff00ff) * weight +
+			      0x00800080) >>
+		      8;
+	uint32_t ag = ((from >> 8) & 0x00ff00ff) * keep +
+		      ((to >> 8) & 0x00ff00ff) * weight + 0x00800080;
+	return (rb & 0x00ff00ff) | (ag & 0xff00ff00);
 }
 
 bool matuwall_bilinear_sampler_init(struct matuwall_bilinear_sampler *sampler,

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "render/draw.h"
+#include "render/image.h"
 #include "render/spinner.h"
 
 #define RING_GAP 3
