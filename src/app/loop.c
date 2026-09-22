@@ -307,7 +307,12 @@ static bool pump_events(struct matuwall_app *app) {
 
 // Hand the selected wallpaper to the backend; runs off the input path on exit
 static bool apply_selection(struct matuwall_app *app) {
+	// state keeps the scanned path, backend and hooks get the real file
 	const char *path = app->scan.paths[app->grid.selected];
+	char resolved[PATH_MAX];
+	if (!matuwall_dirscan_resolve(path, resolved)) {
+		return false;
+	}
 	const struct matuwall_backend *backend =
 		matuwall_backend_select(app->config.backend);
 	if (backend == NULL) {
@@ -324,7 +329,7 @@ static bool apply_selection(struct matuwall_app *app) {
 		matuwall_log_info("backend", "selected configured backend %s",
 			backend->name);
 	}
-	if (!backend->apply(path)) {
+	if (!backend->apply(resolved)) {
 		matuwall_log_error("backend",
 			"%s failed to apply the wallpaper", backend->name);
 		return false;
@@ -332,8 +337,9 @@ static bool apply_selection(struct matuwall_app *app) {
 	if (!matuwall_selection_save(path)) {
 		matuwall_log_warn("state", "could not remember the selection");
 	}
-	matuwall_log_info("apply", "applied %s with %s", path, backend->name);
-	matuwall_hooks_run(&app->config, path);
+	matuwall_log_info(
+		"apply", "applied %s with %s", resolved, backend->name);
+	matuwall_hooks_run(&app->config, resolved);
 	return true;
 }
 

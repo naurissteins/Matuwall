@@ -142,7 +142,7 @@ All colors use _"#rrggbb"_ or _"#rrggbbaa"_.
 
 *on_apply*
 	Commands run after a successful apply. Defaults to an empty array. _{path}_
-	is replaced with the absolute wallpaper path.
+	is replaced with the absolute wallpaper path, with symlinks resolved.
 
 	Commands are split on whitespace and run directly, without a shell. Pipes,
 	globs, variables, and shell quoting are not supported. Hooks run detached and

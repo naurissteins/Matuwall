@@ -123,7 +123,7 @@ to select sweetbg instead.
 ## Hooks
 
 Hooks run after a successful apply. `{path}` becomes the absolute wallpaper
-path
+path, with symlinks resolved
 
 ```toml
 [hooks]

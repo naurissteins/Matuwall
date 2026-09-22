@@ -17,4 +17,7 @@ bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir);
 
 void matuwall_dirscan_finish(struct matuwall_dirscan *scan);
 
+// canonical absolute path of one scanned entry, resolved holds PATH_MAX bytes
+bool matuwall_dirscan_resolve(const char *path, char *resolved);
+
 #endif
