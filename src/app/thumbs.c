@@ -17,7 +17,9 @@ static void on_result(
 	void *user_data, const struct matuwall_thumb_result *result) {
 	struct matuwall_app *app = user_data;
 	if (result->kind == MATUWALL_JOB_PREVIEW) {
-		if (!result->ok && result->index < app->scan.count) {
+		// cancelled decode is superseded, not broken
+		if (!result->ok && !result->cancelled &&
+			result->index < app->scan.count) {
 			matuwall_log_warn("preview", "could not decode %s",
 				app->scan.paths[result->index]);
 		}

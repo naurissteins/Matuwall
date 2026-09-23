@@ -68,9 +68,7 @@ void matuwall_app_preview_select(
 int matuwall_app_preview_timeout(
 	const struct matuwall_app *app, int64_t now_ms) {
 	const struct matuwall_preview *preview = &app->preview;
-	// The result fd wakes us to retry a blocked dwell deadline
-	if (!preview->enabled || preview->due_ms == 0 ||
-		preview->in_flight != SIZE_MAX) {
+	if (!preview->enabled || preview->due_ms == 0) {
 		return -1;
 	}
 	int64_t left = preview->due_ms - now_ms;
@@ -80,15 +78,23 @@ int matuwall_app_preview_timeout(
 void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 	struct matuwall_preview *preview = &app->preview;
 	if (!preview->enabled || preview->due_ms == 0 ||
-		now_ms < preview->due_ms || preview->in_flight != SIZE_MAX) {
+		now_ms < preview->due_ms) {
 		return;
 	}
 	preview->due_ms = 0;
 
-	if (app->workers == NULL || preview->wanted == preview->shown) {
+	if (app->workers == NULL || preview->wanted == preview->in_flight) {
 		return;
 	}
-	// only a job allocation can fail, re-arm so the backdrop catches up
+	// Back on the shown backdrop, so a pending decode is stale work
+	if (preview->wanted == preview->shown) {
+		if (preview->in_flight != SIZE_MAX) {
+			matuwall_worker_cancel_preview(app->workers);
+			preview->in_flight = SIZE_MAX;
+		}
+		return;
+	}
+	// Supersedes any running decode; only a job allocation can fail
 	if (!matuwall_worker_submit_preview(app->workers, preview->wanted,
 		    app->scan.paths[preview->wanted], preview->target_w,
 		    preview->target_h)) {
@@ -101,6 +107,10 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 void matuwall_app_preview_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
 	struct matuwall_preview *preview = &app->preview;
+	if (result->cancelled) {
+		free(result->pixels);
+		return;
+	}
 	if (result->index == preview->in_flight) {
 		preview->in_flight = SIZE_MAX;
 	}

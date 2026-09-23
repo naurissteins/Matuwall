@@ -30,6 +30,7 @@ struct matuwall_thumb_result {
 	size_t index;
 	bool ok;
 	bool cache_hit;
+	bool cancelled;
 	uint32_t *pixels;
 	uint32_t width;
 	uint32_t height;
@@ -53,9 +54,12 @@ bool matuwall_worker_submit(
 void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	size_t first, size_t end, size_t wrap_end);
 
-// Jumps the queue and drops any preview that has not started; latest wins
+// Jumps the queue, drops queued previews and cancels a running one
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	size_t index, const char *path, uint32_t target_w, uint32_t target_h);
+
+// A cancelled preview still publishes a result, with ok false
+void matuwall_worker_cancel_preview(struct matuwall_worker_pool *pool);
 
 void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	matuwall_result_fn cb, void *user_data);

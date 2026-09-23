@@ -17,6 +17,8 @@ struct job {
 	const char *path;
 	uint32_t target_w;
 	uint32_t target_h;
+	// set by the main thread when a newer preview supersedes this one
+	atomic_bool cancelled;
 	struct job *next;
 };
 
@@ -37,6 +39,8 @@ struct matuwall_worker_pool {
 	struct job *jobs_head;
 	struct job *jobs_tail;
 	struct job *results;
+	// newest preview a worker has taken, cleared when it publishes
+	struct job *running_preview;
 	atomic_bool stopping;
 
 	int event_fd;
@@ -45,6 +49,10 @@ struct matuwall_worker_pool {
 
 static bool stop_requested(const struct matuwall_worker_pool *pool) {
 	return atomic_load_explicit(&pool->stopping, memory_order_relaxed);
+}
+
+static bool flag_set(const atomic_bool *flag) {
+	return atomic_load_explicit(flag, memory_order_relaxed);
 }
 
 static size_t worker_count(void) {
@@ -58,18 +66,20 @@ static size_t worker_count(void) {
 static bool produce(const struct matuwall_worker_pool *pool,
 	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
-	if (stop_requested(pool)) {
+	// output sized previews would bloat the cache for one keypress of value
+	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
+	// pool stop also cancels the running preview, so one flag covers both
+	const atomic_bool *stop = thumbnail ? &pool->stopping : &job->cancelled;
+	if (flag_set(stop)) {
 		return false;
 	}
-	// Output-sized previews would bloat the cache for one keypress of value
-	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
 
 	struct matuwall_cache_key key;
 	bool have_key = thumbnail && pool->cache != NULL &&
 			matuwall_cache_key(pool->cache, job->path,
 				job->target_w, job->target_h, &key);
 	if (have_key && matuwall_cache_read(&key, out)) {
-		if (stop_requested(pool)) {
+		if (flag_set(stop)) {
 			matuwall_image_free(out);
 			return false;
 		}
@@ -81,21 +91,21 @@ static bool produce(const struct matuwall_worker_pool *pool,
 	enum matuwall_decode_purpose purpose =
 		thumbnail ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
 	if (!matuwall_image_decode(&decoded, job->path, job->target_w,
-		    job->target_h, purpose, &pool->stopping)) {
+		    job->target_h, purpose, stop)) {
 		return false;
 	}
 	bool scaled = true;
 	if (decoded.width == job->target_w && decoded.height == job->target_h) {
 		*out = decoded;
 	} else {
-		scaled = matuwall_scale_cover(&decoded, job->target_w,
-			job->target_h, out, &pool->stopping);
+		scaled = matuwall_scale_cover(
+			&decoded, job->target_w, job->target_h, out, stop);
 		matuwall_image_free(&decoded);
 	}
 	if (!scaled) {
 		return false;
 	}
-	if (stop_requested(pool)) {
+	if (flag_set(stop)) {
 		matuwall_image_free(out);
 		return false;
 	}
@@ -118,11 +128,26 @@ static struct job *take_job(struct matuwall_worker_pool *pool) {
 	if (pool->jobs_head == NULL) {
 		pool->jobs_tail = NULL;
 	}
+	if (job->result.kind == MATUWALL_JOB_PREVIEW) {
+		pool->running_preview = job;
+	}
 	return job;
+}
+
+// Caller holds the mutex
+static void cancel_running_preview(struct matuwall_worker_pool *pool) {
+	if (pool->running_preview != NULL) {
+		atomic_store_explicit(&pool->running_preview->cancelled, true,
+			memory_order_relaxed);
+	}
 }
 
 static void publish_result(struct matuwall_worker_pool *pool, struct job *job) {
 	pthread_mutex_lock(&pool->mutex);
+	// job is freed after drain, so the pointer must not outlive this
+	if (pool->running_preview == job) {
+		pool->running_preview = NULL;
+	}
 	job->next = pool->results;
 	pool->results = job;
 	pthread_mutex_unlock(&pool->mutex);
@@ -151,6 +176,7 @@ static void *worker_main(void *arg) {
 			job->result.height = img.height;
 		}
 
+		job->result.cancelled = flag_set(&job->cancelled);
 		publish_result(pool, job);
 		pthread_mutex_lock(&pool->mutex);
 	}
@@ -209,6 +235,7 @@ static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	job->target_w = target_w;
 	job->target_h = target_h;
 	job->path = path;
+	atomic_init(&job->cancelled, false);
 	return job;
 }
 
@@ -316,8 +343,8 @@ bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	}
 
 	pthread_mutex_lock(&pool->mutex);
-	// The user has moved on; only the newest preview is worth decoding
 	drop_queued_previews(pool);
+	cancel_running_preview(pool);
 	job->next = pool->jobs_head;
 	pool->jobs_head = job;
 	if (pool->jobs_tail == NULL) {
@@ -328,11 +355,18 @@ bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	return true;
 }
 
+void matuwall_worker_cancel_preview(struct matuwall_worker_pool *pool) {
+	pthread_mutex_lock(&pool->mutex);
+	drop_queued_previews(pool);
+	cancel_running_preview(pool);
+	pthread_mutex_unlock(&pool->mutex);
+}
+
 void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	matuwall_result_fn cb, void *user_data) {
 	uint64_t drained;
 	while (read(pool->event_fd, &drained, sizeof(drained)) > 0) {
-		// Clear the counter; the list below is the real work list
+		// clear the counter, the list below is the real work list
 	}
 
 	pthread_mutex_lock(&pool->mutex);
@@ -340,7 +374,7 @@ void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	pool->results = NULL;
 	pthread_mutex_unlock(&pool->mutex);
 
-	// Reverse to restore submission order for a tidy fill
+	// reverse to restore submission order for a tidy fill
 	struct job *ordered = NULL;
 	while (list != NULL) {
 		struct job *next = list->next;
@@ -360,6 +394,7 @@ void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	pthread_mutex_lock(&pool->mutex);
 	atomic_store_explicit(&pool->stopping, true, memory_order_relaxed);
+	cancel_running_preview(pool);
 	pthread_cond_broadcast(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 
@@ -367,7 +402,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 		pthread_join(pool->threads[i], NULL);
 	}
 
-	// Nothing is running now; free the queues without locking
+	// nothing is running now, free the queues without locking
 	struct job *job = pool->jobs_head;
 	while (job != NULL) {
 		struct job *next = job->next;
