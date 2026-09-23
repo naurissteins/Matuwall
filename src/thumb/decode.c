@@ -66,6 +66,7 @@ static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 	}
 
 	// Keep enough decoded pixels for the final cover crop
+	unsigned int denominator = 1;
 	for (size_t i = 0; i < sizeof(denominators) / sizeof(denominators[0]);
 		i++) {
 		cinfo->scale_num = 1;
@@ -73,12 +74,30 @@ static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 		jpeg_calc_output_dimensions(cinfo);
 		if (cinfo->output_width >= target_w &&
 			cinfo->output_height >= target_h) {
+			denominator = denominators[i];
+			break;
+		}
+	}
+	cinfo->scale_num = 1;
+	cinfo->scale_denom = denominator;
+	jpeg_calc_output_dimensions(cinfo);
+	if (cinfo->output_width == target_w &&
+		cinfo->output_height == target_h) {
+		return;
+	}
+
+	// M/8 lacks SIMD, so it only wins when it also removes the scale pass
+	for (unsigned int num = 7; num > 0; num--) {
+		cinfo->scale_num = num;
+		cinfo->scale_denom = 8;
+		jpeg_calc_output_dimensions(cinfo);
+		if (cinfo->output_width == target_w &&
+			cinfo->output_height == target_h) {
 			return;
 		}
 	}
-
 	cinfo->scale_num = 1;
-	cinfo->scale_denom = 1;
+	cinfo->scale_denom = denominator;
 }
 
 static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
