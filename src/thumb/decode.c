@@ -58,6 +58,10 @@ static void jpeg_on_error(j_common_ptr cinfo) {
 	longjmp(guard->jmp, 1);
 }
 
+static void jpeg_on_message(j_common_ptr cinfo) {
+	(void)cinfo;
+}
+
 static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 	uint32_t target_w, uint32_t target_h) {
 	static const unsigned int denominators[] = {8, 4, 2};
@@ -107,6 +111,7 @@ static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	struct jpeg_guard guard;
 	cinfo.err = jpeg_std_error(&guard.base);
 	guard.base.error_exit = jpeg_on_error;
+	guard.base.output_message = jpeg_on_message;
 
 	if (setjmp(guard.jmp)) {
 		jpeg_destroy_decompress(&cinfo);
@@ -353,11 +358,22 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	return true;
 }
 
+// libpng prints through its own handlers; keep that off stderr as well
+static void png_on_error(png_structp png, png_const_charp message) {
+	(void)message;
+	png_longjmp(png, 1);
+}
+
+static void png_on_warning(png_structp png, png_const_charp message) {
+	(void)png;
+	(void)message;
+}
+
 static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	uint32_t target_h, enum matuwall_decode_purpose purpose,
 	const atomic_bool *stop) {
-	png_structp png =
-		png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_structp png = png_create_read_struct(
+		PNG_LIBPNG_VER_STRING, NULL, png_on_error, png_on_warning);
 	png_infop info = png != NULL ? png_create_info_struct(png) : NULL;
 	struct png_decode_buffers *buffers = calloc(1, sizeof(*buffers));
 	if (png == NULL || info == NULL || buffers == NULL) {
