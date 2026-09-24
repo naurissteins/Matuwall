@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#define MATUWALL_OPAQUE 0xff
+
 struct matuwall_color {
 	uint8_t r;
 	uint8_t g;
@@ -18,6 +20,21 @@ static inline uint32_t matuwall_color_argb(struct matuwall_color color) {
 	uint32_t r = ((uint32_t)color.r * a + 127) / 255;
 	uint32_t g = ((uint32_t)color.g * a + 127) / 255;
 	uint32_t b = ((uint32_t)color.b * a + 127) / 255;
+	return a << 24 | r << 16 | g << 8 | b;
+}
+
+static inline uint8_t matuwall_alpha_mul(uint8_t a, uint8_t b) {
+	return (uint8_t)(((uint32_t)a * b + 127) / 255);
+}
+
+static inline uint32_t matuwall_color_fade(uint32_t argb, uint8_t opacity) {
+	if (opacity == MATUWALL_OPAQUE) {
+		return argb;
+	}
+	uint32_t a = matuwall_alpha_mul((uint8_t)(argb >> 24), opacity);
+	uint32_t r = matuwall_alpha_mul((uint8_t)(argb >> 16), opacity);
+	uint32_t g = matuwall_alpha_mul((uint8_t)(argb >> 8), opacity);
+	uint32_t b = matuwall_alpha_mul((uint8_t)argb, opacity);
 	return a << 24 | r << 16 | g << 8 | b;
 }
 

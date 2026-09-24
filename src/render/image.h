@@ -15,11 +15,11 @@ void matuwall_draw_image_cover_clipped(struct matuwall_buffer *buffer,
 void matuwall_draw_image_rounded(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h);
+	uint32_t src_w, uint32_t src_h, uint8_t opacity);
 
 void matuwall_draw_image_rounded_bilinear(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h);
+	uint32_t src_w, uint32_t src_h, uint8_t opacity);
 
 #endif

@@ -3,10 +3,12 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "render/color.h"
 #include "render/coverage.h"
 #include "render/sample.h"
 
 #define BILINEAR_AXIS_CAPACITY 2048
+#define FADE_CHUNK 256
 
 // fixed point source stepping keeps the full-screen blit off the divider
 #define COVER_SHIFT 16
@@ -145,34 +147,60 @@ static uint32_t image_row_next(struct image_row *row) {
 
 static void draw_image_edge(uint32_t *dst, struct image_row *row, int32_t x0,
 	int32_t x1, int32_t py, int32_t shape_x, int32_t shape_y,
-	int32_t shape_width, int32_t shape_height, int32_t radius) {
+	int32_t shape_width, int32_t shape_height, int32_t radius,
+	uint8_t opacity) {
 	for (int32_t px = x0; px < x1; px++) {
 		uint32_t pixel = image_row_next(row);
-		uint32_t coverage = rect_coverage(px, py, shape_x, shape_y,
-			shape_width, shape_height, radius);
+		uint32_t coverage = fade_coverage(
+			rect_coverage(px, py, shape_x, shape_y, shape_width,
+				shape_height, radius),
+			opacity);
 		if (coverage > 0) {
 			dst[px] = blend(dst[px], pixel, coverage);
 		}
 	}
 }
 
-static void draw_image_span(uint32_t *dst, struct image_row *row,
-	const struct matuwall_bilinear_axis *axes, int32_t x0, int32_t x1) {
-	size_t count = (size_t)(x1 - x0);
+static void sample_image_span(uint32_t *out, struct image_row *row,
+	const struct matuwall_bilinear_axis *axes, size_t count) {
 	if (row->bilinear && axes != NULL) {
 		matuwall_bilinear_row_span(
-			&row->filtered, axes, dst + x0, (uint32_t)count);
+			&row->filtered, axes, out, (uint32_t)count);
 		return;
 	}
 	if (!row->bilinear && row->nearest.step == 1 &&
 		row->nearest.remainder_step == 0) {
-		memcpy(dst + x0, row->nearest.pixels + row->nearest.index,
+		memcpy(out, row->nearest.pixels + row->nearest.index,
 			count * sizeof(uint32_t));
 		row->nearest.index += (uint32_t)count;
 		return;
 	}
-	for (int32_t px = x0; px < x1; px++) {
-		dst[px] = image_row_next(row);
+	for (size_t i = 0; i < count; i++) {
+		out[i] = image_row_next(row);
+	}
+}
+
+static void draw_image_span(uint32_t *dst, struct image_row *row,
+	const struct matuwall_bilinear_axis *axes, int32_t x0, int32_t x1,
+	uint8_t opacity) {
+	size_t count = (size_t)(x1 - x0);
+	if (opacity == MATUWALL_OPAQUE) {
+		sample_image_span(dst + x0, row, axes, count);
+		return;
+	}
+
+	// sample through the fast paths, then blend each chunk over dst
+	uint32_t chunk[FADE_CHUNK];
+	for (size_t done = 0; done < count;) {
+		size_t n =
+			count - done < FADE_CHUNK ? count - done : FADE_CHUNK;
+		sample_image_span(
+			chunk, row, axes != NULL ? axes + done : NULL, n);
+		uint32_t *out = dst + x0 + done;
+		for (size_t i = 0; i < n; i++) {
+			out[i] = blend_opaque(out[i], chunk[i], opacity);
+		}
+		done += n;
 	}
 }
 
@@ -180,7 +208,7 @@ static void draw_image_row(struct matuwall_buffer *buffer,
 	struct image_row *row, const struct matuwall_bilinear_axis *axes,
 	int32_t left, int32_t right, int32_t py, int32_t shape_x,
 	int32_t shape_y, int32_t shape_width, int32_t shape_height,
-	int32_t radius) {
+	int32_t radius, uint8_t opacity) {
 	int32_t full_left = shape_x + radius;
 	int32_t full_right = shape_x + shape_width - radius;
 	if (radius == 0 || (py >= shape_y + radius &&
@@ -203,21 +231,21 @@ static void draw_image_row(struct matuwall_buffer *buffer,
 
 	uint32_t *dst = buffer->data + (size_t)py * buffer->width;
 	draw_image_edge(dst, row, left, full_left, py, shape_x, shape_y,
-		shape_width, shape_height, radius);
+		shape_width, shape_height, radius, opacity);
 	const struct matuwall_bilinear_axis *span_axes =
 		axes != NULL ? axes + (full_left - left) : NULL;
-	draw_image_span(dst, row, span_axes, full_left, full_right);
+	draw_image_span(dst, row, span_axes, full_left, full_right, opacity);
 	draw_image_edge(dst, row, full_right, right, py, shape_x, shape_y,
-		shape_width, shape_height, radius);
+		shape_width, shape_height, radius, opacity);
 }
 
 static void draw_image_rounded(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h, bool bilinear) {
+	uint32_t src_w, uint32_t src_h, bool bilinear, uint8_t opacity) {
 	if (width <= 0 || height <= 0 || inset < 0 || inset > (width - 1) / 2 ||
 		inset > (height - 1) / 2 || src == NULL || src_w == 0 ||
-		src_h == 0) {
+		src_h == 0 || opacity == 0) {
 		return;
 	}
 
@@ -257,22 +285,23 @@ static void draw_image_rounded(struct matuwall_buffer *buffer,
 		image_row_init(&row, bilinear ? &sampler : NULL, src, src_w,
 			src_h, x, y, width, height, left, py);
 		draw_image_row(buffer, &row, prepared, left, right, py, inner_x,
-			inner_y, inner_width, inner_height, inner_radius);
+			inner_y, inner_width, inner_height, inner_radius,
+			opacity);
 	}
 }
 
 void matuwall_draw_image_rounded(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h) {
+	uint32_t src_w, uint32_t src_h, uint8_t opacity) {
 	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
-		src, src_w, src_h, false);
+		src, src_w, src_h, false, opacity);
 }
 
 void matuwall_draw_image_rounded_bilinear(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h) {
+	uint32_t src_w, uint32_t src_h, uint8_t opacity) {
 	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
-		src, src_w, src_h, true);
+		src, src_w, src_h, true, opacity);
 }
