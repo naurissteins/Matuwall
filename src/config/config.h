@@ -48,6 +48,8 @@ struct matuwall_config {
 };
 
 void matuwall_config_defaults(struct matuwall_config *cfg);
+// edge style to render, with "auto" settled by the background alpha
+enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg);
 bool matuwall_config_expand_path(const char *in, char *out, size_t out_size);
 
 bool matuwall_config_load(

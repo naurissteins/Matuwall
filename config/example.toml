@@ -74,8 +74,9 @@ carousel = true
 
 # What carousel tiles do at the panel edges. "clip" cuts them at the margin,
 # "peek" lets them extend into it, and "fade" shrinks and fades them out.
+# "auto" fades when the background is fully transparent and clips otherwise.
 # The regular grid treats "fade" as "clip"
-edge = "clip"
+edge = "auto"
 
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing
