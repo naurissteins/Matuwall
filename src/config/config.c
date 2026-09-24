@@ -180,6 +180,24 @@ static void apply_edge(enum matuwall_edge *dst,
 	warn(line, "edge must be \"clip\", \"peek\", or \"fade\"");
 }
 
+// TODO: drop the edge_peek alias after a couple of releases
+static void apply_edge_peek(enum matuwall_edge *dst,
+	const struct matuwall_toml_value *v, int line) {
+	if (v->type != MATUWALL_TOML_BOOLEAN) {
+		warn(line, "edge_peek must be true or false");
+		return;
+	}
+	warning_count++;
+	matuwall_log_warn("config",
+		"line %d: edge_peek is deprecated; use edge = \"peek\" or "
+		"\"clip\"",
+		line);
+	// An explicit edge wins wherever it appears
+	if (v->boolean && *dst == MATUWALL_EDGE_CLIP) {
+		*dst = MATUWALL_EDGE_PEEK;
+	}
+}
+
 static void apply_hooks(struct matuwall_config *cfg,
 	const struct matuwall_toml_value *v, int line) {
 	if (v->type != MATUWALL_TOML_ARRAY) {
@@ -328,6 +346,10 @@ static bool apply(void *user_data, const char *section, const char *key,
 		}
 		if (strcmp(key, "edge") == 0) {
 			apply_edge(&cfg->edge, v, line);
+			return true;
+		}
+		if (strcmp(key, "edge_peek") == 0) {
+			apply_edge_peek(&cfg->edge, v, line);
 			return true;
 		}
 	} else if (strcmp(section, "thumbnail") == 0) {
