@@ -51,13 +51,22 @@ static const char *const edge_names[] = {
 	[MATUWALL_EDGE_CLIP] = "clip",
 	[MATUWALL_EDGE_PEEK] = "peek",
 	[MATUWALL_EDGE_FADE] = "fade",
+	[MATUWALL_EDGE_AUTO] = "auto",
 };
 
 const char *matuwall_edge_name(enum matuwall_edge edge) {
 	if ((size_t)edge >= sizeof(edge_names) / sizeof(edge_names[0])) {
-		return edge_names[MATUWALL_EDGE_CLIP];
+		return edge_names[MATUWALL_EDGE_AUTO];
 	}
 	return edge_names[edge];
+}
+
+enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg) {
+	if (cfg->edge != MATUWALL_EDGE_AUTO) {
+		return cfg->edge;
+	}
+	// an invisible panel edge makes a hard clip look like tiles vanish
+	return cfg->background.a == 0 ? MATUWALL_EDGE_FADE : MATUWALL_EDGE_CLIP;
 }
 
 void matuwall_config_defaults(struct matuwall_config *cfg) {
@@ -79,7 +88,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 			.radius = 20},
 		.visible_rows = 1,
 		.carousel = true,
-		.edge = MATUWALL_EDGE_CLIP,
+		.edge = MATUWALL_EDGE_AUTO,
 		.panel_radius = 40,
 		.border_width = 0,
 		.shadow_width = 12,
@@ -177,7 +186,7 @@ static void apply_edge(enum matuwall_edge *dst,
 			return;
 		}
 	}
-	warn(line, "edge must be \"clip\", \"peek\", or \"fade\"");
+	warn(line, "edge must be \"auto\", \"clip\", \"peek\", or \"fade\"");
 }
 
 // TODO: drop the edge_peek alias after a couple of releases
@@ -193,7 +202,7 @@ static void apply_edge_peek(enum matuwall_edge *dst,
 		"\"clip\"",
 		line);
 	// An explicit edge wins wherever it appears
-	if (v->boolean && *dst == MATUWALL_EDGE_CLIP) {
+	if (v->boolean && *dst == MATUWALL_EDGE_AUTO) {
 		*dst = MATUWALL_EDGE_PEEK;
 	}
 }

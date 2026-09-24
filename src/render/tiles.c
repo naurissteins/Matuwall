@@ -42,8 +42,7 @@ static bool edge_fades(const struct matuwall_frame *frame) {
 }
 
 static bool edge_clips(const struct matuwall_frame *frame) {
-	return frame->edge == MATUWALL_EDGE_CLIP ||
-	       (frame->edge == MATUWALL_EDGE_FADE && !edge_fades(frame));
+	return frame->edge != MATUWALL_EDGE_PEEK && !edge_fades(frame);
 }
 
 static double smoothstep(double t) {

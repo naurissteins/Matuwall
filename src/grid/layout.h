@@ -19,6 +19,8 @@ enum matuwall_edge {
 	MATUWALL_EDGE_CLIP,
 	MATUWALL_EDGE_PEEK,
 	MATUWALL_EDGE_FADE,
+	// config only: fade over a fully transparent background, else clip
+	MATUWALL_EDGE_AUTO,
 };
 
 enum matuwall_flow {

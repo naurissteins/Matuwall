@@ -43,6 +43,7 @@ struct matuwall_frame {
 	uint32_t preview_width;
 	uint32_t preview_height;
 	bool directory_unavailable;
+	// Resolved, never MATUWALL_EDGE_AUTO
 	enum matuwall_edge edge;
 	double scale;
 	uint32_t background;
