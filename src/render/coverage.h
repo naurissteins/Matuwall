@@ -57,6 +57,23 @@ static inline uint32_t blend(uint32_t dst, uint32_t src, uint32_t coverage) {
 	return blend_ink(dst, ink_at(src, coverage));
 }
 
+static inline uint32_t blend_opaque(
+	uint32_t dst, uint32_t src, uint32_t opacity) {
+	uint32_t keep = COVERAGE_MAX - opacity;
+	uint32_t rb = (src & 0x00ff00ff) * opacity + (dst & 0x00ff00ff) * keep +
+		      0x00800080;
+	uint32_t ag = ((src >> 8) & 0x00ff00ff) * opacity +
+		      ((dst >> 8) & 0x00ff00ff) * keep + 0x00800080;
+	rb = ((rb + ((rb >> 8) & 0x00ff00ff)) >> 8) & 0x00ff00ff;
+	ag = (ag + ((ag >> 8) & 0x00ff00ff)) & 0xff00ff00;
+	return ag | rb;
+}
+
+// Whole-primitive opacity; COVERAGE_MAX is the identity
+static inline uint32_t fade_coverage(uint32_t coverage, uint32_t opacity) {
+	return opacity == COVERAGE_MAX ? coverage : div255(coverage * opacity);
+}
+
 // A radius past half the shorter side is a pill, not a bigger curve. Every
 // rounded primitive clamps the same way
 static inline int32_t clamp_radius(

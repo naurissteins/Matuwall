@@ -116,33 +116,51 @@ static bool tile_crosses_clip(const struct matuwall_frame *frame,
 	       geometry->top + geometry->height > clip->y1;
 }
 
-static void draw_tile(struct matuwall_buffer *buffer,
+static int32_t draw_border(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
-	size_t index, const struct tile_geometry *geometry, bool bilinear) {
-	const struct matuwall_thumb *thumb =
-		frame->thumbs != NULL ? &frame->thumbs[index] : NULL;
+	const struct tile_geometry *geometry, uint8_t opacity) {
 	int32_t border = geometry->border;
 	if (border > (geometry->width - 1) / 2 ||
 		border > (geometry->height - 1) / 2) {
-		border = 0;
+		return 0;
 	}
-	if (border > 0) {
+	if (border <= 0) {
+		return border;
+	}
+	uint32_t color = matuwall_color_fade(frame->border, opacity);
+	// translucent tile must not show its border fill through the image
+	if (opacity < MATUWALL_OPAQUE) {
+		matuwall_draw_rounded_ring(buffer, clip, geometry->left,
+			geometry->top, geometry->width, geometry->height,
+			geometry->radius, border, color);
+	} else {
 		matuwall_draw_rounded_rect(buffer, clip, geometry->left,
 			geometry->top, geometry->width, geometry->height,
-			geometry->radius, frame->border);
+			geometry->radius, color);
 	}
+	return border;
+}
+
+static void draw_tile(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	size_t index, const struct tile_geometry *geometry, bool bilinear,
+	uint8_t opacity) {
+	const struct matuwall_thumb *thumb =
+		frame->thumbs != NULL ? &frame->thumbs[index] : NULL;
+	int32_t border = draw_border(buffer, frame, clip, geometry, opacity);
 
 	if (thumb != NULL && thumb->state == MATUWALL_THUMB_READY &&
 		thumb->pixels != NULL) {
 		void (*draw)(struct matuwall_buffer *,
 			const struct matuwall_clip *, int32_t, int32_t, int32_t,
 			int32_t, int32_t, int32_t, const uint32_t *, uint32_t,
-			uint32_t) =
+			uint32_t, uint8_t) =
 			bilinear ? matuwall_draw_image_rounded_bilinear
 				 : matuwall_draw_image_rounded;
 		draw(buffer, clip, geometry->left, geometry->top,
 			geometry->width, geometry->height, geometry->radius,
-			border, thumb->pixels, thumb->width, thumb->height);
+			border, thumb->pixels, thumb->width, thumb->height,
+			opacity);
 		return;
 	}
 
@@ -150,7 +168,8 @@ static void draw_tile(struct matuwall_buffer *buffer,
 		geometry->radius > border ? geometry->radius - border : 0;
 	matuwall_draw_rounded_rect(buffer, clip, geometry->left + border,
 		geometry->top + border, geometry->width - border * 2,
-		geometry->height - border * 2, inner_radius, frame->tile);
+		geometry->height - border * 2, inner_radius,
+		matuwall_color_fade(frame->tile, opacity));
 	bool pending = thumb == NULL ||
 		       thumb->state == MATUWALL_THUMB_UNLOADED ||
 		       thumb->state == MATUWALL_THUMB_PENDING;
@@ -162,14 +181,14 @@ static void draw_tile(struct matuwall_buffer *buffer,
 			geometry->left + geometry->width / 2,
 			geometry->top + geometry->height / 2,
 			shorter / SPINNER_DIVISOR, frame->spinner,
-			frame->spinner_alpha);
+			matuwall_alpha_mul(frame->spinner_alpha, opacity));
 	}
 }
 
 static void draw_shadow(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *effects,
 	const struct matuwall_clip *tile_clip,
-	const struct tile_geometry *geometry, double focus) {
+	const struct tile_geometry *geometry, double focus, uint8_t opacity) {
 	int32_t width = scaled(frame->shadow_width * focus, frame->scale);
 	if (frame->shadow_width > 0 && width < 1) {
 		width = 1;
@@ -192,7 +211,8 @@ static void draw_shadow(struct matuwall_buffer *buffer,
 	}
 	matuwall_draw_rounded_shadow(buffer, &shadow_clip, geometry->left,
 		geometry->top, geometry->width, geometry->height,
-		geometry->radius, width, frame->shadow);
+		geometry->radius, width,
+		matuwall_color_fade(frame->shadow, opacity));
 }
 
 static bool focused(const struct matuwall_frame *frame, int64_t slot) {
@@ -289,10 +309,10 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				1.0);
+				1.0, MATUWALL_OPAQUE);
 		} else {
 			draw_tile(buffer, frame, &tile_clip, index, &geometry,
-				false);
+				false, MATUWALL_OPAQUE);
 		}
 		if (slot == INT64_MAX) {
 			break;
@@ -328,9 +348,10 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				focus);
+				focus, MATUWALL_OPAQUE);
 		}
-		draw_tile(buffer, frame, &tile_clip, index, &geometry, true);
+		draw_tile(buffer, frame, &tile_clip, index, &geometry, true,
+			MATUWALL_OPAQUE);
 	}
 }
 
