@@ -113,7 +113,7 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	Carousel edge style: _"clip"_, _"peek"_, or _"fade"_. Defaults to _"clip"_.
 	_clip_ cuts tiles at the panel margin. _peek_ lets them extend into it. _fade_
 	shrinks and fades tiles as they leave or enter. The regular grid treats
-	_fade_ as _clip_.
+	_fade_ as _clip_. The old *edge_peek* key still works but warns.
 
 ## [thumbnail]
 
