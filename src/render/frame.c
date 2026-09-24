@@ -195,6 +195,25 @@ static void draw_directory_unavailable(struct matuwall_buffer *buffer,
 		mark_width / 2, mark);
 }
 
+// ring follows its tile through the carousel edge fade
+static struct matuwall_frame_ring edge_ring(const struct matuwall_frame *frame,
+	const struct matuwall_frame_ring *ring) {
+	struct matuwall_tile_edge edge =
+		matuwall_tiles_edge(frame, frame->carousel_slot);
+	struct matuwall_frame_ring out = *ring;
+	out.width = ring->width * edge.scale;
+	out.height = ring->height * edge.scale;
+	out.x += (ring->width - out.width) / 2.0;
+	out.y += (ring->height - out.height) / 2.0;
+	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
+		out.x += edge.shift;
+	} else {
+		out.y += edge.shift;
+	}
+	out.alpha = matuwall_alpha_mul(ring->alpha, edge.opacity);
+	return out;
+}
+
 static void draw_ring(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
 	const struct matuwall_frame_ring *ring, int32_t gap, int32_t width) {
@@ -275,8 +294,10 @@ struct matuwall_damage matuwall_frame_draw(struct matuwall_buffer *buffer,
 
 	if (ring_width > 0 && frame->ring.a > 0) {
 		for (size_t i = 0; i < frame->ring_count; i++) {
-			draw_ring(buffer, frame, &clip, &frame->rings[i],
-				ring_gap, ring_width);
+			struct matuwall_frame_ring ring =
+				edge_ring(frame, &frame->rings[i]);
+			draw_ring(buffer, frame, &clip, &ring, ring_gap,
+				ring_width);
 		}
 	}
 	return damage;

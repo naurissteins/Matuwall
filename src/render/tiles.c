@@ -7,6 +7,8 @@
 #include "render/spinner.h"
 
 #define SPINNER_DIVISOR 14
+// size a fading tile reaches one full step past the margin
+#define FADE_MIN_SCALE 0.8
 
 static int32_t scaled(double logical, double scale) {
 	return (int32_t)lround(logical * scale);
@@ -27,11 +29,69 @@ struct tile_geometry {
 	int32_t border;
 };
 
+enum tile_layer {
+	LAYER_SHADOWS,
+	LAYER_FADING,
+	LAYER_OPAQUE,
+};
+
+// The regular grid keeps a hard edge; fading is a carousel treatment
+static bool edge_fades(const struct matuwall_frame *frame) {
+	return frame->edge == MATUWALL_EDGE_FADE &&
+	       frame->layout->flow != MATUWALL_FLOW_GRID;
+}
+
+static bool edge_clips(const struct matuwall_frame *frame) {
+	return frame->edge == MATUWALL_EDGE_CLIP ||
+	       (frame->edge == MATUWALL_EDGE_FADE && !edge_fades(frame));
+}
+
+static double smoothstep(double t) {
+	return t * t * (3.0 - 2.0 * t);
+}
+
+// fade and shrink a tile by how far it reaches past the margin, pinning
+// its outer edge there so neighbors slide over it and nothing is clipped
+struct matuwall_tile_edge matuwall_tiles_edge(
+	const struct matuwall_frame *frame, int64_t slot) {
+	struct matuwall_tile_edge edge = {
+		.scale = 1.0, .opacity = MATUWALL_OPAQUE};
+	if (!edge_fades(frame)) {
+		return edge;
+	}
+	bool horizontal = frame->layout->flow == MATUWALL_FLOW_HORIZONTAL;
+	struct matuwall_layout_rect item =
+		matuwall_layout_slot(frame->layout, slot);
+	double start = (horizontal ? item.x : item.y) - frame->scroll;
+	double extent = horizontal ? item.width : item.height;
+	double near = frame->layout->margin;
+	double far =
+		(horizontal ? frame->panel.width : frame->panel.height) - near;
+	// viewport narrower than one tile would fade the selection at rest
+	if (far - near < extent) {
+		return edge;
+	}
+
+	double before = near - start;
+	double after = start + extent - far;
+	double over = before > after ? before : after;
+	if (over <= 0.0) {
+		return edge;
+	}
+	double step = extent + frame->layout->spacing;
+	double eased = smoothstep(over < step ? over / step : 1.0);
+	edge.scale = 1.0 - (1.0 - FADE_MIN_SCALE) * eased;
+	double shrink = extent * (1.0 - edge.scale) / 2.0;
+	edge.shift = before > after ? before - shrink : shrink - after;
+	edge.opacity = (uint8_t)lround(MATUWALL_OPAQUE * (1.0 - eased));
+	return edge;
+}
+
 static struct matuwall_clip tile_visibility_clip(
 	const struct matuwall_frame *frame,
 	const struct matuwall_clip *effects) {
 	struct matuwall_clip clip = *effects;
-	if (frame->edge_peek) {
+	if (!edge_clips(frame)) {
 		return clip;
 	}
 
@@ -58,7 +118,7 @@ static struct matuwall_clip tile_visibility_clip(
 
 static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	const struct matuwall_clip *clip, int64_t slot, double focus,
-	struct tile_geometry *geometry) {
+	double shift, struct tile_geometry *geometry) {
 	struct matuwall_layout_rect item =
 		matuwall_layout_slot(frame->layout, slot);
 	double width = item.width * focus;
@@ -66,9 +126,9 @@ static enum tile_position tile_geometry(const struct matuwall_frame *frame,
 	double x = frame->panel.x + item.x - (width - item.width) / 2.0;
 	double y = frame->panel.y + item.y - (height - item.height) / 2.0;
 	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-		x -= frame->scroll;
+		x += shift - frame->scroll;
 	} else {
-		y -= frame->scroll;
+		y += shift - frame->scroll;
 	}
 	int32_t left = scaled(x, frame->scale);
 	int32_t top = scaled(y, frame->scale);
@@ -291,28 +351,33 @@ static size_t slot_index(const struct matuwall_frame *frame, int64_t slot) {
 
 static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
-	bool shadows) {
+	enum tile_layer layer) {
 	struct matuwall_clip tile_clip = tile_visibility_clip(frame, clip);
 	int64_t first;
 	int64_t last;
 	slot_bounds(frame, &tile_clip, &first, &last);
 	for (int64_t slot = first; slot <= last; slot++) {
 		size_t index = slot_index(frame, slot);
+		struct matuwall_tile_edge edge =
+			matuwall_tiles_edge(frame, slot);
 		struct tile_geometry geometry;
-		enum tile_position position =
-			tile_geometry(frame, &tile_clip, slot, 1.0, &geometry);
+		enum tile_position position = tile_geometry(frame, &tile_clip,
+			slot, edge.scale, edge.shift, &geometry);
 		if (position == TILE_AFTER) {
 			break;
 		}
-		if (position == TILE_BEFORE || focused(frame, slot)) {
-			continue;
-		}
-		if (shadows) {
+		bool fading = edge.opacity < MATUWALL_OPAQUE;
+		bool skip = position == TILE_BEFORE || edge.opacity == 0 ||
+			    focused(frame, slot) ||
+			    (layer != LAYER_SHADOWS &&
+				    fading != (layer == LAYER_FADING));
+		if (!skip && layer == LAYER_SHADOWS) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				1.0, MATUWALL_OPAQUE);
-		} else {
+				edge.scale,
+				matuwall_alpha_mul(edge.opacity, edge.opacity));
+		} else if (!skip) {
 			draw_tile(buffer, frame, &tile_clip, index, &geometry,
-				false, MATUWALL_OPAQUE);
+				fading, edge.opacity);
 		}
 		if (slot == INT64_MAX) {
 			break;
@@ -329,18 +394,21 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 		if (index >= frame->item_count) {
 			continue;
 		}
-		double focus = frame->focuses[i].scale;
+		struct matuwall_tile_edge edge =
+			matuwall_tiles_edge(frame, slot);
+		double focus = frame->focuses[i].scale * edge.scale;
 		struct tile_geometry geometry;
-		if (tile_geometry(frame, clip, slot, focus, &geometry) !=
-			TILE_VISIBLE) {
+		if (edge.opacity == 0 ||
+			tile_geometry(frame, clip, slot, focus, edge.shift,
+				&geometry) != TILE_VISIBLE) {
 			continue;
 		}
 		struct matuwall_clip tile_clip = *clip;
-		if (slot != frame->carousel_slot && !frame->edge_peek) {
+		if (slot != frame->carousel_slot && edge_clips(frame)) {
 			struct matuwall_clip viewport =
 				tile_visibility_clip(frame, clip);
 			struct tile_geometry base;
-			if (tile_geometry(frame, clip, slot, 1.0, &base) ==
+			if (tile_geometry(frame, clip, slot, 1.0, 0.0, &base) ==
 					TILE_VISIBLE &&
 				tile_crosses_clip(frame, &viewport, &base)) {
 				tile_clip = viewport;
@@ -348,10 +416,11 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				focus, MATUWALL_OPAQUE);
+				focus,
+				matuwall_alpha_mul(edge.opacity, edge.opacity));
 		}
 		draw_tile(buffer, frame, &tile_clip, index, &geometry, true,
-			MATUWALL_OPAQUE);
+			edge.opacity);
 	}
 }
 
@@ -359,8 +428,12 @@ void matuwall_tiles_draw(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip) {
 	bool shadows = frame->shadow_width > 0 && (frame->shadow >> 24) > 0;
 	if (shadows) {
-		draw_unfocused_pass(buffer, frame, clip, true);
+		draw_unfocused_pass(buffer, frame, clip, LAYER_SHADOWS);
 	}
-	draw_unfocused_pass(buffer, frame, clip, false);
+	// fading tiles go first so the sliding strip passes over them
+	if (edge_fades(frame)) {
+		draw_unfocused_pass(buffer, frame, clip, LAYER_FADING);
+	}
+	draw_unfocused_pass(buffer, frame, clip, LAYER_OPAQUE);
 	draw_focused_tiles(buffer, frame, clip, shadows);
 }

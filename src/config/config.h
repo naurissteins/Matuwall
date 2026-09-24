@@ -11,6 +11,7 @@
 
 const char *matuwall_position_name(enum matuwall_position position);
 bool matuwall_position_from_name(const char *name, enum matuwall_position *out);
+const char *matuwall_edge_name(enum matuwall_edge edge);
 
 #define MATUWALL_MAX_HOOKS 16
 #define MATUWALL_HOOK_MAX 512
@@ -29,7 +30,7 @@ struct matuwall_config {
 	struct matuwall_layout layout;
 	uint32_t visible_rows;
 	bool carousel;
-	bool edge_peek;
+	enum matuwall_edge edge;
 	uint32_t panel_radius;
 	uint32_t border_width;
 	uint32_t shadow_width;

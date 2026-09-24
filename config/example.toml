@@ -72,9 +72,10 @@ visible_rows = 1
 # wraps continuously, repeating thumbnails as needed to keep the strip full
 carousel = true
 
-# Let neighboring thumbnails peek into the panel margin. Disabled by default
-# so carousel and grid edges stay clean
-edge_peek = false
+# What carousel tiles do at the panel edges. "clip" cuts them at the margin,
+# "peek" lets them extend into it, and "fade" shrinks and fades them out.
+# The regular grid treats "fade" as "clip"
+edge = "clip"
 
 [thumbnail]
 # Tile size in logical pixels. The cache key includes these, so changing

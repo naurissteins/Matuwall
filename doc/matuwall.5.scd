@@ -109,9 +109,11 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	positions are horizontal; left and right positions are vertical. The selected
 	tile stays centered.
 
-*edge_peek*
-	Allow neighboring thumbnails to extend into the panel margin. Defaults to
-	_false_.
+*edge*
+	Carousel edge style: _"clip"_, _"peek"_, or _"fade"_. Defaults to _"clip"_.
+	_clip_ cuts tiles at the panel margin. _peek_ lets them extend into it. _fade_
+	shrinks and fades tiles as they leave or enter. The regular grid treats
+	_fade_ as _clip_.
 
 ## [thumbnail]
 

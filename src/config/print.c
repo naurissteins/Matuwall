@@ -80,13 +80,13 @@ bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 
 	fprintf(out,
 		"\n[grid]\ncolumns = %u\nvisible_rows = %u\ncarousel = %s\n"
-		"edge_peek = %s\n"
+		"edge = \"%s\"\n"
 		"spacing = %u\n"
 		"radius = %u\nborder_width = %u\nshadow_width = %u\n"
 		"ring_width = %u\n",
 		config->layout.columns, config->visible_rows,
 		config->carousel ? "true" : "false",
-		config->edge_peek ? "true" : "false", config->layout.spacing,
+		matuwall_edge_name(config->edge), config->layout.spacing,
 		config->layout.radius, config->border_width,
 		config->shadow_width, config->ring_width);
 	fprintf(out, "\n[thumbnail]\nwidth = %u\nheight = %u\n",

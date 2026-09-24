@@ -14,6 +14,13 @@ enum matuwall_position {
 	MATUWALL_POSITION_BOTTOM,
 };
 
+// what tiles do where the content meets the panel margin
+enum matuwall_edge {
+	MATUWALL_EDGE_CLIP,
+	MATUWALL_EDGE_PEEK,
+	MATUWALL_EDGE_FADE,
+};
+
 enum matuwall_flow {
 	MATUWALL_FLOW_GRID,
 	MATUWALL_FLOW_HORIZONTAL,
