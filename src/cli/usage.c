@@ -28,6 +28,8 @@ void matuwall_cli_usage(FILE *out) {
 	      "      --config PATH  load an alternate configuration file\n"
 	      "  -d, --directory DIRECTORY\n"
 	      "                     override the wallpaper directory\n"
+	      "      --edge EDGE    override carousel edge: auto, clip, peek, "
+	      "or fade\n"
 	      "      --edge-margin MARGIN\n"
 	      "                     override monitor edge gap (0..4096)\n"
 	      "      --height HEIGHT\n"

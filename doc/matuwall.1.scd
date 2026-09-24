@@ -69,6 +69,9 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 	command-line order. Up to 16 non-empty commands of up to 511 bytes are
 	accepted.
 
+*--edge* _EDGE_
+	Set _grid.edge_ to *auto*, *clip*, *peek*, or *fade*.
+
 *--edge-margin* _MARGIN_
 	Set _window.edge_margin_ to an integer from 0 to 4096.
 

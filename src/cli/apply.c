@@ -43,6 +43,9 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->carousel_set) {
 		config->carousel = options->carousel;
 	}
+	if (options->edge_set) {
+		config->edge = options->edge;
+	}
 	if (options->height_set) {
 		config->layout.tile_height = options->height;
 	}
@@ -148,6 +151,10 @@ void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
 	if (options->carousel_set) {
 		matuwall_log_info("config", "carousel overridden to %s",
 			config->carousel ? "true" : "false");
+	}
+	if (options->edge_set) {
+		matuwall_log_info("config", "edge overridden to %s",
+			matuwall_edge_name(config->edge));
 	}
 	if (options->height_set) {
 		matuwall_log_info("config", "thumbnail height overridden to %u",
