@@ -47,6 +47,19 @@ bool matuwall_position_from_name(
 	return true;
 }
 
+static const char *const edge_names[] = {
+	[MATUWALL_EDGE_CLIP] = "clip",
+	[MATUWALL_EDGE_PEEK] = "peek",
+	[MATUWALL_EDGE_FADE] = "fade",
+};
+
+const char *matuwall_edge_name(enum matuwall_edge edge) {
+	if ((size_t)edge >= sizeof(edge_names) / sizeof(edge_names[0])) {
+		return edge_names[MATUWALL_EDGE_CLIP];
+	}
+	return edge_names[edge];
+}
+
 void matuwall_config_defaults(struct matuwall_config *cfg) {
 	*cfg = (struct matuwall_config){
 		.backend = "awww",
@@ -66,7 +79,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 			.radius = 20},
 		.visible_rows = 1,
 		.carousel = true,
-		.edge_peek = false,
+		.edge = MATUWALL_EDGE_CLIP,
 		.panel_radius = 40,
 		.border_width = 0,
 		.shadow_width = 12,
@@ -152,6 +165,19 @@ static void apply_position(enum matuwall_position *dst,
 		warn(line, "position must be \"center\", \"left\", \"right\", "
 			   "\"top\", or \"bottom\"");
 	}
+}
+
+static void apply_edge(enum matuwall_edge *dst,
+	const struct matuwall_toml_value *v, int line) {
+	for (size_t i = 0; v->type == MATUWALL_TOML_STRING &&
+			   i < sizeof(edge_names) / sizeof(edge_names[0]);
+		i++) {
+		if (strcmp(v->string, edge_names[i]) == 0) {
+			*dst = (enum matuwall_edge)i;
+			return;
+		}
+	}
+	warn(line, "edge must be \"clip\", \"peek\", or \"fade\"");
 }
 
 static void apply_hooks(struct matuwall_config *cfg,
@@ -300,9 +326,8 @@ static bool apply(void *user_data, const char *section, const char *key,
 				"carousel must be true or false");
 			return true;
 		}
-		if (strcmp(key, "edge_peek") == 0) {
-			apply_bool(&cfg->edge_peek, v, line,
-				"edge_peek must be true or false");
+		if (strcmp(key, "edge") == 0) {
+			apply_edge(&cfg->edge, v, line);
 			return true;
 		}
 	} else if (strcmp(section, "thumbnail") == 0) {
