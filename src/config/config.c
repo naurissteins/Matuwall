@@ -61,6 +61,17 @@ const char *matuwall_edge_name(enum matuwall_edge edge) {
 	return edge_names[edge];
 }
 
+bool matuwall_edge_from_name(const char *name, enum matuwall_edge *out) {
+	for (size_t i = 0; i < sizeof(edge_names) / sizeof(edge_names[0]);
+		i++) {
+		if (strcmp(name, edge_names[i]) == 0) {
+			*out = (enum matuwall_edge)i;
+			return true;
+		}
+	}
+	return false;
+}
+
 enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg) {
 	if (cfg->edge != MATUWALL_EDGE_AUTO) {
 		return cfg->edge;
@@ -178,15 +189,11 @@ static void apply_position(enum matuwall_position *dst,
 
 static void apply_edge(enum matuwall_edge *dst,
 	const struct matuwall_toml_value *v, int line) {
-	for (size_t i = 0; v->type == MATUWALL_TOML_STRING &&
-			   i < sizeof(edge_names) / sizeof(edge_names[0]);
-		i++) {
-		if (strcmp(v->string, edge_names[i]) == 0) {
-			*dst = (enum matuwall_edge)i;
-			return;
-		}
+	if (v->type != MATUWALL_TOML_STRING ||
+		!matuwall_edge_from_name(v->string, dst)) {
+		warn(line, "edge must be \"auto\", \"clip\", \"peek\", or "
+			   "\"fade\"");
 	}
-	warn(line, "edge must be \"auto\", \"clip\", \"peek\", or \"fade\"");
 }
 
 // TODO: drop the edge_peek alias after a couple of releases

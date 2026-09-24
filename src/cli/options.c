@@ -19,6 +19,7 @@ enum {
 	OPTION_CAROUSEL,
 	OPTION_CLOSE_ON_FOCUS_LOSS,
 	OPTION_CONFIG,
+	OPTION_EDGE,
 	OPTION_EDGE_MARGIN,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
@@ -56,6 +57,7 @@ static const struct option long_options[] = {
 	{"columns", required_argument, NULL, 'c'},
 	{"config", required_argument, NULL, OPTION_CONFIG},
 	{"directory", required_argument, NULL, 'd'},
+	{"edge", required_argument, NULL, OPTION_EDGE},
 	{"edge-margin", required_argument, NULL, OPTION_EDGE_MARGIN},
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
@@ -179,6 +181,18 @@ static bool parse_position(const char *value,
 	return true;
 }
 
+static bool parse_edge(const char *value, struct matuwall_cli_options *options,
+	char *err, size_t err_size) {
+	if (!matuwall_edge_from_name(value, &options->edge)) {
+		snprintf(err, err_size,
+			"invalid edge '%s': expected auto, clip, peek, or fade",
+			value);
+		return false;
+	}
+	options->edge_set = true;
+	return true;
+}
+
 static enum parse_result parse_numeric_override(int option, const char *value,
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	switch (option) {
@@ -270,6 +284,10 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_path_override("directory", value,
 			       options->directory, sizeof(options->directory),
 			       &options->directory_set, err, err_size)
+			       ? PARSE_CONTINUE
+			       : PARSE_ERROR;
+	case OPTION_EDGE:
+		return parse_edge(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
 	case OPTION_HOOK:

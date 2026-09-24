@@ -12,6 +12,7 @@
 const char *matuwall_position_name(enum matuwall_position position);
 bool matuwall_position_from_name(const char *name, enum matuwall_position *out);
 const char *matuwall_edge_name(enum matuwall_edge edge);
+bool matuwall_edge_from_name(const char *name, enum matuwall_edge *out);
 
 #define MATUWALL_MAX_HOOKS 16
 #define MATUWALL_HOOK_MAX 512

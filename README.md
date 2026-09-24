@@ -62,6 +62,7 @@ matuwall -b awww                                 // use awww once
 matuwall --backend auto                          // detect a running backend
 matuwall --carousel                              // enable the centered carousel
 matuwall --no-carousel                           // use the regular grid
+matuwall --edge fade                             // fade tiles at carousel edges
 matuwall -c 4                                    // use at most four columns
 matuwall -r 3                                    // use at most three visible rows
 matuwall -s 12                                   // set tile spacing to 12
