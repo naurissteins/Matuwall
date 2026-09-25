@@ -73,6 +73,10 @@ void matuwall_worker_cancel_preview(struct matuwall_worker_pool *pool);
 void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	matuwall_result_fn cb, void *user_data);
 
+// no new job starts, running WebP and progressive JPEG setup still finish
+void matuwall_worker_pool_request_stop(struct matuwall_worker_pool *pool);
+
+// requests a stop, joins every worker and frees the pool
 void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool);
 
 #endif

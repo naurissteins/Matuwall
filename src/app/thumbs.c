@@ -307,11 +307,7 @@ void matuwall_app_thumbs_drain(struct matuwall_app *app) {
 	}
 }
 
-void matuwall_app_thumbs_finish(struct matuwall_app *app) {
-	if (app->workers != NULL) {
-		matuwall_worker_pool_stop(app->workers);
-		app->workers = NULL;
-	}
+static void release_thumbs(struct matuwall_app *app) {
 	if (app->thumb_count > 0) {
 		size_t unrequested = 0;
 		for (size_t i = 0; i < app->thumb_count; i++) {
@@ -352,4 +348,19 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 	app->thumb_failed = 0;
 	app->thumb_discarded = 0;
 	app->thumb_withdrawn = 0;
+}
+
+void matuwall_app_thumbs_quiesce(struct matuwall_app *app) {
+	if (app->workers != NULL) {
+		matuwall_worker_pool_request_stop(app->workers);
+	}
+	release_thumbs(app);
+}
+
+void matuwall_app_thumbs_finish(struct matuwall_app *app) {
+	if (app->workers != NULL) {
+		matuwall_worker_pool_stop(app->workers);
+		app->workers = NULL;
+	}
+	release_thumbs(app);
 }

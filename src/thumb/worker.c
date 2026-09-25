@@ -468,13 +468,17 @@ void matuwall_worker_drain(struct matuwall_worker_pool *pool,
 	}
 }
 
-void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
+void matuwall_worker_pool_request_stop(struct matuwall_worker_pool *pool) {
 	pthread_mutex_lock(&pool->mutex);
 	atomic_store_explicit(&pool->stopping, true, memory_order_relaxed);
 	cancel_running_preview(pool);
 	pthread_cond_broadcast(&pool->wakeup);
 	pthread_cond_broadcast(&pool->budget_freed);
 	pthread_mutex_unlock(&pool->mutex);
+}
+
+void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
+	matuwall_worker_pool_request_stop(pool);
 
 	for (size_t i = 0; i < pool->thread_count; i++) {
 		pthread_join(pool->threads[i], NULL);
