@@ -16,11 +16,20 @@ enum matuwall_decode_purpose {
 	MATUWALL_DECODE_PREVIEW,
 };
 
+// decoders declare their transient peak before allocating it. reserve
+// may block, and returns false when the decode should give up
+struct matuwall_decode_budget {
+	bool (*reserve)(void *user_data, uint64_t bytes);
+	void *user_data;
+};
+
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height);
 
+// budget may be NULL for an unbounded decode
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h,
-	enum matuwall_decode_purpose purpose, const atomic_bool *stop);
+	enum matuwall_decode_purpose purpose, const atomic_bool *stop,
+	const struct matuwall_decode_budget *budget);
 
 void matuwall_image_free(struct matuwall_image *img);
 
