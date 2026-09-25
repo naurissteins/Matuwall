@@ -408,6 +408,9 @@ bool matuwall_app_run(struct matuwall_app *app) {
 	// Enter requested an apply: do it now, off the input path, on the way
 	// out
 	if (app->apply_requested) {
+		// free cores and memory for the backend, join at exit
+		matuwall_app_thumbs_quiesce(app);
+		matuwall_app_preview_finish(app);
 		return apply_selection(app);
 	}
 	return !app->scan.unavailable;
