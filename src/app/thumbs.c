@@ -48,7 +48,10 @@ static void on_result(
 	if (app->pending > 0) {
 		app->pending--;
 	}
-	app->layer.needs_repaint = true;
+	// lookahead lands off screen, and the next visit repaints anyway
+	if (matuwall_thumb_store_drawable(app, result->index)) {
+		app->layer.needs_repaint = true;
+	}
 }
 
 // Fit the physical target inside the output without changing its aspect
@@ -86,62 +89,12 @@ static bool thumbnail_target(
 	return true;
 }
 
-static void visible_ranges(const struct matuwall_app *app, size_t *first,
-	size_t *end, size_t *wrap_end) {
-	size_t columns = app->layout.columns;
-	if (columns == 0) {
-		columns = 1;
-	}
-
-	if (app->layout.flow != MATUWALL_FLOW_GRID) {
-		size_t visible =
-			app->layout.flow == MATUWALL_FLOW_HORIZONTAL
-				? columns
-				: matuwall_grid_visible_rows(&app->layout,
-					  (uint32_t)app->panel.height);
-		if (visible > app->scan.count) {
-			visible = app->scan.count;
-		}
-		int64_t before = (int64_t)(visible / 2);
-		int64_t start_slot = app->grid.cursor >= INT64_MIN + before
-					     ? app->grid.cursor - before
-					     : INT64_MIN;
-		*first = matuwall_layout_carousel_index(
-			start_slot, app->scan.count);
-		size_t until_end = app->scan.count - *first;
-		if (visible <= until_end) {
-			*end = *first + visible;
-			*wrap_end = 0;
-		} else {
-			*end = app->scan.count;
-			*wrap_end = visible - until_end;
-		}
-		return;
-	}
-
-	*first = (size_t)app->grid.first_row * columns;
-	if (*first >= app->scan.count) {
-		*first = app->scan.count;
-		*end = app->scan.count;
-		*wrap_end = 0;
-		return;
-	}
-
-	uint32_t height =
-		app->panel.height > 0 ? (uint32_t)app->panel.height : 0;
-	size_t rows = matuwall_grid_visible_rows(&app->layout, height);
-	size_t count = rows * columns;
-	size_t remaining = app->scan.count - *first;
-	*end = *first + (count < remaining ? count : remaining);
-	*wrap_end = 0;
-}
-
 static void accept_thumbnail_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
 	size_t first;
 	size_t end;
 	size_t wrap_end;
-	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	matuwall_thumb_store_accept(app, result, first, end, wrap_end);
 }
 
@@ -171,7 +124,7 @@ static void refresh_current_visible_pending(struct matuwall_app *app) {
 	size_t first;
 	size_t end;
 	size_t wrap_end;
-	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	refresh_visible_pending(app, first, end, wrap_end);
 }
 
@@ -269,7 +222,7 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	size_t first;
 	size_t end;
 	size_t wrap_end;
-	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
 	submit_visible_window(app, first, end, wrap_end);
 	app->thumb_priority_first = first;
@@ -317,7 +270,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	size_t first;
 	size_t end;
 	size_t wrap_end;
-	visible_ranges(app, &first, &end, &wrap_end);
+	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
 	submit_visible_window(app, first, end, wrap_end);
 	refresh_visible_pending(app, first, end, wrap_end);

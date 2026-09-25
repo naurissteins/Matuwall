@@ -66,6 +66,10 @@ uint32_t matuwall_layout_rows(
 struct matuwall_layout_rect matuwall_layout_slot(
 	const struct matuwall_layout *layout, int64_t slot);
 
+// whether a slot's tile at this scroll reaches into the panel
+bool matuwall_layout_slot_reaches_panel(const struct matuwall_layout *layout,
+	const struct matuwall_rect *panel, double scroll, int64_t slot);
+
 size_t matuwall_layout_carousel_index(int64_t slot, size_t count);
 
 double matuwall_layout_scroll(const struct matuwall_layout *layout,
