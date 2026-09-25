@@ -279,6 +279,35 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	refresh_visible_pending(app, first, end, wrap_end);
 }
 
+struct thumb_window {
+	struct matuwall_app *app;
+	size_t first;
+	size_t end;
+	size_t wrap_end;
+};
+
+// runs under the pool lock, pure reads of main-thread state
+static bool keep_queued(void *user_data, size_t index) {
+	const struct thumb_window *window = user_data;
+	return matuwall_thumb_store_in_window(window->app, index, window->first,
+		window->end, window->wrap_end);
+}
+
+// withdrawn job never runs, so the tile can be requested again
+static void withdraw_queued(void *user_data, size_t index) {
+	struct thumb_window *window = user_data;
+	struct matuwall_app *app = window->app;
+	if (index >= app->thumb_count ||
+		app->thumbs[index].state != MATUWALL_THUMB_PENDING) {
+		return;
+	}
+	app->thumbs[index].state = MATUWALL_THUMB_UNLOADED;
+	if (app->pending > 0) {
+		app->pending--;
+	}
+	app->thumb_withdrawn++;
+}
+
 void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	if (app->workers == NULL) {
 		app->visible_pending = 0;
@@ -298,7 +327,20 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 		return;
 	}
 
-	matuwall_worker_prioritize_thumbs(app->workers, first, end, wrap_end);
+	// old viewports are withdrawn, not just reordered behind the new one
+	struct thumb_window window = {
+		.app = app,
+		.first = first,
+		.end = end,
+		.wrap_end = wrap_end,
+	};
+	const struct matuwall_thumb_filter filter = {
+		.keep = keep_queued,
+		.dropped = withdraw_queued,
+		.user_data = &window,
+	};
+	matuwall_worker_prioritize_thumbs(
+		app->workers, first, end, wrap_end, &filter);
 	app->thumb_priority_first = first;
 	app->thumb_priority_end = end;
 	app->thumb_priority_wrap_end = wrap_end;
@@ -326,11 +368,12 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 		size_t unfinished = app->pending;
 		matuwall_log_info("thumbnail",
 			"summary: %zu cache hit%s, %zu decoded, %zu failed, "
-			"%zu unrequested, %zu unfinished, %zu evicted, "
-			"%zu KiB peak resident",
+			"%zu discarded, %zu withdrawn, %zu unrequested, "
+			"%zu unfinished, %zu evicted, %zu KiB peak resident",
 			app->thumb_cache_hits,
 			app->thumb_cache_hits == 1 ? "" : "s",
-			app->thumb_decoded, app->thumb_failed, unrequested,
+			app->thumb_decoded, app->thumb_failed,
+			app->thumb_discarded, app->thumb_withdrawn, unrequested,
 			unfinished, app->thumb_evicted,
 			app->thumb_resident_peak_bytes / 1024);
 	}
@@ -354,4 +397,6 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 	app->thumb_cache_hits = 0;
 	app->thumb_decoded = 0;
 	app->thumb_failed = 0;
+	app->thumb_discarded = 0;
+	app->thumb_withdrawn = 0;
 }

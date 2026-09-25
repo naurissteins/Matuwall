@@ -42,6 +42,7 @@ struct matuwall_app {
 	size_t thumb_count;
 	size_t pending;
 	size_t visible_pending;
+	int64_t spinner_due_ms;
 	size_t thumb_target_bytes;
 	size_t thumb_resident_bytes;
 	size_t thumb_resident_peak_bytes;
@@ -52,6 +53,9 @@ struct matuwall_app {
 	size_t thumb_cache_hits;
 	size_t thumb_decoded;
 	size_t thumb_failed;
+	// decoded but dropped outside the window, and withdrawn before running
+	size_t thumb_discarded;
+	size_t thumb_withdrawn;
 	bool thumb_priority_set;
 	bool running;
 	bool apply_requested;

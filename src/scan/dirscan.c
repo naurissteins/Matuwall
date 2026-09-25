@@ -37,6 +37,11 @@ static bool has_supported_extension(const char *name) {
 	return false;
 }
 
+// d_type is free, links and DT_UNKNOWN are checked when opened
+static bool may_be_image(unsigned char type) {
+	return type == DT_REG || type == DT_LNK || type == DT_UNKNOWN;
+}
+
 static bool push_path(struct matuwall_dirscan *scan, char *path) {
 	if (scan->count == scan->capacity) {
 		size_t capacity = scan->capacity == 0 ? INITIAL_CAPACITY
@@ -89,7 +94,7 @@ bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir) {
 		if (entry->d_name[0] == '.') {
 			continue;
 		}
-		if (entry->d_type == DT_DIR) {
+		if (!may_be_image(entry->d_type)) {
 			continue;
 		}
 		if (!has_supported_extension(entry->d_name)) {

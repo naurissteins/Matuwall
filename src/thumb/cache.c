@@ -144,15 +144,25 @@ bool matuwall_cache_read(
 	const struct matuwall_cache_key *key, struct matuwall_image *img) {
 	*img = (struct matuwall_image){0};
 
-	FILE *fp = fopen(key->filename, "rb");
+	// entries are only ever renamed-in regular files
+	int fd = open(
+		key->filename, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+	if (fd < 0) {
+		return false;
+	}
+	struct stat st;
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+		close(fd);
+		return false;
+	}
+	FILE *fp = fdopen(fd, "rb");
 	if (fp == NULL) {
+		close(fd);
 		return false;
 	}
 
-	struct stat st;
 	struct cache_header header;
-	if (fstat(fileno(fp), &st) != 0 ||
-		fread(&header, sizeof(header), 1, fp) != 1 ||
+	if (fread(&header, sizeof(header), 1, fp) != 1 ||
 		!header_ok(&header, key, st.st_size) ||
 		!source_path_matches(fp, key)) {
 		fclose(fp);

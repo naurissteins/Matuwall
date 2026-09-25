@@ -205,6 +205,30 @@ static int sooner(int timeout, int candidate) {
 	return timeout < 0 || candidate < timeout ? candidate : timeout;
 }
 
+// Pulse only while an on-screen thumbnail is pending
+static int spinner_timeout(const struct matuwall_app *app, int64_t now_ms) {
+	if (app->visible_pending == 0) {
+		return -1;
+	}
+	if (app->spinner_due_ms == 0) {
+		return MATUWALL_SPINNER_INTERVAL_MS;
+	}
+	int64_t left = app->spinner_due_ms - now_ms;
+	return left > 0 ? (int)left : 0;
+}
+
+// A deadline, not a per-wakeup flag: frame callbacks must not drive the pulse
+static void spinner_tick(struct matuwall_app *app, int64_t now_ms) {
+	if (app->visible_pending == 0) {
+		app->spinner_due_ms = 0;
+		return;
+	}
+	if (app->spinner_due_ms == 0 || now_ms >= app->spinner_due_ms) {
+		app->layer.needs_repaint = true;
+		app->spinner_due_ms = now_ms + MATUWALL_SPINNER_INTERVAL_MS;
+	}
+}
+
 static bool pump_events(struct matuwall_app *app) {
 	while (wl_display_prepare_read(app->display) != 0) {
 		if (wl_display_dispatch_pending(app->display) < 0) {
@@ -237,13 +261,10 @@ static bool pump_events(struct matuwall_app *app) {
 		nfds++;
 	}
 
+	int64_t now = matuwall_now_ms();
 	int timeout = matuwall_seat_repeat_timeout(&app->seat);
-	// Pulse only while an on-screen thumbnail is pending
-	if (app->visible_pending > 0) {
-		timeout = sooner(timeout, MATUWALL_SPINNER_INTERVAL_MS);
-	}
-	timeout = sooner(
-		timeout, matuwall_app_preview_timeout(app, matuwall_now_ms()));
+	timeout = sooner(timeout, spinner_timeout(app, now));
+	timeout = sooner(timeout, matuwall_app_preview_timeout(app, now));
 
 	if (poll(pfd, nfds, timeout) < 0) {
 		wl_display_cancel_read(app->display);
@@ -295,10 +316,7 @@ static bool pump_events(struct matuwall_app *app) {
 
 	matuwall_seat_dispatch_repeat(&app->seat);
 	matuwall_app_preview_tick(app, matuwall_now_ms());
-	// Keep the pulse advancing while visible tiles are still loading
-	if (app->visible_pending > 0) {
-		app->layer.needs_repaint = true;
-	}
+	spinner_tick(app, matuwall_now_ms());
 	matuwall_layer_collect_idle(&app->layer);
 	return true;
 }

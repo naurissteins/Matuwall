@@ -302,7 +302,8 @@ bool matuwall_worker_submit(
 }
 
 void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
-	size_t first, size_t end, size_t wrap_end) {
+	size_t first, size_t end, size_t wrap_end,
+	const struct matuwall_thumb_filter *filter) {
 	if (first >= end && wrap_end == 0) {
 		return;
 	}
@@ -310,6 +311,7 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	struct job_list previews = {0};
 	struct job_list visible = {0};
 	struct job_list remaining = {0};
+	struct job_list withdrawn = {0};
 
 	pthread_mutex_lock(&pool->mutex);
 	struct job *job = pool->jobs_head;
@@ -317,6 +319,9 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 		struct job *next = job->next;
 		if (job->result.kind == MATUWALL_JOB_PREVIEW) {
 			job_list_append(&previews, job);
+		} else if (!filter->keep(
+				   filter->user_data, job->result.index)) {
+			job_list_append(&withdrawn, job);
 		} else if ((job->result.index >= first &&
 				   job->result.index < end) ||
 			   job->result.index < wrap_end) {
@@ -332,6 +337,14 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	pool->jobs_head = previews.head;
 	pool->jobs_tail = previews.tail;
 	pthread_mutex_unlock(&pool->mutex);
+
+	job = withdrawn.head;
+	while (job != NULL) {
+		struct job *next = job->next;
+		filter->dropped(filter->user_data, job->result.index);
+		free(job);
+		job = next;
+	}
 }
 
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
