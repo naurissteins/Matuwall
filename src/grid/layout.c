@@ -93,6 +93,22 @@ struct matuwall_layout_rect matuwall_layout_slot(
 	};
 }
 
+bool matuwall_layout_slot_reaches_panel(const struct matuwall_layout *layout,
+	const struct matuwall_rect *panel, double scroll, int64_t slot) {
+	struct matuwall_layout_rect item = matuwall_layout_slot(layout, slot);
+	bool horizontal = layout->flow == MATUWALL_FLOW_HORIZONTAL;
+	double start = (horizontal ? item.x : item.y) - scroll;
+	double end = start + (horizontal ? item.width : item.height);
+	double extent = horizontal ? panel->width : panel->height;
+	// fade pins edge tiles inside from up to spacing - margin beyond the
+	// panel, one more unit absorbs pixel rounding
+	double slack = 1.0;
+	if (layout->spacing > layout->margin) {
+		slack += (double)(layout->spacing - layout->margin);
+	}
+	return end > -slack && start < extent + slack;
+}
+
 size_t matuwall_layout_carousel_index(int64_t slot, size_t count) {
 	if (count == 0) {
 		return SIZE_MAX;

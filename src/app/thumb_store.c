@@ -36,6 +36,82 @@ size_t matuwall_thumb_store_lookahead(
 	return lookahead < visible ? lookahead : visible;
 }
 
+void matuwall_thumb_store_visible_ranges(const struct matuwall_app *app,
+	size_t *first, size_t *end, size_t *wrap_end) {
+	size_t columns = app->layout.columns;
+	if (columns == 0) {
+		columns = 1;
+	}
+
+	if (app->layout.flow != MATUWALL_FLOW_GRID) {
+		size_t visible =
+			app->layout.flow == MATUWALL_FLOW_HORIZONTAL
+				? columns
+				: matuwall_grid_visible_rows(&app->layout,
+					  (uint32_t)app->panel.height);
+		if (visible > app->scan.count) {
+			visible = app->scan.count;
+		}
+		int64_t before = (int64_t)(visible / 2);
+		int64_t start_slot = app->grid.cursor >= INT64_MIN + before
+					     ? app->grid.cursor - before
+					     : INT64_MIN;
+		*first = matuwall_layout_carousel_index(
+			start_slot, app->scan.count);
+		size_t until_end = app->scan.count - *first;
+		if (visible <= until_end) {
+			*end = *first + visible;
+			*wrap_end = 0;
+		} else {
+			*end = app->scan.count;
+			*wrap_end = visible - until_end;
+		}
+		return;
+	}
+
+	*first = (size_t)app->grid.first_row * columns;
+	if (*first >= app->scan.count) {
+		*first = app->scan.count;
+		*end = app->scan.count;
+		*wrap_end = 0;
+		return;
+	}
+
+	uint32_t height =
+		app->panel.height > 0 ? (uint32_t)app->panel.height : 0;
+	size_t rows = matuwall_grid_visible_rows(&app->layout, height);
+	size_t count = rows * columns;
+	size_t remaining = app->scan.count - *first;
+	*end = *first + (count < remaining ? count : remaining);
+	*wrap_end = 0;
+}
+
+// running animation repaints every frame, only the rest view counts
+bool matuwall_thumb_store_drawable(
+	const struct matuwall_app *app, size_t index) {
+	const struct matuwall_layout *layout = &app->layout;
+	double scroll = matuwall_layout_scroll(
+		layout, &app->panel, app->grid.cursor, app->grid.first_row);
+	if (layout->flow == MATUWALL_FLOW_GRID) {
+		return matuwall_layout_slot_reaches_panel(
+			layout, &app->panel, scroll, (int64_t)index);
+	}
+
+	size_t count = app->thumb_count;
+	int64_t cursor = app->grid.cursor;
+	if (index >= count || cursor > INT64_MAX - (int64_t)count ||
+		cursor < INT64_MIN + (int64_t)count) {
+		return true;
+	}
+	size_t current = matuwall_layout_carousel_index(cursor, count);
+	int64_t ahead = (int64_t)((index + count - current) % count);
+	// the nearest copies of index on either side of the cursor
+	return matuwall_layout_slot_reaches_panel(
+		       layout, &app->panel, scroll, cursor + ahead) ||
+	       matuwall_layout_slot_reaches_panel(layout, &app->panel, scroll,
+		       cursor + ahead - (int64_t)count);
+}
+
 static bool in_visible_range(
 	size_t index, size_t first, size_t end, size_t wrap_end) {
 	return (index >= first && index < end) || index < wrap_end;

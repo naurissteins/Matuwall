@@ -11,6 +11,13 @@ struct matuwall_thumb_result;
 bool matuwall_thumb_store_set_target(
 	struct matuwall_app *app, uint32_t width, uint32_t height);
 
+// visible items as [first, end) plus a carousel wrap of [0, wrap_end)
+void matuwall_thumb_store_visible_ranges(const struct matuwall_app *app,
+	size_t *first, size_t *end, size_t *wrap_end);
+
+bool matuwall_thumb_store_drawable(
+	const struct matuwall_app *app, size_t index);
+
 size_t matuwall_thumb_store_lookahead(
 	const struct matuwall_app *app, size_t visible);
 

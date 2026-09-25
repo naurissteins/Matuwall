@@ -2,6 +2,10 @@
 
 #include <stddef.h>
 
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
+
 #define SAMPLE_SHIFT 16
 #define SAMPLE_ONE (UINT32_C(1) << SAMPLE_SHIFT)
 #define SAMPLE_HALF (SAMPLE_ONE / 2)
@@ -112,9 +116,56 @@ void matuwall_bilinear_axes_init(
 	}
 }
 
+#ifdef __SSE2__
+// lerp_pixel on 16-bit lanes: same weights and rounding, so the output is
+// bit-identical and no lane can exceed 255 * 256 + 0x80
+static void row_span_sse2(const struct matuwall_bilinear_row *row,
+	const struct matuwall_bilinear_axis *axes, uint32_t *dst,
+	uint32_t count) {
+	const __m128i zero = _mm_setzero_si128();
+	const __m128i round = _mm_set1_epi16(0x80);
+	int16_t y_weight = (int16_t)((row->y_fraction + 0x80) >> 8);
+	int16_t y_keep = (int16_t)(256 - y_weight);
+	// low half weighs the top row, high half the bottom row
+	const __m128i vertical = _mm_set_epi16(y_weight, y_weight, y_weight,
+		y_weight, y_keep, y_keep, y_keep, y_keep);
+	uint32_t width = row->sampler->width;
+
+	for (uint32_t i = 0; i < count; i++) {
+		uint32_t first = axes[i].first;
+		uint32_t second = first + (first + 1 < width);
+		int16_t weight = (int16_t)((axes[i].fraction + 0x80) >> 8);
+		__m128i from = _mm_unpacklo_epi32(
+			_mm_cvtsi32_si128((int32_t)row->top[first]),
+			_mm_cvtsi32_si128((int32_t)row->bottom[first]));
+		__m128i to = _mm_unpacklo_epi32(
+			_mm_cvtsi32_si128((int32_t)row->top[second]),
+			_mm_cvtsi32_si128((int32_t)row->bottom[second]));
+		from = _mm_unpacklo_epi8(from, zero);
+		to = _mm_unpacklo_epi8(to, zero);
+
+		// top and bottom horizontal lerps side by side
+		__m128i across = _mm_add_epi16(
+			_mm_mullo_epi16(
+				from, _mm_set1_epi16((int16_t)(256 - weight))),
+			_mm_mullo_epi16(to, _mm_set1_epi16(weight)));
+		across = _mm_srli_epi16(_mm_add_epi16(across, round), 8);
+
+		__m128i down = _mm_mullo_epi16(across, vertical);
+		down = _mm_add_epi16(down, _mm_srli_si128(down, 8));
+		down = _mm_srli_epi16(_mm_add_epi16(down, round), 8);
+		dst[i] = (uint32_t)_mm_cvtsi128_si32(
+			_mm_packus_epi16(down, down));
+	}
+}
+#endif
+
 void matuwall_bilinear_row_span(struct matuwall_bilinear_row *row,
 	const struct matuwall_bilinear_axis *axes, uint32_t *dst,
 	uint32_t count) {
+#ifdef __SSE2__
+	row_span_sse2(row, axes, dst, count);
+#else
 	for (uint32_t i = 0; i < count; i++) {
 		uint32_t first = axes[i].first;
 		uint32_t second = first + (first + 1 < row->sampler->width);
@@ -124,5 +175,6 @@ void matuwall_bilinear_row_span(struct matuwall_bilinear_row *row,
 			row->bottom[second], axes[i].fraction);
 		dst[i] = lerp_pixel(upper, lower, row->y_fraction);
 	}
+#endif
 	row->position += (int64_t)count * row->sampler->step_x;
 }
