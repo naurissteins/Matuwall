@@ -19,9 +19,33 @@
 #define MAX_PIXELS (1u << 26)
 #define MAX_THUMBNAIL_PIXELS (1u << 24)
 #define WEBP_FILE_LIMIT (64UL * 1024 * 1024)
+// refuse decodes whose transient memory estimate passes this
+#define DECODE_MEMORY_LIMIT ((uint64_t)512 * 1024 * 1024)
+
+// one decode's target and limits, shared by every format
+struct decode_job {
+	uint32_t target_w;
+	uint32_t target_h;
+	enum matuwall_decode_purpose purpose;
+	const atomic_bool *stop;
+	const struct matuwall_decode_budget *budget;
+};
 
 static bool stop_requested(const atomic_bool *stop) {
 	return stop != NULL && atomic_load_explicit(stop, memory_order_relaxed);
+}
+
+// called once per decode, before its large allocations
+static bool reserve(const struct decode_job *job, uint64_t bytes) {
+	if (bytes > DECODE_MEMORY_LIMIT) {
+		return false;
+	}
+	return job->budget == NULL ||
+	       job->budget->reserve(job->budget->user_data, bytes);
+}
+
+static uint64_t target_bytes(const struct decode_job *job) {
+	return (uint64_t)job->target_w * job->target_h * sizeof(uint32_t);
 }
 
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height) {
@@ -107,9 +131,79 @@ static void jpeg_scale_for_target(struct jpeg_decompress_struct *cinfo,
 	cinfo->scale_denom = denominator;
 }
 
-static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose,
+// multi-scan files keep every source coefficient, whatever the DCT scale
+static uint64_t jpeg_coefficient_bytes(struct jpeg_decompress_struct *cinfo) {
+	if (!jpeg_has_multiple_scans(cinfo)) {
+		return 0;
+	}
+	uint64_t bytes = 0;
+	for (int ci = 0; ci < cinfo->num_components; ci++) {
+		const jpeg_component_info *comp = &cinfo->comp_info[ci];
+		uint64_t h = (uint64_t)comp->h_samp_factor;
+		uint64_t v = (uint64_t)comp->v_samp_factor;
+		uint64_t columns = (comp->width_in_blocks + h - 1) / h * h;
+		uint64_t rows = (comp->height_in_blocks + v - 1) / v * v;
+		bytes += columns * rows * DCTSIZE2 * sizeof(JCOEF);
+	}
+	return bytes;
+}
+
+// heap state, so the error longjmp can still free it
+struct jpeg_stream {
+	uint8_t *row;
+	struct matuwall_row_scaler scaler;
+};
+
+static void jpeg_stream_free(struct jpeg_stream *stream) {
+	free(stream->row);
+	matuwall_row_scaler_finish(&stream->scaler);
+	free(stream);
+}
+
+static bool read_jpeg_direct(struct jpeg_decompress_struct *cinfo,
+	struct matuwall_image *img, const atomic_bool *stop) {
+	while (cinfo->output_scanline < img->height) {
+		JSAMPROW row =
+			(JSAMPROW)(img->pixels +
+				   (size_t)cinfo->output_scanline * img->width);
+		if (stop_requested(stop) ||
+			jpeg_read_scanlines(cinfo, &row, 1) != 1) {
+			return false;
+		}
+	}
+	jpeg_finish_decompress(cinfo);
+	return true;
+}
+
+// rows below the cover crop are never decoded
+static bool read_jpeg_streamed(struct jpeg_decompress_struct *cinfo,
+	struct matuwall_image *img, struct jpeg_stream *stream,
 	const atomic_bool *stop) {
+	stream->row = malloc((size_t)cinfo->output_width * 3);
+	if (stream->row == NULL ||
+		!matuwall_row_scaler_init(&stream->scaler, cinfo->output_width,
+			cinfo->output_height, img->width, img->height,
+			img->pixels)) {
+		return false;
+	}
+	while (!matuwall_row_scaler_done(&stream->scaler)) {
+		uint32_t y = cinfo->output_scanline;
+		JSAMPROW row = stream->row;
+		if (stop_requested(stop) || y >= cinfo->output_height ||
+			jpeg_read_scanlines(cinfo, &row, 1) != 1) {
+			return false;
+		}
+		matuwall_row_scaler_push(&stream->scaler, y, stream->row);
+	}
+	return true;
+}
+
+static bool decode_jpeg(
+	FILE *fp, struct matuwall_image *img, const struct decode_job *job) {
+	struct jpeg_stream *stream = calloc(1, sizeof(*stream));
+	if (stream == NULL) {
+		return false;
+	}
 	struct jpeg_decompress_struct cinfo = {0};
 	struct jpeg_guard guard;
 	cinfo.err = jpeg_std_error(&guard.base);
@@ -118,54 +212,48 @@ static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 
 	if (setjmp(guard.jmp)) {
 		jpeg_destroy_decompress(&cinfo);
-		free(img->pixels);
-		img->pixels = NULL;
+		jpeg_stream_free(stream);
+		matuwall_image_free(img);
 		return false;
 	}
 
 	jpeg_create_decompress(&cinfo);
+	// backstop for the estimate below: libjpeg fails instead of growing
+	cinfo.mem->max_memory_to_use = (long)DECODE_MEMORY_LIMIT;
 	jpeg_stdio_src(&cinfo, fp);
 	jpeg_read_header(&cinfo, TRUE);
 
-	if (!matuwall_image_dimensions_ok(
-		    cinfo.image_width, cinfo.image_height)) {
-		jpeg_destroy_decompress(&cinfo);
-		return false;
+	bool ok = matuwall_image_dimensions_ok(
+		cinfo.image_width, cinfo.image_height);
+	if (ok) {
+		jpeg_scale_for_target(&cinfo, job->target_w, job->target_h);
+	}
+	bool direct = cinfo.output_width == job->target_w &&
+		      cinfo.output_height == job->target_h;
+	uint64_t peak = jpeg_coefficient_bytes(&cinfo) + target_bytes(job);
+	if (!direct) {
+		peak += (uint64_t)cinfo.output_width * 3 +
+			matuwall_row_scaler_bytes(job->target_w);
+	}
+	ok = ok && reserve(job, peak);
+	if (ok) {
+		cinfo.out_color_space = direct ? JCS_EXT_BGRA : JCS_RGB;
+		jpeg_start_decompress(&cinfo);
+		img->width = job->target_w;
+		img->height = job->target_h;
+		img->pixels = malloc(target_bytes(job));
+		ok = img->pixels != NULL &&
+		     (direct ? read_jpeg_direct(&cinfo, img, job->stop)
+			     : read_jpeg_streamed(
+				       &cinfo, img, stream, job->stop));
 	}
 
-	jpeg_scale_for_target(&cinfo, target_w, target_h);
-	cinfo.out_color_space = JCS_EXT_BGRA;
-	jpeg_start_decompress(&cinfo);
-
-	uint32_t width = cinfo.output_width;
-	uint32_t height = cinfo.output_height;
-	if (!decode_dimensions_ok(width, height, purpose)) {
-		jpeg_destroy_decompress(&cinfo);
-		return false;
-	}
-	img->width = width;
-	img->height = height;
-	img->pixels = malloc((size_t)width * height * sizeof(uint32_t));
-	if (img->pixels == NULL) {
-		jpeg_destroy_decompress(&cinfo);
-		return false;
-	}
-
-	while (cinfo.output_scanline < height) {
-		JSAMPROW row =
-			(JSAMPROW)(img->pixels +
-				   (size_t)cinfo.output_scanline * width);
-		if (stop_requested(stop) ||
-			jpeg_read_scanlines(&cinfo, &row, 1) != 1) {
-			jpeg_destroy_decompress(&cinfo);
-			matuwall_image_free(img);
-			return false;
-		}
-	}
-
-	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
-	return true;
+	jpeg_stream_free(stream);
+	if (!ok) {
+		matuwall_image_free(img);
+	}
+	return ok;
 }
 
 // --- png ---
@@ -173,64 +261,14 @@ static bool decode_jpeg(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 struct png_decode_buffers {
 	png_bytep *rows;
 	png_bytep row;
-	uint64_t *sums;
-	struct matuwall_span *columns;
+	struct matuwall_row_scaler scaler;
 };
 
 static void png_buffers_free(struct png_decode_buffers *buffers) {
 	free((void *)buffers->rows);
 	free(buffers->row);
-	free(buffers->sums);
-	free(buffers->columns);
+	matuwall_row_scaler_finish(&buffers->scaler);
 	*buffers = (struct png_decode_buffers){0};
-}
-
-// rows are packed RGB, sums stay in B, G, R planes for write_png_row
-static void accumulate_png_row(const png_byte *row, uint64_t *sums,
-	const struct matuwall_span *columns, uint32_t target_w) {
-	for (uint32_t ox = 0; ox < target_w; ox++) {
-		const png_byte *p = row + (size_t)columns[ox].start * 3;
-		const png_byte *end = p + (size_t)columns[ox].count * 3;
-		// locals, since byte loads may alias sums, span fits 32 bits
-		uint32_t r = 0;
-		uint32_t g = 0;
-		uint32_t b = 0;
-		for (; p < end; p += 3) {
-			r += p[0];
-			g += p[1];
-			b += p[2];
-		}
-		sums[ox] += b;
-		sums[target_w + ox] += g;
-		sums[target_w * 2 + ox] += r;
-	}
-}
-
-static void write_png_row(uint32_t *dst, const uint64_t *sums,
-	const struct matuwall_span *columns, uint32_t target_w,
-	uint32_t source_rows) {
-	if (source_rows == 0) {
-		return;
-	}
-	for (uint32_t ox = 0; ox < target_w; ox++) {
-		uint64_t count = (uint64_t)columns[ox].count * source_rows;
-		if (count == 0) {
-			dst[ox] = 0xff000000u;
-			continue;
-		}
-		// A 1x1 box is the source pixel, skip the divisions
-		if (count == 1) {
-			dst[ox] = 0xff000000u |
-				  (uint32_t)sums[target_w * 2 + ox] << 16 |
-				  (uint32_t)sums[target_w + ox] << 8 |
-				  (uint32_t)sums[ox];
-			continue;
-		}
-		dst[ox] = 0xff000000u |
-			  (uint32_t)(sums[target_w * 2 + ox] / count) << 16 |
-			  (uint32_t)(sums[target_w + ox] / count) << 8 |
-			  (uint32_t)(sums[ox] / count);
-	}
 }
 
 static void normalize_png(png_structp png, png_infop info, bool argb) {
@@ -261,10 +299,14 @@ static void normalize_png(png_structp png, png_infop info, bool argb) {
 }
 
 static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
-	uint32_t width, uint32_t height, enum matuwall_decode_purpose purpose,
-	int passes, struct png_decode_buffers *buffers,
-	const atomic_bool *stop) {
-	if (!decode_dimensions_ok(width, height, purpose)) {
+	uint32_t width, uint32_t height, int passes,
+	struct png_decode_buffers *buffers, const struct decode_job *job) {
+	uint64_t whole = (uint64_t)width * height * sizeof(uint32_t);
+	// the worker's cover scale holds its output beside the whole image
+	if (!decode_dimensions_ok(width, height, job->purpose) ||
+		!reserve(job,
+			whole + target_bytes(job) +
+				matuwall_row_scaler_bytes(job->target_w))) {
 		return false;
 	}
 	img->width = width;
@@ -280,7 +322,7 @@ static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 	}
 	for (int pass = 0; pass < passes; pass++) {
 		for (uint32_t y = 0; y < height; y++) {
-			if (stop_requested(stop)) {
+			if (stop_requested(job->stop)) {
 				png_longjmp(png, 1);
 			}
 			png_read_row(png, buffers->rows[y], NULL);
@@ -294,68 +336,28 @@ static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
 }
 
 static bool decode_png_rows(png_structp png, struct matuwall_image *img,
-	uint32_t width, uint32_t height, uint32_t target_w, uint32_t target_h,
-	enum matuwall_decode_purpose purpose,
-	struct png_decode_buffers *buffers, const atomic_bool *stop) {
-	if (!decode_dimensions_ok(target_w, target_h, purpose)) {
+	uint32_t width, uint32_t height, struct png_decode_buffers *buffers,
+	const struct decode_job *job) {
+	if (!reserve(job, target_bytes(job) + (uint64_t)width * 3 +
+				  matuwall_row_scaler_bytes(job->target_w))) {
 		return false;
 	}
-	uint32_t crop_x;
-	uint32_t crop_y;
-	uint32_t crop_w;
-	uint32_t crop_h;
-	matuwall_cover_crop(width, height, target_w, target_h, &crop_x, &crop_y,
-		&crop_w, &crop_h);
-
-	img->width = target_w;
-	img->height = target_h;
-	img->pixels = malloc((size_t)target_w * target_h * sizeof(uint32_t));
+	img->width = job->target_w;
+	img->height = job->target_h;
+	img->pixels = malloc(target_bytes(job));
 	buffers->row = malloc((size_t)width * 3);
-	buffers->sums = calloc((size_t)target_w * 3, sizeof(uint64_t));
-	buffers->columns = malloc((size_t)target_w * sizeof(*buffers->columns));
 	if (img->pixels == NULL || buffers->row == NULL ||
-		buffers->sums == NULL || buffers->columns == NULL) {
+		!matuwall_row_scaler_init(&buffers->scaler, width, height,
+			job->target_w, job->target_h, img->pixels)) {
 		png_longjmp(png, 1);
 	}
-	// column spans never vary by row, so they are derived once
-	for (uint32_t ox = 0; ox < target_w; ox++) {
-		buffers->columns[ox] =
-			matuwall_axis_span(crop_x, crop_w, target_w, ox);
-	}
 
-	uint32_t next_y = 0;
-	uint32_t loaded_y = UINT32_MAX;
-	for (uint32_t oy = 0; oy < target_h; oy++) {
-		struct matuwall_span rows =
-			matuwall_axis_span(crop_y, crop_h, target_h, oy);
-		uint32_t sy0 = rows.start;
-		uint32_t sy1 = sy0 + rows.count;
-		memset(buffers->sums, 0,
-			(size_t)target_w * 3 * sizeof(uint64_t));
-		for (uint32_t sy = sy0; sy < sy1; sy++) {
-			while (next_y <= sy) {
-				if (stop_requested(stop)) {
-					png_longjmp(png, 1);
-				}
-				png_read_row(png, buffers->row, NULL);
-				loaded_y = next_y++;
-			}
-			if (loaded_y != sy) {
-				png_longjmp(png, 1);
-			}
-			accumulate_png_row(buffers->row, buffers->sums,
-				buffers->columns, target_w);
-		}
-		write_png_row(img->pixels + (size_t)oy * target_w,
-			buffers->sums, buffers->columns, target_w, rows.count);
-	}
-
-	while (next_y < height) {
-		if (stop_requested(stop)) {
+	for (uint32_t y = 0; y < height; y++) {
+		if (stop_requested(job->stop)) {
 			png_longjmp(png, 1);
 		}
 		png_read_row(png, buffers->row, NULL);
-		next_y++;
+		matuwall_row_scaler_push(&buffers->scaler, y, buffers->row);
 	}
 	png_read_end(png, NULL);
 	return true;
@@ -372,9 +374,8 @@ static void png_on_warning(png_structp png, png_const_charp message) {
 	(void)message;
 }
 
-static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose,
-	const atomic_bool *stop) {
+static bool decode_png(
+	FILE *fp, struct matuwall_image *img, const struct decode_job *job) {
 	png_structp png = png_create_read_struct(
 		PNG_LIBPNG_VER_STRING, NULL, png_on_error, png_on_warning);
 	png_infop info = png != NULL ? png_create_info_struct(png) : NULL;
@@ -391,8 +392,7 @@ static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 	if (setjmp(png_jmpbuf(png))) {
 		png_buffers_free(buffers);
 		free(buffers);
-		free(img->pixels);
-		img->pixels = NULL;
+		matuwall_image_free(img);
 		png_destroy_read_struct(&png, &info, NULL);
 		return false;
 	}
@@ -421,11 +421,10 @@ static bool decode_png(FILE *fp, struct matuwall_image *img, uint32_t target_w,
 		png_longjmp(png, 1);
 	}
 
-	bool ok = interlaced
-			  ? decode_interlaced_png(png, img, width, height,
-				    purpose, passes, buffers, stop)
-			  : decode_png_rows(png, img, width, height, target_w,
-				    target_h, purpose, buffers, stop);
+	bool ok = interlaced ? decode_interlaced_png(png, img, width, height,
+				       passes, buffers, job)
+			     : decode_png_rows(
+				       png, img, width, height, buffers, job);
 	png_buffers_free(buffers);
 	free(buffers);
 	png_destroy_read_struct(&png, &info, NULL);
@@ -459,17 +458,27 @@ static bool read_webp(FILE *fp, uint8_t **data, size_t *data_size) {
 	return true;
 }
 
+// lossless decodes the whole ARGB image, lossy alpha keeps a full plane
+static uint64_t webp_working_bytes(const WebPBitstreamFeatures *features) {
+	uint64_t pixels =
+		(uint64_t)features->width * (uint64_t)features->height;
+	if (features->format == 2) {
+		return pixels * sizeof(uint32_t);
+	}
+	return features->has_alpha ? pixels : 0;
+}
+
 static bool configure_webp(WebPDecoderConfig *config, const uint8_t *data,
-	size_t data_size, uint32_t target_w, uint32_t target_h,
-	enum matuwall_decode_purpose purpose) {
+	size_t data_size, const struct decode_job *job) {
 	if (!WebPInitDecoderConfig(config) ||
 		WebPGetFeatures(data, data_size, &config->input) !=
 			VP8_STATUS_OK ||
 		!matuwall_image_dimensions_ok((uint32_t)config->input.width,
-			(uint32_t)config->input.height) ||
-		!decode_dimensions_ok(target_w, target_h, purpose)) {
+			(uint32_t)config->input.height)) {
 		return false;
 	}
+	uint32_t target_w = job->target_w;
+	uint32_t target_h = job->target_h;
 
 	uint32_t crop_x;
 	uint32_t crop_y;
@@ -489,15 +498,19 @@ static bool configure_webp(WebPDecoderConfig *config, const uint8_t *data,
 	return true;
 }
 
-static bool decode_webp(FILE *fp, struct matuwall_image *img, uint32_t target_w,
-	uint32_t target_h, enum matuwall_decode_purpose purpose,
-	const atomic_bool *stop) {
+// compressed file is read before its format is known and is counted
+static bool decode_webp(
+	FILE *fp, struct matuwall_image *img, const struct decode_job *job) {
+	uint32_t target_w = job->target_w;
+	uint32_t target_h = job->target_h;
+	const atomic_bool *stop = job->stop;
 	uint8_t *data = NULL;
 	size_t data_size;
 	WebPDecoderConfig config;
 	if (!read_webp(fp, &data, &data_size) ||
-		!configure_webp(&config, data, data_size, target_w, target_h,
-			purpose)) {
+		!configure_webp(&config, data, data_size, job) ||
+		!reserve(job, data_size + target_bytes(job) +
+				      webp_working_bytes(&config.input))) {
 		free(data);
 		return false;
 	}
@@ -574,12 +587,20 @@ static FILE *open_regular(const char *path) {
 
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h,
-	enum matuwall_decode_purpose purpose, const atomic_bool *stop) {
+	enum matuwall_decode_purpose purpose, const atomic_bool *stop,
+	const struct matuwall_decode_budget *budget) {
 	*img = (struct matuwall_image){0};
 	if (!decode_dimensions_ok(target_w, target_h, purpose) ||
 		stop_requested(stop)) {
 		return false;
 	}
+	const struct decode_job job = {
+		.target_w = target_w,
+		.target_h = target_h,
+		.purpose = purpose,
+		.stop = stop,
+		.budget = budget,
+	};
 
 	FILE *fp = open_regular(path);
 	if (fp == NULL) {
@@ -595,11 +616,11 @@ bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 
 	bool ok;
 	if (is_png(sig, got)) {
-		ok = decode_png(fp, img, target_w, target_h, purpose, stop);
+		ok = decode_png(fp, img, &job);
 	} else if (is_jpeg(sig, got)) {
-		ok = decode_jpeg(fp, img, target_w, target_h, purpose, stop);
+		ok = decode_jpeg(fp, img, &job);
 	} else if (is_webp(sig, got)) {
-		ok = decode_webp(fp, img, target_w, target_h, purpose, stop);
+		ok = decode_webp(fp, img, &job);
 	} else {
 		ok = false;
 	}

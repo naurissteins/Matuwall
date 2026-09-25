@@ -11,6 +11,8 @@
 #include "thumb/scale.h"
 
 #define MAX_WORKERS 4
+// transient decode memory shared by all workers, see reserve_decode
+#define DECODE_BUDGET ((uint64_t)96 * 1024 * 1024)
 
 struct job {
 	struct matuwall_thumb_result result;
@@ -42,6 +44,9 @@ struct matuwall_worker_pool {
 	// newest preview a worker has taken, cleared when it publishes
 	struct job *running_preview;
 	atomic_bool stopping;
+	// bytes reserved by running decodes; signalled on release and stop
+	uint64_t decode_bytes;
+	pthread_cond_t budget_freed;
 
 	int event_fd;
 	struct matuwall_cache *cache;
@@ -63,8 +68,78 @@ static size_t worker_count(void) {
 	return online < MAX_WORKERS ? (size_t)online : MAX_WORKERS;
 }
 
-static bool produce(const struct matuwall_worker_pool *pool,
-	const struct job *job, struct matuwall_image *out, bool *cache_hit) {
+// --- decode budget ---
+
+struct decode_ticket {
+	struct matuwall_worker_pool *pool;
+	const atomic_bool *stop;
+	uint64_t bytes;
+};
+
+// waits until the decode fits beside running ones, an oversized decode
+// runs alone. Each decode reserves once, so waiters never hold bytes
+static bool reserve_decode(void *user_data, uint64_t bytes) {
+	struct decode_ticket *ticket = user_data;
+	struct matuwall_worker_pool *pool = ticket->pool;
+	pthread_mutex_lock(&pool->mutex);
+	while (pool->decode_bytes > 0 && !flag_set(ticket->stop) &&
+		(pool->decode_bytes > DECODE_BUDGET ||
+			bytes > DECODE_BUDGET - pool->decode_bytes)) {
+		pthread_cond_wait(&pool->budget_freed, &pool->mutex);
+	}
+	bool granted = !flag_set(ticket->stop);
+	if (granted) {
+		pool->decode_bytes += bytes;
+		ticket->bytes += bytes;
+	}
+	pthread_mutex_unlock(&pool->mutex);
+	return granted;
+}
+
+static void release_decode(struct decode_ticket *ticket) {
+	if (ticket->bytes == 0) {
+		return;
+	}
+	struct matuwall_worker_pool *pool = ticket->pool;
+	pthread_mutex_lock(&pool->mutex);
+	pool->decode_bytes -= ticket->bytes;
+	ticket->bytes = 0;
+	pthread_cond_broadcast(&pool->budget_freed);
+	pthread_mutex_unlock(&pool->mutex);
+}
+
+// --- jobs ---
+
+static bool decode_and_scale(struct matuwall_worker_pool *pool,
+	const struct job *job, const atomic_bool *stop,
+	struct matuwall_image *out) {
+	struct decode_ticket ticket = {.pool = pool, .stop = stop};
+	const struct matuwall_decode_budget budget = {
+		.reserve = reserve_decode,
+		.user_data = &ticket,
+	};
+	enum matuwall_decode_purpose purpose =
+		job->result.kind == MATUWALL_JOB_THUMB
+			? MATUWALL_DECODE_THUMBNAIL
+			: MATUWALL_DECODE_PREVIEW;
+	struct matuwall_image decoded;
+	bool ok = matuwall_image_decode(&decoded, job->path, job->target_w,
+		job->target_h, purpose, stop, &budget);
+	if (ok && decoded.width == job->target_w &&
+		decoded.height == job->target_h) {
+		*out = decoded;
+	} else if (ok) {
+		ok = matuwall_scale_cover(
+			&decoded, job->target_w, job->target_h, out, stop);
+		matuwall_image_free(&decoded);
+	}
+	// the scale pass is part of the decode's reserved peak
+	release_decode(&ticket);
+	return ok;
+}
+
+static bool produce(struct matuwall_worker_pool *pool, const struct job *job,
+	struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
 	// output sized previews would bloat the cache for one keypress of value
 	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
@@ -87,22 +162,7 @@ static bool produce(const struct matuwall_worker_pool *pool,
 		return true;
 	}
 
-	struct matuwall_image decoded;
-	enum matuwall_decode_purpose purpose =
-		thumbnail ? MATUWALL_DECODE_THUMBNAIL : MATUWALL_DECODE_PREVIEW;
-	if (!matuwall_image_decode(&decoded, job->path, job->target_w,
-		    job->target_h, purpose, stop)) {
-		return false;
-	}
-	bool scaled = true;
-	if (decoded.width == job->target_w && decoded.height == job->target_h) {
-		*out = decoded;
-	} else {
-		scaled = matuwall_scale_cover(
-			&decoded, job->target_w, job->target_h, out, stop);
-		matuwall_image_free(&decoded);
-	}
-	if (!scaled) {
+	if (!decode_and_scale(pool, job, stop, out)) {
 		return false;
 	}
 	if (flag_set(stop)) {
@@ -139,6 +199,8 @@ static void cancel_running_preview(struct matuwall_worker_pool *pool) {
 	if (pool->running_preview != NULL) {
 		atomic_store_explicit(&pool->running_preview->cancelled, true,
 			memory_order_relaxed);
+		// it may be waiting for decode budget
+		pthread_cond_broadcast(&pool->budget_freed);
 	}
 }
 
@@ -195,9 +257,11 @@ struct matuwall_worker_pool *matuwall_worker_pool_start(
 	atomic_init(&pool->stopping, false);
 	pthread_mutex_init(&pool->mutex, NULL);
 	pthread_cond_init(&pool->wakeup, NULL);
+	pthread_cond_init(&pool->budget_freed, NULL);
 
 	pool->event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (pool->event_fd < 0) {
+		pthread_cond_destroy(&pool->budget_freed);
 		pthread_cond_destroy(&pool->wakeup);
 		pthread_mutex_destroy(&pool->mutex);
 		free(pool);
@@ -409,6 +473,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	atomic_store_explicit(&pool->stopping, true, memory_order_relaxed);
 	cancel_running_preview(pool);
 	pthread_cond_broadcast(&pool->wakeup);
+	pthread_cond_broadcast(&pool->budget_freed);
 	pthread_mutex_unlock(&pool->mutex);
 
 	for (size_t i = 0; i < pool->thread_count; i++) {
@@ -434,6 +499,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 		close(pool->event_fd);
 	}
 	matuwall_cache_destroy(pool->cache);
+	pthread_cond_destroy(&pool->budget_freed);
 	pthread_cond_destroy(&pool->wakeup);
 	pthread_mutex_destroy(&pool->mutex);
 	free(pool);
