@@ -29,6 +29,9 @@ struct matuwall_seat {
 	struct xkb_context *context;
 	struct xkb_keymap *keymap;
 	struct xkb_state *state;
+	// received but not compiled yet, -1 when none is pending
+	int keymap_fd;
+	uint32_t keymap_size;
 
 	int32_t repeat_rate;
 	int32_t repeat_delay;

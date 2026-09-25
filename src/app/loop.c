@@ -265,6 +265,8 @@ static bool pump_events(struct matuwall_app *app) {
 	int timeout = matuwall_seat_repeat_timeout(&app->seat);
 	timeout = sooner(timeout, spinner_timeout(app, now));
 	timeout = sooner(timeout, matuwall_app_preview_timeout(app, now));
+	timeout =
+		sooner(timeout, matuwall_layer_idle_timeout(&app->layer, now));
 
 	if (poll(pfd, nfds, timeout) < 0) {
 		wl_display_cancel_read(app->display);
@@ -317,7 +319,7 @@ static bool pump_events(struct matuwall_app *app) {
 	matuwall_seat_dispatch_repeat(&app->seat);
 	matuwall_app_preview_tick(app, matuwall_now_ms());
 	spinner_tick(app, matuwall_now_ms());
-	matuwall_layer_collect_idle(&app->layer);
+	matuwall_layer_collect_idle(&app->layer, matuwall_now_ms());
 	return true;
 }
 
@@ -369,6 +371,11 @@ bool matuwall_app_run(struct matuwall_app *app) {
 	// First frame before any decoding: placeholders only
 	app->layer.needs_repaint = true;
 	if (!render_if_needed(app)) {
+		return false;
+	}
+	// send it now, the post-frame startup below must not delay it
+	if (wl_display_flush(app->display) < 0 && errno != EAGAIN) {
+		matuwall_log_error("wayland", "cannot send the first frame");
 		return false;
 	}
 	if (!matuwall_log_activate()) {
