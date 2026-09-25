@@ -39,6 +39,8 @@ struct matuwall_layer {
 
 	struct wl_callback *frame_callback;
 	struct matuwall_buffer_pool buffer_pool;
+	// surplus buffers are freed once this passes quietly, 0 when collected
+	int64_t collect_due_ms;
 };
 
 // Starts bufferless across the selected output so its bounds are known
@@ -60,8 +62,12 @@ bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
 	bool continue_frames, bool opaque,
 	const struct matuwall_damage *damage);
 
-// release surplus buffers once no repaint is waiting
-void matuwall_layer_collect_idle(struct matuwall_layer *layer);
+// poll deadline for idle collection, -1 when nothing is due
+int matuwall_layer_idle_timeout(
+	const struct matuwall_layer *layer, int64_t now_ms);
+
+// release surplus buffers after a quiet period with no repaint waiting
+void matuwall_layer_collect_idle(struct matuwall_layer *layer, int64_t now_ms);
 
 void matuwall_layer_destroy(struct matuwall_layer *layer);
 

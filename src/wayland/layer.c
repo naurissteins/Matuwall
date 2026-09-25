@@ -3,20 +3,39 @@
 #include <wayland-client.h>
 
 #include "fractional-scale-v1-client-protocol.h"
+#include "util/clock.h"
 #include "viewporter-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 #define LAYER_NAMESPACE "matuwall"
 // fractional-scale-v1 reports scale in 120ths of the logical size
 #define FRACTIONAL_SCALE_DENOM 120
+// compositors that hold the attached buffer would otherwise force a fresh
+// output-sized buffer and a full redraw for every sporadic repaint
+#define IDLE_COLLECT_MS 2000
 
 // --- frame pacing ---
 
-void matuwall_layer_collect_idle(struct matuwall_layer *layer) {
-	if (layer->needs_repaint || layer->frame_callback != NULL ||
-		layer->buffer_pool.drawing != NULL || !layer->configured) {
+static bool collect_blocked(const struct matuwall_layer *layer) {
+	return layer->collect_due_ms == 0 || layer->needs_repaint ||
+	       layer->frame_callback != NULL ||
+	       layer->buffer_pool.drawing != NULL || !layer->configured;
+}
+
+int matuwall_layer_idle_timeout(
+	const struct matuwall_layer *layer, int64_t now_ms) {
+	if (collect_blocked(layer)) {
+		return -1;
+	}
+	int64_t left = layer->collect_due_ms - now_ms;
+	return left > 0 ? (int)left : 0;
+}
+
+void matuwall_layer_collect_idle(struct matuwall_layer *layer, int64_t now_ms) {
+	if (collect_blocked(layer) || now_ms < layer->collect_due_ms) {
 		return;
 	}
+	layer->collect_due_ms = 0;
 
 	uint32_t width;
 	uint32_t height;
@@ -346,7 +365,7 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 
 	matuwall_buffer_pool_submitted(&layer->buffer_pool);
 	layer->needs_repaint = continue_frames;
-	matuwall_layer_collect_idle(layer);
+	layer->collect_due_ms = matuwall_now_ms() + IDLE_COLLECT_MS;
 	return true;
 }
 

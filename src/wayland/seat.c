@@ -29,18 +29,15 @@ static void clear_keymap(struct matuwall_seat *seat) {
 	}
 }
 
-static void handle_keymap(void *data, struct wl_keyboard *keyboard,
-	uint32_t format, int32_t fd, uint32_t size) {
-	struct matuwall_seat *seat = data;
-	(void)keyboard;
-
-	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
-		matuwall_log_warn(
-			"input", "compositor sent an unsupported keymap");
-		close(fd);
-		return;
+static void drop_pending_keymap(struct matuwall_seat *seat) {
+	if (seat->keymap_fd >= 0) {
+		close(seat->keymap_fd);
+		seat->keymap_fd = -1;
 	}
+}
 
+// consumes fd, the current keymap stays in place if the new one fails
+static void compile_keymap(struct matuwall_seat *seat, int fd, uint32_t size) {
 	char *text = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (text == MAP_FAILED) {
 		matuwall_log_error(
@@ -74,6 +71,34 @@ static void handle_keymap(void *data, struct wl_keyboard *keyboard,
 	seat->state = state;
 }
 
+// focus events need a mapped surface, so this runs after the first frame
+static void load_pending_keymap(struct matuwall_seat *seat) {
+	if (seat->keymap_fd < 0) {
+		return;
+	}
+	int fd = seat->keymap_fd;
+	seat->keymap_fd = -1;
+	compile_keymap(seat, fd, seat->keymap_size);
+}
+
+// compact mode receives the keymap before the first frame, keep only the fd
+static void handle_keymap(void *data, struct wl_keyboard *keyboard,
+	uint32_t format, int32_t fd, uint32_t size) {
+	struct matuwall_seat *seat = data;
+	(void)keyboard;
+
+	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+		matuwall_log_warn(
+			"input", "compositor sent an unsupported keymap");
+		close(fd);
+		return;
+	}
+
+	drop_pending_keymap(seat);
+	seat->keymap_fd = fd;
+	seat->keymap_size = size;
+}
+
 static void handle_key(void *data, struct wl_keyboard *keyboard,
 	uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
 	struct matuwall_seat *seat = data;
@@ -81,6 +106,7 @@ static void handle_key(void *data, struct wl_keyboard *keyboard,
 	(void)serial;
 	(void)time;
 
+	load_pending_keymap(seat);
 	if (seat->state == NULL) {
 		return;
 	}
@@ -120,6 +146,7 @@ static void handle_modifiers(void *data, struct wl_keyboard *keyboard,
 	(void)keyboard;
 	(void)serial;
 
+	load_pending_keymap(seat);
 	if (seat->state != NULL) {
 		xkb_state_update_mask(
 			seat->state, depressed, latched, locked, 0, 0, group);
@@ -197,6 +224,7 @@ static void handle_capabilities(
 		}
 	} else if (!has_keyboard && seat->keyboard != NULL) {
 		release_keyboard(seat);
+		drop_pending_keymap(seat);
 		clear_keymap(seat);
 		stop_repeat(seat);
 	}
@@ -234,6 +262,7 @@ bool matuwall_seat_init(struct matuwall_seat *seat, struct wl_seat *wl_seat,
 		.wl_seat = wl_seat,
 		.handler = *handler,
 		.user_data = user_data,
+		.keymap_fd = -1,
 	};
 
 	seat->context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
@@ -281,6 +310,7 @@ void matuwall_seat_finish(struct matuwall_seat *seat) {
 	stop_repeat(seat);
 	matuwall_pointer_finish(&seat->pointer);
 	release_keyboard(seat);
+	drop_pending_keymap(seat);
 	clear_keymap(seat);
 	if (seat->context != NULL) {
 		xkb_context_unref(seat->context);
