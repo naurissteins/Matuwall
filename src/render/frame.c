@@ -3,8 +3,8 @@
 #include <math.h>
 #include <stdbool.h>
 
+#include "render/backdrop.h"
 #include "render/draw.h"
-#include "render/image.h"
 #include "render/tiles.h"
 
 #define RING_GAP 3
@@ -251,26 +251,28 @@ struct matuwall_damage matuwall_frame_draw(struct matuwall_buffer *buffer,
 	int32_t panel_radius =
 		to_pixels((int32_t)frame->panel_radius, frame->scale);
 	struct matuwall_damage overlay = panel_damage(buffer, frame);
-	struct matuwall_damage damage;
-	if (!buffer->frame_valid ||
-		buffer->backdrop_generation != backdrop_generation) {
-		damage = full_damage(buffer);
-	} else {
-		damage = clip_damage(
-			union_damage(buffer->overlay_damage, overlay), buffer);
-	}
+	bool full = !buffer->frame_valid ||
+		    buffer->backdrop_generation != backdrop_generation;
+	struct matuwall_damage damage =
+		full ? full_damage(buffer)
+		     : clip_damage(
+			       union_damage(buffer->overlay_damage, overlay),
+			       buffer);
 	if (damage.x0 >= damage.x1 || damage.y0 >= damage.y1) {
+		full = true;
 		damage = full_damage(buffer);
 	}
 	struct matuwall_clip damaged = damage_clip(damage);
 
-	if (frame->backdrop && frame->preview != NULL) {
-		matuwall_draw_image_cover_clipped(buffer, &damaged,
-			frame->preview, frame->preview_width,
-			frame->preview_height);
+	if (frame->backdrop) {
+		bool opaque = matuwall_backdrop_draw(buffer, &frame->preview,
+			damage, overlay, backdrop_generation, full);
+		buffer->backdrop_opaque =
+			opaque && (full || buffer->backdrop_opaque);
 	} else {
 		// Let the real desktop show outside the rounded panel
 		matuwall_draw_clear_clipped(buffer, &damaged, 0);
+		buffer->backdrop_opaque = false;
 	}
 	draw_panel(buffer, frame, &damaged, panel_radius);
 	buffer->frame_valid = true;

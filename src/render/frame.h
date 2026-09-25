@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "grid/layout.h"
+#include "render/backdrop.h"
 #include "render/color.h"
 #include "thumb/worker.h"
 #include "wayland/shm.h"
@@ -38,10 +39,7 @@ struct matuwall_frame {
 	struct matuwall_rect panel;
 	// Surface spans the whole output, so the panel floats on a backdrop
 	bool backdrop;
-	// Wallpaper filling the backdrop; NULL leaves the desktop showing
-	const uint32_t *preview;
-	uint32_t preview_width;
-	uint32_t preview_height;
+	struct matuwall_backdrop preview;
 	bool directory_unavailable;
 	// Resolved, never MATUWALL_EDGE_AUTO
 	enum matuwall_edge edge;
