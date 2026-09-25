@@ -14,6 +14,9 @@ bool matuwall_thumb_store_set_target(
 size_t matuwall_thumb_store_lookahead(
 	const struct matuwall_app *app, size_t visible);
 
+bool matuwall_thumb_store_in_window(const struct matuwall_app *app,
+	size_t index, size_t first, size_t end, size_t wrap_end);
+
 void matuwall_thumb_store_evict_outside(
 	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end);
 

@@ -1,10 +1,13 @@
 #include "thumb/decode.h"
 
+#include <fcntl.h>
 #include <setjmp.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <jpeglib.h>
 #include <png.h>
@@ -551,6 +554,24 @@ static bool is_webp(const uint8_t *sig, size_t n) {
 	       memcmp(sig + 8, "WEBP", 4) == 0;
 }
 
+// O_NONBLOCK keeps a FIFO named like an image from wedging a worker
+static FILE *open_regular(const char *path) {
+	int fd = open(path, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+	if (fd < 0) {
+		return NULL;
+	}
+	struct stat info;
+	if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode)) {
+		close(fd);
+		return NULL;
+	}
+	FILE *fp = fdopen(fd, "rb");
+	if (fp == NULL) {
+		close(fd);
+	}
+	return fp;
+}
+
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h,
 	enum matuwall_decode_purpose purpose, const atomic_bool *stop) {
@@ -560,7 +581,7 @@ bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 		return false;
 	}
 
-	FILE *fp = fopen(path, "rb");
+	FILE *fp = open_regular(path);
 	if (fp == NULL) {
 		return false;
 	}

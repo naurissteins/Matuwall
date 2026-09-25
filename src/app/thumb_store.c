@@ -41,8 +41,8 @@ static bool in_visible_range(
 	return (index >= first && index < end) || index < wrap_end;
 }
 
-static bool in_resident_window(const struct matuwall_app *app, size_t index,
-	size_t first, size_t end, size_t wrap_end) {
+bool matuwall_thumb_store_in_window(const struct matuwall_app *app,
+	size_t index, size_t first, size_t end, size_t wrap_end) {
 	size_t visible = end - first + wrap_end;
 	if (visible == 0 || index >= app->thumb_count) {
 		return false;
@@ -87,7 +87,8 @@ static void unload_thumbnail(struct matuwall_app *app, size_t index) {
 void matuwall_thumb_store_evict_outside(
 	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end) {
 	for (size_t i = 0; i < app->thumb_count; i++) {
-		if (!in_resident_window(app, i, first, end, wrap_end)) {
+		if (!matuwall_thumb_store_in_window(
+			    app, i, first, end, wrap_end)) {
 			unload_thumbnail(app, i);
 		}
 	}
@@ -123,9 +124,11 @@ void matuwall_thumb_store_accept(struct matuwall_app *app,
 	const struct matuwall_thumb_result *result, size_t first, size_t end,
 	size_t wrap_end) {
 	struct matuwall_thumb *thumb = &app->thumbs[result->index];
-	if (!in_resident_window(app, result->index, first, end, wrap_end)) {
+	if (!matuwall_thumb_store_in_window(
+		    app, result->index, first, end, wrap_end)) {
 		free(result->pixels);
 		thumb->state = MATUWALL_THUMB_UNLOADED;
+		app->thumb_discarded++;
 		return;
 	}
 
@@ -145,6 +148,7 @@ void matuwall_thumb_store_accept(struct matuwall_app *app,
 	if (bytes > MAX_RESIDENT_BYTES - app->thumb_resident_bytes) {
 		free(result->pixels);
 		thumb->state = MATUWALL_THUMB_UNLOADED;
+		app->thumb_discarded++;
 		return;
 	}
 

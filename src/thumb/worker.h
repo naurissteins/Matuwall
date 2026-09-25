@@ -50,15 +50,24 @@ int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool);
 bool matuwall_worker_submit(
 	struct matuwall_worker_pool *pool, size_t index, const char *path);
 
-// Move queued thumbnails in [first, end) and [0, wrap_end) ahead
-void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
-	size_t first, size_t end, size_t wrap_end);
+// callbacks for a queue reorder, keep runs under the pool lock
+struct matuwall_thumb_filter {
+	bool (*keep)(void *user_data, size_t index);
+	void (*dropped)(void *user_data, size_t index);
+	void *user_data;
+};
 
-// Jumps the queue, drops queued previews and cancels a running one
+// Move queued thumbnails in [first, end) and [0, wrap_end) ahead and
+// withdraw queued ones keep rejects, dropped runs after the lock is released
+void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
+	size_t first, size_t end, size_t wrap_end,
+	const struct matuwall_thumb_filter *filter);
+
+// jumps the queue, drops queued previews and cancels a running one
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	size_t index, const char *path, uint32_t target_w, uint32_t target_h);
 
-// A cancelled preview still publishes a result, with ok false
+// cancelled preview still publishes a result, with ok false
 void matuwall_worker_cancel_preview(struct matuwall_worker_pool *pool);
 
 void matuwall_worker_drain(struct matuwall_worker_pool *pool,
