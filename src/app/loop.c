@@ -123,9 +123,15 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.scroll = visual.scroll,
 		.panel = app->panel,
 		.backdrop = app->config.preview,
-		.preview = app->preview.image.pixels,
-		.preview_width = app->preview.image.width,
-		.preview_height = app->preview.image.height,
+		.preview =
+			{
+				.image = app->preview.image.pixels,
+				.width = app->preview.image.width,
+				.height = app->preview.image.height,
+				.patch = &app->preview.patch,
+				.sibling = matuwall_buffer_pool_sibling(
+					&app->layer.buffer_pool, buffer),
+			},
 		.directory_unavailable = app->scan.unavailable,
 		.edge = matuwall_config_edge(&app->config),
 		.scale = scale,
@@ -164,7 +170,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 	}
 	struct matuwall_damage damage =
 		matuwall_frame_draw(buffer, &frame, app->preview.generation);
-	bool opaque = frame.backdrop && frame.preview != NULL;
+	bool opaque = frame.backdrop && buffer->backdrop_opaque;
 	if (!matuwall_layer_commit_frame(
 		    &app->layer, visual.active, opaque, &damage)) {
 		matuwall_log_error("render", "failed to commit a frame");
@@ -398,6 +404,7 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		if (!render_if_needed(app)) {
 			return false;
 		}
+		matuwall_app_preview_trim(app, matuwall_now_ms());
 	}
 	if (interrupted != 0) {
 		matuwall_log_info("exit", "stopped by signal");

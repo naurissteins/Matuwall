@@ -37,14 +37,14 @@ static inline struct ink ink_at(uint32_t src, uint32_t coverage) {
 	};
 }
 
+// div255 on two 16-bit lanes at once; dst * inv + 0x80 never carries a lane
 static inline uint32_t blend_ink(uint32_t dst, struct ink ink) {
-	uint32_t a = (ink.src >> 24) + div255(((dst >> 24) & 0xff) * ink.inv);
-	uint32_t r = ((ink.src >> 16) & 0xff) +
-		     div255(((dst >> 16) & 0xff) * ink.inv);
-	uint32_t g =
-		((ink.src >> 8) & 0xff) + div255(((dst >> 8) & 0xff) * ink.inv);
-	uint32_t b = (ink.src & 0xff) + div255((dst & 0xff) * ink.inv);
-	return a << 24 | r << 16 | g << 8 | b;
+	uint32_t rb = (dst & 0x00ff00ff) * ink.inv + 0x00800080;
+	uint32_t ag = ((dst >> 8) & 0x00ff00ff) * ink.inv + 0x00800080;
+	rb = ((rb + ((rb >> 8) & 0x00ff00ff)) >> 8) & 0x00ff00ff;
+	ag = (ag + ((ag >> 8) & 0x00ff00ff)) & 0xff00ff00;
+	// premultiplied ink keeps every channel sum within 255
+	return ink.src + (ag | rb);
 }
 
 static inline uint32_t blend(uint32_t dst, uint32_t src, uint32_t coverage) {

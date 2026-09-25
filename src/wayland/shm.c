@@ -211,6 +211,37 @@ void matuwall_buffer_pool_collect_idle(
 	}
 }
 
+const struct matuwall_buffer *matuwall_buffer_pool_sibling(
+	const struct matuwall_buffer_pool *pool,
+	const struct matuwall_buffer *buffer) {
+	for (const struct matuwall_buffer *other = pool->buffers; other != NULL;
+		other = other->next) {
+		if (other != buffer && other->frame_valid &&
+			other->width == buffer->width &&
+			other->height == buffer->height) {
+			return other;
+		}
+	}
+	return NULL;
+}
+
+bool matuwall_buffer_pool_painted(const struct matuwall_buffer_pool *pool,
+	uint32_t width, uint32_t height, uint64_t generation) {
+	bool any = false;
+	for (const struct matuwall_buffer *buffer = pool->buffers;
+		buffer != NULL; buffer = buffer->next) {
+		if (buffer->width != width || buffer->height != height) {
+			continue;
+		}
+		if (!buffer->frame_valid ||
+			buffer->backdrop_generation != generation) {
+			return false;
+		}
+		any = true;
+	}
+	return any;
+}
+
 void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool) {
 	while (pool->buffers != NULL) {
 		struct matuwall_buffer *buffer = pool->buffers;

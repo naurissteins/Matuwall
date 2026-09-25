@@ -28,6 +28,8 @@ struct matuwall_buffer {
 	// Last rendered scene state advances independently per buffer
 	bool frame_valid;
 	uint64_t backdrop_generation;
+	// every pixel outside the panel is backdrop, not transparent
+	bool backdrop_opaque;
 	struct matuwall_damage overlay_damage;
 	struct matuwall_buffer *next;
 };
@@ -53,6 +55,15 @@ void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool);
 
 void matuwall_buffer_pool_collect_idle(
 	struct matuwall_buffer_pool *pool, uint32_t width, uint32_t height);
+
+// another painted buffer of the same size, NULL when there is none
+const struct matuwall_buffer *matuwall_buffer_pool_sibling(
+	const struct matuwall_buffer_pool *pool,
+	const struct matuwall_buffer *buffer);
+
+// every buffer of this size shows this backdrop generation
+bool matuwall_buffer_pool_painted(const struct matuwall_buffer_pool *pool,
+	uint32_t width, uint32_t height, uint64_t generation);
 
 void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool);
 

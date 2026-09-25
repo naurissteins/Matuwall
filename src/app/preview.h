@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "render/backdrop.h"
 #include "thumb/decode.h"
 #include "thumb/worker.h"
 
@@ -22,6 +23,8 @@ struct matuwall_preview {
 	uint32_t target_w;
 	uint32_t target_h;
 	uint64_t generation;
+	// outlives the image, which is freed once every buffer holds it
+	struct matuwall_backdrop_patch patch;
 	bool enabled;
 };
 
@@ -37,6 +40,9 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms);
 
 void matuwall_app_preview_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result);
+
+// runs after each frame: frees the painted image, reloads a lost backdrop
+void matuwall_app_preview_trim(struct matuwall_app *app, int64_t now_ms);
 
 void matuwall_app_preview_finish(struct matuwall_app *app);
 

@@ -74,6 +74,7 @@ executable(
 	'src/grid/layout.c',
 	'src/grid/navigate.c',
 	'src/hooks/hooks.c',
+	'src/render/backdrop.c',
 	'src/render/draw.c',
 	'src/render/frame.c',
 	'src/render/image.c',

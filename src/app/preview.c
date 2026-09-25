@@ -132,7 +132,41 @@ void matuwall_app_preview_result(
 	app->layer.needs_repaint = true;
 }
 
+void matuwall_app_preview_trim(struct matuwall_app *app, int64_t now_ms) {
+	struct matuwall_preview *preview = &app->preview;
+	if (!preview->enabled) {
+		return;
+	}
+	// geometry change outran the patch; decode the shown image again
+	if (preview->patch.missed) {
+		preview->patch.missed = false;
+		if (preview->image.pixels == NULL &&
+			preview->shown != SIZE_MAX) {
+			preview->patch.valid = false;
+			preview->shown = SIZE_MAX;
+			preview->due_ms = now_ms;
+		}
+		return;
+	}
+	if (preview->image.pixels == NULL || !preview->patch.valid ||
+		preview->patch.generation != preview->generation) {
+		return;
+	}
+	uint32_t width;
+	uint32_t height;
+	matuwall_layer_buffer_size(&app->layer, &width, &height);
+	if (preview->patch.buffer_width != width ||
+		preview->patch.buffer_height != height ||
+		!matuwall_buffer_pool_painted(&app->layer.buffer_pool, width,
+			height, preview->generation)) {
+		return;
+	}
+	matuwall_image_free(&preview->image);
+}
+
 void matuwall_app_preview_finish(struct matuwall_app *app) {
 	matuwall_image_free(&app->preview.image);
+	free(app->preview.patch.pixels);
+	app->preview.patch = (struct matuwall_backdrop_patch){0};
 	app->preview.shown = SIZE_MAX;
 }
