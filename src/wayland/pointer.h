@@ -4,10 +4,13 @@
 #include <stdint.h>
 
 struct wl_pointer;
+struct wl_surface;
 struct matuwall_seat_handler;
 
 struct matuwall_pointer {
 	struct wl_pointer *wl_pointer;
+	// surface under the pointer, NULL outside every picker surface
+	struct wl_surface *focus;
 	int32_t x;
 	int32_t y;
 	double scroll_accum;

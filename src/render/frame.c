@@ -3,7 +3,6 @@
 #include <math.h>
 #include <stdbool.h>
 
-#include "render/backdrop.h"
 #include "render/draw.h"
 #include "render/tiles.h"
 
@@ -246,38 +245,26 @@ static void draw_ring(struct matuwall_buffer *buffer,
 		ring_radius, width, ring_color(frame->ring, ring->alpha));
 }
 
-struct matuwall_damage matuwall_frame_draw(struct matuwall_buffer *buffer,
-	const struct matuwall_frame *frame, uint64_t backdrop_generation) {
+struct matuwall_damage matuwall_frame_draw(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame) {
 	int32_t panel_radius =
 		to_pixels((int32_t)frame->panel_radius, frame->scale);
-	struct matuwall_damage overlay = panel_damage(buffer, frame);
-	bool full = !buffer->frame_valid ||
-		    buffer->backdrop_generation != backdrop_generation;
+	struct matuwall_damage panel = panel_damage(buffer, frame);
+	bool full = !buffer->frame_valid;
 	struct matuwall_damage damage =
 		full ? full_damage(buffer)
-		     : clip_damage(
-			       union_damage(buffer->overlay_damage, overlay),
+		     : clip_damage(union_damage(buffer->panel_damage, panel),
 			       buffer);
 	if (damage.x0 >= damage.x1 || damage.y0 >= damage.y1) {
-		full = true;
 		damage = full_damage(buffer);
 	}
 	struct matuwall_clip damaged = damage_clip(damage);
 
-	if (frame->backdrop) {
-		bool opaque = matuwall_backdrop_draw(buffer, &frame->preview,
-			damage, overlay, backdrop_generation, full);
-		buffer->backdrop_opaque =
-			opaque && (full || buffer->backdrop_opaque);
-	} else {
-		// Let the real desktop show outside the rounded panel
-		matuwall_draw_clear_clipped(buffer, &damaged, 0);
-		buffer->backdrop_opaque = false;
-	}
+	// let the real desktop show outside the rounded panel
+	matuwall_draw_clear_clipped(buffer, &damaged, 0);
 	draw_panel(buffer, frame, &damaged, panel_radius);
 	buffer->frame_valid = true;
-	buffer->backdrop_generation = backdrop_generation;
-	buffer->overlay_damage = overlay;
+	buffer->panel_damage = panel;
 	if (frame->directory_unavailable) {
 		draw_directory_unavailable(buffer, frame, &damaged);
 		return damage;

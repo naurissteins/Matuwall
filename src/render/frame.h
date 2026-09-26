@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "grid/layout.h"
-#include "render/backdrop.h"
 #include "render/color.h"
 #include "thumb/worker.h"
 #include "wayland/shm.h"
@@ -37,9 +36,6 @@ struct matuwall_frame {
 	size_t focus_count;
 	// Panel geometry in logical, surface-local units
 	struct matuwall_rect panel;
-	// Surface spans the whole output, so the panel floats on a backdrop
-	bool backdrop;
-	struct matuwall_backdrop preview;
 	bool directory_unavailable;
 	// Resolved, never MATUWALL_EDGE_AUTO
 	enum matuwall_edge edge;
@@ -59,7 +55,7 @@ struct matuwall_frame {
 	uint8_t spinner_alpha;
 };
 
-struct matuwall_damage matuwall_frame_draw(struct matuwall_buffer *buffer,
-	const struct matuwall_frame *frame, uint64_t backdrop_generation);
+struct matuwall_damage matuwall_frame_draw(
+	struct matuwall_buffer *buffer, const struct matuwall_frame *frame);
 
 #endif

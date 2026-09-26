@@ -7,7 +7,9 @@
 #include "viewporter-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
-#define LAYER_NAMESPACE "matuwall"
+#define PANEL_NAMESPACE "matuwall"
+// its own namespace lets compositor rules treat the preview apart
+#define BACKDROP_NAMESPACE "matuwall-preview"
 // fractional-scale-v1 reports scale in 120ths of the logical size
 #define FRACTIONAL_SCALE_DENOM 120
 // compositors that hold the attached buffer would otherwise force a fresh
@@ -181,12 +183,49 @@ static uint32_t anchor_for(enum matuwall_position position) {
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |                            \
 		ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT)
 
+static void place_panel(struct matuwall_layer *layer,
+	const struct matuwall_layer_panel *panel) {
+	int32_t top = 0;
+	int32_t right = 0;
+	int32_t bottom = 0;
+	int32_t left = 0;
+
+	switch (panel->position) {
+	case MATUWALL_POSITION_LEFT:
+		left = (int32_t)panel->margin;
+		break;
+	case MATUWALL_POSITION_RIGHT:
+		right = (int32_t)panel->margin;
+		break;
+	case MATUWALL_POSITION_TOP:
+		top = (int32_t)panel->margin;
+		break;
+	case MATUWALL_POSITION_BOTTOM:
+		bottom = (int32_t)panel->margin;
+		break;
+	case MATUWALL_POSITION_CENTER:
+		break;
+	}
+
+	layer->requested_width = panel->width;
+	layer->requested_height = panel->height;
+	zwlr_layer_surface_v1_set_size(
+		layer->layer_surface, panel->width, panel->height);
+	zwlr_layer_surface_v1_set_anchor(
+		layer->layer_surface, anchor_for(panel->position));
+	zwlr_layer_surface_v1_set_margin(
+		layer->layer_surface, top, right, bottom, left);
+}
+
 bool matuwall_layer_create(struct matuwall_layer *layer,
-	const struct matuwall_registry *reg, struct wl_output *output) {
+	const struct matuwall_registry *reg, struct wl_output *output,
+	enum matuwall_layer_role role,
+	const struct matuwall_layer_panel *panel) {
 	*layer = (struct matuwall_layer){
 		.compositor = reg->compositor,
 		.buffer_scale = 1,
 	};
+	bool backdrop = role == MATUWALL_LAYER_BACKDROP;
 
 	layer->wl_surface = wl_compositor_create_surface(reg->compositor);
 	if (layer->wl_surface == NULL) {
@@ -210,7 +249,8 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 	// NULL keeps the compositor-selected active output behavior
 	layer->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
 		reg->layer_shell, layer->wl_surface, output,
-		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, LAYER_NAMESPACE);
+		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
+		backdrop ? BACKDROP_NAMESPACE : PANEL_NAMESPACE);
 	if (layer->layer_surface == NULL) {
 		wl_surface_destroy(layer->wl_surface);
 		layer->wl_surface = NULL;
@@ -219,51 +259,75 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 
 	zwlr_layer_surface_v1_add_listener(
 		layer->layer_surface, &layer_surface_listener, layer);
-	zwlr_layer_surface_v1_set_size(layer->layer_surface, 0, 0);
-	zwlr_layer_surface_v1_set_anchor(layer->layer_surface, ANCHOR_ALL);
+	if (panel != NULL) {
+		place_panel(layer, panel);
+	} else {
+		zwlr_layer_surface_v1_set_size(layer->layer_surface, 0, 0);
+		zwlr_layer_surface_v1_set_anchor(
+			layer->layer_surface, ANCHOR_ALL);
+	}
 	// A picker overlays the desktop; it must not reserve space
 	zwlr_layer_surface_v1_set_exclusive_zone(layer->layer_surface, 0);
-	// Every key belongs to the picker while it is open
+	// every key belongs to the panel while it is open
 	zwlr_layer_surface_v1_set_keyboard_interactivity(layer->layer_surface,
-		ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
+		backdrop
+			? ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE
+			: ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
 	wl_surface_commit(layer->wl_surface);
 	return true;
 }
 
-void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
-	uint32_t height, enum matuwall_position position, uint32_t margin) {
-	int32_t top = 0;
-	int32_t right = 0;
-	int32_t bottom = 0;
-	int32_t left = 0;
+void matuwall_layer_set_panel(struct matuwall_layer *layer,
+	const struct matuwall_layer_panel *panel) {
+	place_panel(layer, panel);
+	layer->configured = false;
+	wl_surface_commit(layer->wl_surface);
+}
 
-	switch (position) {
-	case MATUWALL_POSITION_LEFT:
-		left = (int32_t)margin;
-		break;
-	case MATUWALL_POSITION_RIGHT:
-		right = (int32_t)margin;
-		break;
-	case MATUWALL_POSITION_TOP:
-		top = (int32_t)margin;
-		break;
-	case MATUWALL_POSITION_BOTTOM:
-		bottom = (int32_t)margin;
-		break;
-	case MATUWALL_POSITION_CENTER:
-		break;
+bool matuwall_layer_map_clear(
+	struct matuwall_layer *layer, struct wl_shm *shm) {
+	if (!layer->configured || layer->width > INT32_MAX ||
+		layer->height > INT32_MAX) {
+		return false;
+	}
+	// without a viewport the only way to cover the surface is a full buffer
+	if (layer->viewport == NULL) {
+		struct matuwall_buffer *buffer;
+		struct matuwall_damage damage = {.x1 = 1, .y1 = 1};
+		return matuwall_layer_begin_frame(layer, shm, &buffer) ==
+			       MATUWALL_BUFFER_READY &&
+		       matuwall_layer_commit_frame(
+			       layer, false, false, &damage);
 	}
 
-	layer->requested_width = width;
-	layer->requested_height = height;
-	layer->configured = false;
-	zwlr_layer_surface_v1_set_size(layer->layer_surface, width, height);
-	zwlr_layer_surface_v1_set_anchor(
-		layer->layer_surface, anchor_for(position));
-	zwlr_layer_surface_v1_set_margin(
-		layer->layer_surface, top, right, bottom, left);
+	layer->clear_buffer = matuwall_shm_clear_pixel(shm);
+	if (layer->clear_buffer == NULL) {
+		return false;
+	}
+	int32_t width = (int32_t)layer->width;
+	int32_t height = (int32_t)layer->height;
+	wl_surface_attach(layer->wl_surface, layer->clear_buffer, 0, 0);
+	wp_viewport_set_destination(layer->viewport, width, height);
+	wl_surface_damage_buffer(layer->wl_surface, 0, 0, 1, 1);
 	wl_surface_commit(layer->wl_surface);
+
+	// the first real frame resends only what differs from this
+	layer->geometry_sent = true;
+	layer->sent_scale = 1;
+	layer->sent_width = width;
+	layer->sent_height = height;
+	return true;
+}
+
+void matuwall_layer_inherit_scale(
+	struct matuwall_layer *layer, const struct matuwall_layer *from) {
+	if (layer->fractional_scale == 0 && layer->fractional != NULL) {
+		layer->fractional_scale = from->fractional_scale;
+	}
+	if (layer->buffer_scale == 1 && from->buffer_scale > 1) {
+		layer->buffer_scale = from->buffer_scale;
+	}
 }
 
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
@@ -446,6 +510,10 @@ void matuwall_layer_destroy(struct matuwall_layer *layer) {
 	}
 
 	// The surface no longer references client-side buffer objects
+	if (layer->clear_buffer != NULL) {
+		wl_buffer_destroy(layer->clear_buffer);
+		layer->clear_buffer = NULL;
+	}
 	matuwall_buffer_pool_destroy(&layer->buffer_pool);
 	layer->compositor = NULL;
 	layer->configured = false;

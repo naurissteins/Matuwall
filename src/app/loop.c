@@ -82,15 +82,11 @@ static bool same_rect(
 	       a->height == b->height;
 }
 
-// The panel is the whole surface unless a backdrop is drawn around it
+// fit the grid to the output and place the panel in its configured surface
 static void refresh_panel(struct matuwall_app *app) {
 	struct matuwall_layout old_layout = app->layout;
 	struct matuwall_rect old_panel = app->panel;
 	uint32_t old_first_row = app->grid.first_row;
-	if (app->config.preview) {
-		app->output_width = app->layer.width;
-		app->output_height = app->layer.height;
-	}
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
 		app->output_width, app->output_height, app->config.carousel,
 		app->config.position, app->config.edge_margin, &app->layout,
@@ -143,16 +139,6 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.carousel_slot = app->grid.cursor,
 		.scroll = visual.scroll,
 		.panel = app->panel,
-		.backdrop = app->config.preview,
-		.preview =
-			{
-				.image = app->preview.image.pixels,
-				.width = app->preview.image.width,
-				.height = app->preview.image.height,
-				.patch = &app->preview.patch,
-				.sibling = matuwall_buffer_pool_sibling(
-					&app->layer.buffer_pool, buffer),
-			},
 		.directory_unavailable = app->scan.unavailable,
 		.edge = matuwall_config_edge(&app->config),
 		.scale = scale,
@@ -189,11 +175,9 @@ static bool render_if_needed(struct matuwall_app *app) {
 			};
 		}
 	}
-	struct matuwall_damage damage =
-		matuwall_frame_draw(buffer, &frame, app->preview.generation);
-	bool opaque = frame.backdrop && buffer->backdrop_opaque;
+	struct matuwall_damage damage = matuwall_frame_draw(buffer, &frame);
 	if (!matuwall_layer_commit_frame(
-		    &app->layer, visual.active, opaque, &damage)) {
+		    &app->layer, visual.active, false, &damage)) {
 		matuwall_log_error("render", "failed to commit a frame");
 		return false;
 	}
@@ -294,6 +278,8 @@ static bool pump_events(struct matuwall_app *app) {
 	timeout = sooner(timeout, matuwall_app_preview_timeout(app, now));
 	timeout =
 		sooner(timeout, matuwall_layer_idle_timeout(&app->layer, now));
+	timeout = sooner(
+		timeout, matuwall_layer_idle_timeout(&app->backdrop, now));
 
 	struct timespec wait = {
 		.tv_sec = timeout / 1000,
@@ -351,6 +337,7 @@ static bool pump_events(struct matuwall_app *app) {
 	matuwall_app_preview_tick(app, matuwall_now_ms());
 	spinner_tick(app, matuwall_now_ms());
 	matuwall_layer_collect_idle(&app->layer, matuwall_now_ms());
+	matuwall_layer_collect_idle(&app->backdrop, matuwall_now_ms());
 	return true;
 }
 
@@ -442,7 +429,7 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		if (!render_if_needed(app)) {
 			return false;
 		}
-		matuwall_app_preview_trim(app, matuwall_now_ms());
+		matuwall_app_preview_render(app, matuwall_now_ms());
 	}
 	restore_signal_mask();
 	if (interrupted != 0) {

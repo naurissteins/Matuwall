@@ -118,6 +118,11 @@ You can also use both CLI and config file together. Set fundamental configs via 
 
 See example config [`config/example.toml`](config/example.toml)
 
+### Compositor rules
+
+The panels layer namespace is `matuwall`. With `--preview` the fullscreen preview is a separate layer surface named `matuwall-preview` 
+This is useful if you want to animate panel or preview separately
+
 ## Wallpaper daemons
 
 The built-in default is `awww`. Set `backend = "sweetbg"` or use `-b sweetbg`

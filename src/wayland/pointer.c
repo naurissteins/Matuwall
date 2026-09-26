@@ -15,23 +15,27 @@ static void handle_enter(void *data, struct wl_pointer *wl_pointer,
 	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)serial;
-	(void)surface;
 
 	// Treat entering as a move so a tile highlights without a jitter first
+	pointer->focus = surface;
 	pointer->x = wl_fixed_to_int(x);
 	pointer->y = wl_fixed_to_int(y);
 	if (pointer->handler->pointer_motion != NULL) {
 		pointer->handler->pointer_motion(
-			pointer->user_data, pointer->x, pointer->y);
+			pointer->user_data, surface, pointer->x, pointer->y);
 	}
 }
 
 static void handle_leave(void *data, struct wl_pointer *wl_pointer,
 	uint32_t serial, struct wl_surface *surface) {
-	(void)data;
+	struct matuwall_pointer *pointer = data;
 	(void)wl_pointer;
 	(void)serial;
-	(void)surface;
+
+	// an enter on the other surface may already have replaced it
+	if (pointer->focus == surface) {
+		pointer->focus = NULL;
+	}
 }
 
 static void handle_motion(void *data, struct wl_pointer *wl_pointer,
@@ -43,8 +47,8 @@ static void handle_motion(void *data, struct wl_pointer *wl_pointer,
 	pointer->x = wl_fixed_to_int(x);
 	pointer->y = wl_fixed_to_int(y);
 	if (pointer->handler->pointer_motion != NULL) {
-		pointer->handler->pointer_motion(
-			pointer->user_data, pointer->x, pointer->y);
+		pointer->handler->pointer_motion(pointer->user_data,
+			pointer->focus, pointer->x, pointer->y);
 	}
 }
 
@@ -59,8 +63,8 @@ static void handle_button(void *data, struct wl_pointer *wl_pointer,
 		return;
 	}
 	bool pressed = state == WL_POINTER_BUTTON_STATE_PRESSED;
-	pointer->handler->pointer_button(
-		pointer->user_data, pointer->x, pointer->y, pressed);
+	pointer->handler->pointer_button(pointer->user_data, pointer->focus,
+		pointer->x, pointer->y, pressed);
 }
 
 static void handle_axis(void *data, struct wl_pointer *wl_pointer,
@@ -146,5 +150,6 @@ void matuwall_pointer_finish(struct matuwall_pointer *pointer) {
 		wl_pointer_destroy(pointer->wl_pointer);
 	}
 	pointer->wl_pointer = NULL;
+	pointer->focus = NULL;
 	pointer->scroll_accum = 0.0;
 }

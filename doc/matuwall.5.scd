@@ -48,7 +48,8 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 *preview*
 	Show the selected wallpaper full-screen behind the panel. Defaults to
 	_false_. Nothing is applied until *Enter*; *Escape* leaves the wallpaper
-	unchanged.
+	unchanged. The preview is its own layer surface with the namespace
+	_matuwall-preview_. The panel uses _matuwall_.
 
 *close_on_focus_loss*
 	Close when keyboard focus leaves Matuwall. Defaults to _false_.

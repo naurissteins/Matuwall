@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Where the grid panel sits, either as a surface anchor or inside a backdrop
+// where the grid panel sits on the output
 enum matuwall_position {
 	MATUWALL_POSITION_CENTER,
 	MATUWALL_POSITION_LEFT,

@@ -9,14 +9,16 @@
 
 struct wl_seat;
 struct wl_keyboard;
+struct wl_surface;
 
 struct matuwall_seat_handler {
 	void (*key)(void *user_data, xkb_keysym_t sym);
 	void (*focus_lost)(void *user_data);
-	// Pointer coordinates are surface-local logical pixels
-	void (*pointer_motion)(void *user_data, int32_t x, int32_t y);
-	void (*pointer_button)(
-		void *user_data, int32_t x, int32_t y, bool pressed);
+	// coordinates are logical pixels local to surface, which may be NULL
+	void (*pointer_motion)(void *user_data, struct wl_surface *surface,
+		int32_t x, int32_t y);
+	void (*pointer_button)(void *user_data, struct wl_surface *surface,
+		int32_t x, int32_t y, bool pressed);
 	// steps is signed: positive scrolls down, negative up
 	void (*pointer_scroll)(void *user_data, int32_t steps);
 };

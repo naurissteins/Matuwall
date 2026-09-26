@@ -19,7 +19,9 @@
 struct matuwall_app {
 	struct wl_display *display;
 	struct matuwall_registry registry;
+	// the grid panel with preview the backdrop sits under it
 	struct matuwall_layer layer;
+	struct matuwall_layer backdrop;
 	struct matuwall_seat seat;
 	struct matuwall_instance instance;
 
@@ -32,8 +34,7 @@ struct matuwall_app {
 	struct matuwall_dirscan scan;
 	struct matuwall_grid grid;
 	struct matuwall_animation animation;
-	// Panel geometry inside the surface; equal to the surface without
-	// preview
+	// panel geometry inside its surface, normally the whole surface
 	struct matuwall_rect panel;
 	struct matuwall_preview preview;
 
