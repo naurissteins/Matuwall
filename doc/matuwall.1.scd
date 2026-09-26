@@ -30,6 +30,11 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 	Use _sweetbg_, _awww_, or _auto_. Named backends are not probed; _auto_
 	probes when applying the wallpaper.
 
+*--backend-arg* _ARG_
+	Replace the configured _backend.<name>.args_ for this run. Later
+	occurrences append in command-line order. Applies to whichever backend
+	runs. Up to 32 non-empty arguments of up to 255 bytes are accepted.
+
 *--border* _COLOR_
 	Set _colors.border_.
 
@@ -86,6 +91,9 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 
 *--no-carousel*
 	Disable the carousel and use the regular grid.
+
+*--no-backend-args*
+	Clear the runtime backend args. A later *--backend-arg* starts a new list.
 
 *--no-hooks*
 	Clear the runtime hook list. A later *--hook* starts a new list.
@@ -178,7 +186,8 @@ clicking outside the panel cancels.
 # BACKENDS
 
 The default backend is *awww*. Set _general.backend_ to _sweetbg_ or _auto_ to
-change it. Backend commands receive the path directly, never through a shell.
+change it. Extra flags come from _backend.<name>.args_ or *--backend-arg*.
+Backend commands receive the path directly, never through a shell.
 Failed applies leave the wallpaper unchanged and exit non-zero.
 
 After a successful apply, _hooks.on_apply_ commands are started without waiting

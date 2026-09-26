@@ -12,6 +12,7 @@ enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
+	OPTION_BACKEND_ARG,
 	OPTION_BORDER,
 	OPTION_BORDER_WIDTH,
 	OPTION_SHADOW,
@@ -23,6 +24,7 @@ enum {
 	OPTION_EDGE_MARGIN,
 	OPTION_HEIGHT,
 	OPTION_HOOK,
+	OPTION_NO_BACKEND_ARGS,
 	OPTION_NO_CAROUSEL,
 	OPTION_NO_CLOSE_ON_FOCUS_LOSS,
 	OPTION_NO_CONFIG,
@@ -48,6 +50,7 @@ enum parse_result {
 static const struct option long_options[] = {
 	{"background", required_argument, NULL, OPTION_BACKGROUND},
 	{"backend", required_argument, NULL, 'b'},
+	{"backend-arg", required_argument, NULL, OPTION_BACKEND_ARG},
 	{"border", required_argument, NULL, OPTION_BORDER},
 	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
 	{"shadow", required_argument, NULL, OPTION_SHADOW},
@@ -62,6 +65,7 @@ static const struct option long_options[] = {
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
+	{"no-backend-args", no_argument, NULL, OPTION_NO_BACKEND_ARGS},
 	{"no-carousel", no_argument, NULL, OPTION_NO_CAROUSEL},
 	{"no-close-on-focus-loss", no_argument, NULL,
 		OPTION_NO_CLOSE_ON_FOCUS_LOSS},
@@ -165,6 +169,30 @@ static enum parse_result parse_hook(const char *value,
 		return PARSE_ERROR;
 	}
 	options->hooks[options->hook_count++] = value;
+	return PARSE_CONTINUE;
+}
+
+// first one replaces the configured args, later ones append
+static enum parse_result parse_backend_arg(const char *value,
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	size_t length = strlen(value);
+	if (length == 0 || length >= MATUWALL_BACKEND_ARG_MAX) {
+		snprintf(err, err_size,
+			"invalid backend arg: must contain 1 to %d bytes",
+			MATUWALL_BACKEND_ARG_MAX - 1);
+		return PARSE_ERROR;
+	}
+	if (!options->backend_args_set) {
+		options->backend_args_set = true;
+		options->backend_arg_count = 0;
+	}
+	if (options->backend_arg_count >= MATUWALL_MAX_BACKEND_ARGS) {
+		snprintf(err, err_size,
+			"too many --backend-arg options: maximum is %d",
+			MATUWALL_MAX_BACKEND_ARGS);
+		return PARSE_ERROR;
+	}
+	options->backend_args[options->backend_arg_count++] = value;
 	return PARSE_CONTINUE;
 }
 
@@ -272,6 +300,12 @@ static enum parse_result parse_override(int option, const char *value,
 		return parse_backend(value, options, err, err_size)
 			       ? PARSE_CONTINUE
 			       : PARSE_ERROR;
+	case OPTION_BACKEND_ARG:
+		return parse_backend_arg(value, options, err, err_size);
+	case OPTION_NO_BACKEND_ARGS:
+		options->backend_args_set = true;
+		options->backend_arg_count = 0;
+		return PARSE_CONTINUE;
 	case OPTION_CONFIG:
 		if (!parse_path_override("config path", value,
 			    options->config_path, sizeof(options->config_path),
