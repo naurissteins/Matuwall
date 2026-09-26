@@ -60,6 +60,8 @@ matuwall --print-config                          // show the effective config an
 matuwall -d ~/Pictures/Photography               // use another directory
 matuwall -b awww                                 // use awww once
 matuwall --backend auto                          // detect a running backend
+matuwall --backend-arg --persist                 // replace backend flags for one run
+matuwall --no-backend-args                       // apply without configured flags
 matuwall --carousel                              // enable the centered carousel
 matuwall --no-carousel                           // use the regular grid
 matuwall --edge fade                             // fade tiles at carousel edges
@@ -130,6 +132,12 @@ args = ["--persist"]            # keep the wallpaper after a sweetbg restart
 
 [backend.awww]
 args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+```
+
+CLI override example using `--backend-arg` flags
+
+```sh
+matuwall -b awww --backend-arg --transition-type --backend-arg grow --backend-arg --transition-duration --backend-arg 2.5
 ```
 
 ## Hooks

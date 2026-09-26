@@ -4,6 +4,16 @@
 
 #include "util/log.h"
 
+// One list for this run, whichever backend ends up applying it
+static void apply_backend_args(const struct matuwall_cli_options *options,
+	struct matuwall_backend_args *args) {
+	args->count = options->backend_arg_count;
+	for (size_t i = 0; i < options->backend_arg_count; i++) {
+		memcpy(args->items[i], options->backend_args[i],
+			strlen(options->backend_args[i]) + 1);
+	}
+}
+
 void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	struct matuwall_config *config) {
 	if (options->background_set) {
@@ -36,6 +46,10 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->backend_set) {
 		memcpy(config->backend, options->backend,
 			strlen(options->backend) + 1);
+	}
+	if (options->backend_args_set) {
+		apply_backend_args(options, &config->sweetbg_args);
+		apply_backend_args(options, &config->awww_args);
 	}
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
@@ -143,6 +157,12 @@ void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
 	if (options->backend_set) {
 		matuwall_log_info(
 			"config", "backend overridden to %s", config->backend);
+	}
+	if (options->backend_args_set) {
+		matuwall_log_info("config",
+			"backend args overridden with %zu arg%s",
+			options->backend_arg_count,
+			options->backend_arg_count == 1 ? "" : "s");
 	}
 	if (options->columns_set) {
 		matuwall_log_info("config", "columns overridden to %u",

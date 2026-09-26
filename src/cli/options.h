@@ -38,6 +38,10 @@ struct matuwall_cli_options {
 	struct matuwall_color spinner;
 	bool backend_set;
 	char backend[32];
+	bool backend_args_set;
+	// backend arg pointers borrow argv storage
+	const char *backend_args[MATUWALL_MAX_BACKEND_ARGS];
+	size_t backend_arg_count;
 	bool columns_set;
 	uint32_t columns;
 	bool carousel_set;
