@@ -82,6 +82,65 @@ static uint64_t jpeg_coefficient_bytes(struct jpeg_decompress_struct *cinfo) {
 	return bytes;
 }
 
+// --- progressive input ---
+
+static bool idct_is_1x1(const jpeg_component_info *comp) {
+#if JPEG_LIB_VERSION >= 70
+	return comp->DCT_h_scaled_size == 1 && comp->DCT_v_scaled_size == 1;
+#else
+	return comp->DCT_scaled_size == 1;
+#endif
+}
+
+static bool dc_only_output(const struct jpeg_decompress_struct *cinfo) {
+	for (int ci = 0; ci < cinfo->num_components; ci++) {
+		if (!idct_is_1x1(&cinfo->comp_info[ci])) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool dc_exact(const struct jpeg_decompress_struct *cinfo) {
+	if (cinfo->coef_bits == NULL) {
+		return false;
+	}
+	for (int ci = 0; ci < cinfo->num_components; ci++) {
+		if (cinfo->coef_bits[ci][0] != 0) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool consume_scans(
+	struct jpeg_decompress_struct *cinfo, const atomic_bool *stop) {
+	bool dc_only = dc_only_output(cinfo);
+	for (;;) {
+		if (stop_requested(stop)) {
+			return false;
+		}
+		int status = jpeg_consume_input(cinfo);
+		if (status == JPEG_REACHED_EOI) {
+			break;
+		}
+		// a stdio source never suspends, so this is only a loop guard
+		if (status == JPEG_SUSPENDED) {
+			return false;
+		}
+		// only a completed scan makes every started scan's data present
+		if (status == JPEG_SCAN_COMPLETED && dc_only &&
+			dc_exact(cinfo)) {
+			// smoothing would guess the missing AC and rewrite DC
+			cinfo->do_block_smoothing = FALSE;
+			break;
+		}
+	}
+	return jpeg_start_output(cinfo, cinfo->input_scan_number);
+}
+
+// --- output ---
+
 // heap state, so the error longjmp can still free it
 struct jpeg_stream {
 	uint8_t *row;
@@ -105,7 +164,11 @@ static bool read_jpeg_direct(struct jpeg_decompress_struct *cinfo,
 			return false;
 		}
 	}
-	jpeg_finish_decompress(cinfo);
+	// buffered input already ended, or stopped early on purpose, finishing
+	// would read and decode every remaining scan
+	if (!cinfo->buffered_image) {
+		jpeg_finish_decompress(cinfo);
+	}
 	return true;
 }
 
@@ -172,7 +235,13 @@ bool matuwall_decode_jpeg(
 	ok = ok && reserve(job, peak);
 	if (ok) {
 		cinfo.out_color_space = direct ? JCS_EXT_BGRA : JCS_RGB;
+		// normal mode absorbs all scans in one uncancellable call
+		// buffering baseline would add a whole-image coefficient array
+		cinfo.buffered_image = jpeg_has_multiple_scans(&cinfo);
 		jpeg_start_decompress(&cinfo);
+		ok = !cinfo.buffered_image || consume_scans(&cinfo, job->stop);
+	}
+	if (ok) {
 		img->width = job->target_w;
 		img->height = job->target_h;
 		img->pixels = alloc_target(job);
