@@ -238,9 +238,13 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 	}
 	wl_surface_add_listener(layer->wl_surface, &surface_listener, layer);
 
-	if (reg->viewporter != NULL && reg->fractional_scale_manager != NULL) {
+	// a viewport also lets the backdrop show a capped image at full size
+	if (reg->viewporter != NULL &&
+		(backdrop || reg->fractional_scale_manager != NULL)) {
 		layer->viewport = wp_viewporter_get_viewport(
 			reg->viewporter, layer->wl_surface);
+	}
+	if (layer->viewport != NULL && reg->fractional_scale_manager != NULL) {
 		layer->fractional =
 			wp_fractional_scale_manager_v1_get_fractional_scale(
 				reg->fractional_scale_manager,
@@ -393,13 +397,20 @@ static bool update_opaque_region(struct matuwall_layer *layer, bool opaque) {
 }
 
 // surface state persists across commits; resend only what changed
-static void send_geometry(struct matuwall_layer *layer) {
-	bool viewport = layer->viewport != NULL && layer->fractional_scale > 0;
+static void send_geometry(
+	struct matuwall_layer *layer, const struct matuwall_buffer *buffer) {
+	uint32_t native_width;
+	uint32_t native_height;
+	matuwall_layer_buffer_size(layer, &native_width, &native_height);
+	bool native = buffer->width == native_width &&
+		      buffer->height == native_height;
+	bool viewport = layer->viewport != NULL &&
+			(layer->fractional_scale > 0 || !native);
 	int32_t scale = 1;
 	int32_t width = -1;
 	int32_t height = -1;
 	if (viewport) {
-		// viewport maps the scaled buffer back to the logical size
+		// viewport maps any buffer size back to the logical size
 		width = (int32_t)layer->width;
 		height = (int32_t)layer->height;
 	} else if (layer->buffer_scale > 1) {
@@ -449,7 +460,7 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 		}
 	}
 
-	send_geometry(layer);
+	send_geometry(layer, buffer);
 
 	wl_surface_attach(layer->wl_surface, buffer->wl_buffer, 0, 0);
 	wl_surface_damage_buffer(layer->wl_surface, damage->x0, damage->y0,
@@ -465,6 +476,16 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	struct matuwall_layer *layer, struct wl_shm *shm,
 	struct matuwall_buffer **out) {
+	uint32_t pixel_width;
+	uint32_t pixel_height;
+	matuwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
+	return matuwall_layer_begin_frame_sized(
+		layer, shm, pixel_width, pixel_height, out);
+}
+
+enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
+	struct matuwall_layer *layer, struct wl_shm *shm, uint32_t width,
+	uint32_t height, struct matuwall_buffer **out) {
 	*out = NULL;
 	if (!layer->configured || layer->wl_surface == NULL) {
 		return MATUWALL_BUFFER_FAILED;
@@ -474,13 +495,18 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	if (layer->frame_callback != NULL) {
 		return MATUWALL_BUFFER_BUSY;
 	}
-
-	uint32_t pixel_width;
-	uint32_t pixel_height;
-	matuwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
-
+	// only a viewport can map an off-size buffer onto the surface
+	if (layer->viewport == NULL) {
+		uint32_t native_width;
+		uint32_t native_height;
+		matuwall_layer_buffer_size(
+			layer, &native_width, &native_height);
+		if (width != native_width || height != native_height) {
+			return MATUWALL_BUFFER_FAILED;
+		}
+	}
 	return matuwall_buffer_pool_acquire(
-		&layer->buffer_pool, shm, pixel_width, pixel_height, out);
+		&layer->buffer_pool, shm, width, height, out);
 }
 
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,

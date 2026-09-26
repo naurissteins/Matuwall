@@ -140,6 +140,16 @@ void matuwall_app_preview_result(
 	app->backdrop.needs_repaint = true;
 }
 
+// with a viewport the compositor stretches the capped image to the output
+static bool backdrop_buffer_size(
+	struct matuwall_app *app, uint32_t *width, uint32_t *height) {
+	if (app->backdrop.viewport != NULL) {
+		return preview_target(app, width, height);
+	}
+	matuwall_layer_buffer_size(&app->backdrop, width, height);
+	return *width != 0 && *height != 0;
+}
+
 // the picker still works without its backdrop, so a failure only drops it
 static void preview_disable(struct matuwall_app *app, const char *reason) {
 	struct matuwall_preview *preview = &app->preview;
@@ -180,9 +190,16 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 		return;
 	}
 
+	uint32_t width;
+	uint32_t height;
+	if (!backdrop_buffer_size(app, &width, &height)) {
+		preview_disable(app, "backdrop has no size");
+		return;
+	}
 	struct matuwall_buffer *buffer;
 	enum matuwall_buffer_acquire acquired =
-		matuwall_layer_begin_frame(layer, app->registry.shm, &buffer);
+		matuwall_layer_begin_frame_sized(
+			layer, app->registry.shm, width, height, &buffer);
 	if (acquired == MATUWALL_BUFFER_BUSY) {
 		return;
 	}
