@@ -91,6 +91,7 @@ executable(
 	'src/wayland/output.c',
 	'src/wayland/registry.c',
 	'src/wayland/layer.c',
+	'src/wayland/present.c',
 	'src/wayland/pointer.c',
 	'src/wayland/seat.c',
 	'src/wayland/shm.c',
