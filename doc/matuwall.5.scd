@@ -33,6 +33,16 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	Explicit backends are used without probing. Apply failures leave the
 	wallpaper unchanged and exit non-zero.
 
+## [backend.sweetbg], [backend.awww]
+
+*args*
+	Extra flags for that backend's _img_ command. Defaults to an empty array.
+	Each item is one argument, placed before the wallpaper path. For awww they
+	come before _--_. Only the selected backend's args are used.
+
+	Arguments are passed as-is, without a shell. The daemon rejects flags it
+	does not know. At most 32 arguments of up to 255 bytes each are accepted.
+
 ## [window]
 
 *preview*
@@ -158,6 +168,12 @@ All colors use _"#rrggbb"_ or _"#rrggbbaa"_.
 [general]
 directory = "~/Pictures/Wallpapers"
 backend = "awww"
+
+[backend.sweetbg]
+args = ["--persist"]
+
+[backend.awww]
+args = ["--transition-type", "grow", "--transition-duration", "1.5"]
 
 [window]
 preview = false

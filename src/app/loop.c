@@ -380,7 +380,20 @@ static bool apply_selection(struct matuwall_app *app) {
 		matuwall_log_info("backend", "selected configured backend %s",
 			backend->name);
 	}
-	if (!backend->apply(resolved)) {
+	// config owns the strings; opts only borrows them for the exec
+	const struct matuwall_backend_args *extra =
+		matuwall_config_backend_args(&app->config, backend->name);
+	const char *args[MATUWALL_MAX_BACKEND_ARGS];
+	struct matuwall_apply_opts opts = {.args = args};
+	for (size_t i = 0; extra != NULL && i < extra->count; i++) {
+		args[opts.arg_count++] = extra->items[i];
+	}
+	if (opts.arg_count > 0) {
+		matuwall_log_info("backend",
+			"passing %zu configured args to %s", opts.arg_count,
+			backend->name);
+	}
+	if (!backend->apply(resolved, &opts)) {
 		matuwall_log_error("backend",
 			"%s failed to apply the wallpaper", backend->name);
 		return false;

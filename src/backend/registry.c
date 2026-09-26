@@ -105,7 +105,47 @@ bool matuwall_backend_socket_ready(const char *leaf) {
 	return stat(path, &st) == 0 && S_ISSOCK(st.st_mode);
 }
 
-bool matuwall_backend_run(const char *file, char *const argv[]) {
+#define BACKEND_ARGV_MAX 64
+
+static bool append_argv(
+	char **argv, size_t *count, const char *const *items, size_t n) {
+	for (size_t i = 0; i < n; i++) {
+		if (*count + 1 >= BACKEND_ARGV_MAX) {
+			return false;
+		}
+		// execvp takes char *const[], it never writes through these
+		argv[(*count)++] = (char *)items[i];
+	}
+	argv[*count] = NULL;
+	return true;
+}
+
+static size_t list_length(const char *const list[]) {
+	size_t n = 0;
+	while (list[n] != NULL) {
+		n++;
+	}
+	return n;
+}
+
+static bool build_argv(char **argv, const char *const head[],
+	const struct matuwall_apply_opts *opts, const char *const tail[]) {
+	size_t count = 0;
+	size_t extra = opts != NULL ? opts->arg_count : 0;
+	return append_argv(argv, &count, head, list_length(head)) &&
+	       (extra == 0 || append_argv(argv, &count, opts->args, extra)) &&
+	       append_argv(argv, &count, tail, list_length(tail));
+}
+
+bool matuwall_backend_run(const char *file, const char *const head[],
+	const struct matuwall_apply_opts *opts, const char *const tail[]) {
+	char *argv[BACKEND_ARGV_MAX];
+	if (!build_argv(argv, head, opts, tail)) {
+		matuwall_log_error(
+			"backend", "too many arguments for %s", file);
+		return false;
+	}
+
 	int exec_error[2];
 	if (pipe2(exec_error, O_CLOEXEC) != 0) {
 		matuwall_log_error("backend", "cannot create exec pipe: %s",

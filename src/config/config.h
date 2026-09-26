@@ -16,10 +16,20 @@ bool matuwall_edge_from_name(const char *name, enum matuwall_edge *out);
 
 #define MATUWALL_MAX_HOOKS 16
 #define MATUWALL_HOOK_MAX 512
+#define MATUWALL_MAX_BACKEND_ARGS 32
+#define MATUWALL_BACKEND_ARG_MAX 256
+
+// extra flags from [backend.<name>] args, passed before the wallpaper path
+struct matuwall_backend_args {
+	char items[MATUWALL_MAX_BACKEND_ARGS][MATUWALL_BACKEND_ARG_MAX];
+	size_t count;
+};
 
 struct matuwall_config {
 	char directory[PATH_MAX];
 	char backend[32];
+	struct matuwall_backend_args sweetbg_args;
+	struct matuwall_backend_args awww_args;
 	enum matuwall_position position;
 	uint32_t edge_margin;
 	struct matuwall_color background;
@@ -52,6 +62,9 @@ void matuwall_config_defaults(struct matuwall_config *cfg);
 // edge style to render, with "auto" settled by the background alpha
 enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg);
 bool matuwall_config_expand_path(const char *in, char *out, size_t out_size);
+// args for a backend name, NULL for "auto" or an unknown name
+const struct matuwall_backend_args *matuwall_config_backend_args(
+	const struct matuwall_config *cfg, const char *backend);
 
 bool matuwall_config_load(
 	struct matuwall_config *cfg, char *err, size_t err_size);

@@ -48,11 +48,13 @@ static bool awww_detect(void) {
 	return true;
 }
 
-static bool awww_apply(const char *path) {
-	// `--` keeps a path that starts with '-' from parsing as a flag; the
-	// client canonicalizes the path itself before telling the daemon
-	char *const argv[] = {"awww", "img", "--", (char *)path, NULL};
-	return matuwall_backend_run("awww", argv);
+static bool awww_apply(
+	const char *path, const struct matuwall_apply_opts *opts) {
+	// user flags must land before `--`, which keeps the path from parsing
+	// as a flag, the client canonicalizes the path itself
+	const char *const head[] = {"awww", "img", NULL};
+	const char *const tail[] = {"--", path, NULL};
+	return matuwall_backend_run("awww", head, opts, tail);
 }
 
 const struct matuwall_backend matuwall_backend_awww = {
