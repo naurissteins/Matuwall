@@ -115,7 +115,8 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 void matuwall_app_preview_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
 	struct matuwall_preview *preview = &app->preview;
-	if (result->cancelled) {
+	// a decode that outlived preview_disable has nowhere to go
+	if (result->cancelled || !preview->enabled) {
 		free(result->pixels);
 		return;
 	}
@@ -141,9 +142,17 @@ void matuwall_app_preview_result(
 
 // the picker still works without its backdrop, so a failure only drops it
 static void preview_disable(struct matuwall_app *app, const char *reason) {
+	struct matuwall_preview *preview = &app->preview;
 	matuwall_log_warn("preview", "%s, preview disabled", reason);
-	matuwall_image_free(&app->preview.image);
-	app->preview.enabled = false;
+	if (preview->in_flight != SIZE_MAX && app->workers != NULL) {
+		matuwall_worker_cancel_preview(app->workers);
+	}
+	preview->in_flight = SIZE_MAX;
+	preview->due_ms = 0;
+	matuwall_image_free(&preview->image);
+	preview->enabled = false;
+	// nothing paints the backdrop again, held buffers wait for teardown
+	matuwall_buffer_pool_collect_idle(&app->backdrop.buffer_pool, 0, 0);
 }
 
 void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
