@@ -237,6 +237,47 @@ static void apply_hooks(struct matuwall_config *cfg,
 	}
 }
 
+// each item stays one argv entry, an empty one would reach the daemon as a path
+static void apply_backend_args(struct matuwall_backend_args *args,
+	const struct matuwall_toml_value *v, int line) {
+	if (v->type != MATUWALL_TOML_ARRAY) {
+		warn(line, "args must be an array of strings");
+		return;
+	}
+	args->count = 0;
+	for (size_t i = 0; i < v->item_count; i++) {
+		if (args->count >= MATUWALL_MAX_BACKEND_ARGS) {
+			warn(line, "too many backend args; extra ignored");
+			return;
+		}
+		const char *arg = v->items[i];
+		size_t len = strlen(arg);
+		if (len == 0 || len >= MATUWALL_BACKEND_ARG_MAX) {
+			warn(line, "backend arg empty or too long; skipped");
+			continue;
+		}
+		memcpy(args->items[args->count], arg, len + 1);
+		args->count++;
+	}
+}
+
+static struct matuwall_backend_args *backend_args(
+	struct matuwall_config *cfg, const char *backend) {
+	if (strcmp(backend, "sweetbg") == 0) {
+		return &cfg->sweetbg_args;
+	}
+	if (strcmp(backend, "awww") == 0) {
+		return &cfg->awww_args;
+	}
+	return NULL;
+}
+
+const struct matuwall_backend_args *matuwall_config_backend_args(
+	const struct matuwall_config *cfg, const char *backend) {
+	// read-only view of the same lookup
+	return backend_args((struct matuwall_config *)cfg, backend);
+}
+
 static bool unknown(const char *section, const char *key, int line, char *err,
 	size_t err_size) {
 	if (section[0] == '\0') {
@@ -253,6 +294,10 @@ static bool apply(void *user_data, const char *section, const char *key,
 	const struct matuwall_toml_value *v, int line, char *err,
 	size_t err_size) {
 	struct matuwall_config *cfg = user_data;
+	struct matuwall_backend_args *args =
+		strncmp(section, "backend.", 8) == 0
+			? backend_args(cfg, section + 8)
+			: NULL;
 
 	if (strcmp(section, "general") == 0) {
 		if (strcmp(key, "directory") == 0) {
@@ -408,6 +453,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 	} else if (strcmp(section, "hooks") == 0) {
 		if (strcmp(key, "on_apply") == 0) {
 			apply_hooks(cfg, v, line);
+			return true;
+		}
+	} else if (args != NULL) {
+		if (strcmp(key, "args") == 0) {
+			apply_backend_args(args, v, line);
 			return true;
 		}
 	} else {

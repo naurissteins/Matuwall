@@ -1,6 +1,6 @@
 # Matuwall configuration
 # Place this file at $XDG_CONFIG_HOME/matuwall/config.toml
-# (or ~/.config/matuwall/config.toml). Every key is optional, and the values
+# (or ~/.config/matuwall/config.toml). Every key is optional and the values
 # below are the defaults. A missing file runs with these same defaults
 
 [general]
@@ -10,6 +10,17 @@ directory = "~/Pictures/Wallpapers"
 # Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto"
 # "auto" probes sweetbg then awww and picks the first one actually running
 backend = "awww"
+
+# Extra flags for each backend's img command, one argument per item
+# https://github.com/naurissteins/Matuwall/wiki/Backends-and-Hooks#backend-flags
+[backend.sweetbg]
+# --persist (-p) keeps the wallpaper after a sweetbg restart
+args = []
+# args = ["--persist"]
+
+[backend.awww]
+args = []
+# args = ["--transition-type", "grow", "--transition-duration", "1.5"]
 
 [window]
 # Show the selected wallpaper full-screen behind the grid
@@ -68,19 +79,17 @@ visible_rows = 1
 
 # Turn the grid into a centered carousel. Top, bottom, and center use a
 # horizontal row, left and right use a vertical column. In this mode columns
-# controls the maximum visible tiles and visible_rows is ignored. Navigation
-# wraps continuously, repeating thumbnails as needed to keep the strip full
+# controls the maximum visible tiles and visible_rows is ignored
 carousel = true
 
 # What carousel tiles do at the panel edges. "clip" cuts them at the margin,
-# "peek" lets them extend into it, and "fade" shrinks and fades them out.
-# "auto" fades when the background is fully transparent and clips otherwise.
+# "peek" lets them extend into it and "fade" shrinks and fades them out.
+# "auto" fades when the background is fully transparent and clips otherwise
 # The regular grid treats "fade" as "clip"
 edge = "auto"
 
 [thumbnail]
-# Tile size in logical pixels. The cache key includes these, so changing
-# them regenerates thumbnails at the new size
+# Thumbnail size in pixels
 width = 300
 height = 169
 
@@ -101,11 +110,8 @@ ring = "#f2cdcdff"
 spinner = "#cdd0e6ff"
 
 [hooks]
-# Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme.
-# {path} expands to the absolute wallpaper path. Each command is split on
-# whitespace and run directly (no shell), so shell syntax like pipes, globs, or
-# quotes has no effect! {path} is always passed as a single argument, so spaces
-# in a filename are safe. Hooks run detached and are not waited on
+# Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme
+# More info: https://github.com/naurissteins/Matuwall/wiki/Backends-and-Hooks#hooks
 # on_apply = [
 #   "matugen image {path}",
 #   "wal -i {path} -n",

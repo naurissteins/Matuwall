@@ -121,6 +121,17 @@ See example config [`config/example.toml`](config/example.toml)
 The built-in default is `awww`. Set `backend = "sweetbg"` or use `-b sweetbg`
 to select sweetbg instead.
 
+Pass extra flags to a backend with `args`. Each item is one argument, placed
+before the wallpaper path
+
+```toml
+[backend.sweetbg]
+args = ["--persist"]            # keep the wallpaper after a sweetbg restart
+
+[backend.awww]
+args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+```
+
 ## Hooks
 
 Hooks run after a successful apply. `{path}` becomes the absolute wallpaper

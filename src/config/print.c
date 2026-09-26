@@ -56,13 +56,26 @@ static void print_hooks(FILE *out, const struct matuwall_config *config) {
 	fputs("]\n", out);
 }
 
+static void print_backend_args(FILE *out, const char *backend,
+	const struct matuwall_backend_args *args) {
+	fprintf(out, "\n[backend.%s]\nargs = [", backend);
+	for (size_t i = 0; i < args->count; i++) {
+		fputs(i == 0 ? "" : ", ", out);
+		print_quoted(out, args->items[i]);
+	}
+	fputs("]\n", out);
+}
+
 bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 	fputs("[general]\ndirectory = ", out);
 	print_quoted(out, config->directory);
 	fputs("\nbackend = ", out);
 	print_quoted(out, config->backend);
+	fputc('\n', out);
+	print_backend_args(out, "sweetbg", &config->sweetbg_args);
+	print_backend_args(out, "awww", &config->awww_args);
 
-	fputs("\n\n[window]\npreview = ", out);
+	fputs("\n[window]\npreview = ", out);
 	fputs(config->preview ? "true\n" : "false\n", out);
 	fputs("close_on_focus_loss = ", out);
 	fputs(config->close_on_focus_loss ? "true\n" : "false\n", out);

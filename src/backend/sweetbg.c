@@ -21,10 +21,12 @@ static bool sweetbg_detect(void) {
 	return true;
 }
 
-static bool sweetbg_apply(const char *path) {
-	// sweetbg resolves the path to absolute itself
-	char *const argv[] = {"sweetbg", "img", (char *)path, NULL};
-	return matuwall_backend_run("sweetbg", argv);
+static bool sweetbg_apply(
+	const char *path, const struct matuwall_apply_opts *opts) {
+	// sweetbg has no `--`; the resolved path starts with '/', never a flag
+	const char *const head[] = {"sweetbg", "img", NULL};
+	const char *const tail[] = {path, NULL};
+	return matuwall_backend_run("sweetbg", head, opts, tail);
 }
 
 const struct matuwall_backend matuwall_backend_sweetbg = {

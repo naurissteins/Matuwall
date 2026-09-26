@@ -227,8 +227,16 @@ static void report_backends(
 			probes[i].ready	   ? "client found, daemon detected"
 			: probes[i].client ? "client found, daemon not detected"
 					   : "client not found on PATH";
-		report_line(report, DIAG_INFO, probes[i].backend->name, "%s",
-			detail);
+		const struct matuwall_backend_args *args =
+			matuwall_config_backend_args(
+				config, probes[i].backend->name);
+		char extra[48] = "";
+		if (args != NULL && args->count > 0) {
+			snprintf(extra, sizeof(extra), "; %zu extra args",
+				args->count);
+		}
+		report_line(report, DIAG_INFO, probes[i].backend->name, "%s%s",
+			detail, extra);
 		if (strcmp(config->backend, probes[i].backend->name) == 0) {
 			configured = &probes[i];
 		}
