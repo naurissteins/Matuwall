@@ -39,9 +39,12 @@ void matuwall_layer_collect_idle(struct matuwall_layer *layer, int64_t now_ms) {
 	}
 	layer->collect_due_ms = 0;
 
-	uint32_t width;
-	uint32_t height;
-	matuwall_layer_buffer_size(layer, &width, &height);
+	// a zero size matches no buffer, so every released one is freed
+	uint32_t width = 0;
+	uint32_t height = 0;
+	if (layer->keep_spare) {
+		matuwall_layer_buffer_size(layer, &width, &height);
+	}
 	matuwall_buffer_pool_collect_idle(&layer->buffer_pool, width, height);
 }
 
@@ -226,6 +229,8 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 		.buffer_scale = 1,
 	};
 	bool backdrop = role == MATUWALL_LAYER_BACKDROP;
+	// the backdrop paints once per preview, a spare would only hold memory
+	layer->keep_spare = !backdrop;
 
 	layer->wl_surface = wl_compositor_create_surface(reg->compositor);
 	if (layer->wl_surface == NULL) {

@@ -58,6 +58,8 @@ struct matuwall_layer {
 	bool layout_dirty;
 	bool opaque;
 	bool closed;
+	// frequent repaints make one released buffer worth keeping at idle
+	bool keep_spare;
 
 	struct wl_callback *frame_callback;
 	struct matuwall_buffer_pool buffer_pool;
