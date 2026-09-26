@@ -12,12 +12,13 @@
 // Lifecycle only: build every subsystem, tear every one back down. The run
 // phase lives in loop.c
 
-static bool wait_for_configure(struct matuwall_app *app) {
+static bool wait_for_configure(
+	struct matuwall_app *app, const struct matuwall_layer *layer) {
 	if (wl_display_roundtrip(app->display) < 0) {
 		matuwall_log_error("wayland", "roundtrip failed");
 		return false;
 	}
-	if (!app->layer.configured) {
+	if (!layer->configured) {
 		matuwall_log_error("wayland",
 			"compositor did not provide usable surface dimensions");
 		return false;
@@ -105,46 +106,65 @@ bool matuwall_app_init(struct matuwall_app *app,
 		return false;
 	}
 
-	if (!matuwall_layer_create(&app->layer, &app->registry,
-		    app->registry.selected_output)) {
+	// backdrop probes the output in preview mode
+	bool preview = app->config.preview;
+	struct matuwall_layer *probe = preview ? &app->backdrop : &app->layer;
+	if (!matuwall_layer_create(probe, &app->registry,
+		    app->registry.selected_output,
+		    preview ? MATUWALL_LAYER_BACKDROP : MATUWALL_LAYER_PANEL,
+		    NULL)) {
 		matuwall_log_error(
 			"wayland", "failed to create the layer surface");
 		return false;
 	}
 
-	// The bufferless output probe gives the compositor-selected bounds
-	if (!wait_for_configure(app)) {
+	// bufferless output probe gives the compositor-selected bounds
+	if (!wait_for_configure(app, probe)) {
 		return false;
 	}
-	app->output_width = app->layer.width;
-	app->output_height = app->layer.height;
+	app->output_width = probe->width;
+	app->output_height = probe->height;
+	// mapped before the panel, since compositors stack layers by map order
+	if (preview &&
+		!matuwall_layer_map_clear(&app->backdrop, app->registry.shm)) {
+		matuwall_log_warn(
+			"preview", "cannot map the backdrop, preview disabled");
+		matuwall_layer_destroy(&app->backdrop);
+	}
 	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
 		app->output_width, app->output_height, app->config.carousel,
 		app->config.position, app->config.edge_margin, &app->layout,
 		&app->visible_rows);
 	matuwall_log_info("output", "%ux%u, grid %ux%u, preview %s",
 		app->output_width, app->output_height, app->layout.columns,
-		app->visible_rows, app->config.preview ? "on" : "off");
+		app->visible_rows, preview ? "on" : "off");
 
-	if (!app->config.preview) {
-		// fit the output like preview mode; off-screen rows cost buffer
-		struct matuwall_rect panel = matuwall_layout_panel(&app->layout,
-			app->scan.count, app->visible_rows,
-			app->config.position, app->config.edge_margin,
-			app->output_width, app->output_height);
-		matuwall_layer_set_panel(&app->layer, (uint32_t)panel.width,
-			(uint32_t)panel.height, app->config.position,
-			edge_offset(&panel, app->config.position,
-				app->output_width, app->output_height));
-		if (!wait_for_configure(app)) {
-			return false;
-		}
+	// off-screen rows cost buffer, so the panel surface fits the output
+	struct matuwall_rect rect = matuwall_layout_panel(&app->layout,
+		app->scan.count, app->visible_rows, app->config.position,
+		app->config.edge_margin, app->output_width, app->output_height);
+	struct matuwall_layer_panel panel = {
+		.width = (uint32_t)rect.width,
+		.height = (uint32_t)rect.height,
+		.position = app->config.position,
+		.margin = edge_offset(&rect, app->config.position,
+			app->output_width, app->output_height),
+	};
+	if (!preview) {
+		matuwall_layer_set_panel(&app->layer, &panel);
+	} else if (!matuwall_layer_create(&app->layer, &app->registry,
+			   app->registry.selected_output, MATUWALL_LAYER_PANEL,
+			   &panel)) {
+		matuwall_log_error(
+			"wayland", "failed to create the panel surface");
+		return false;
 	}
-	return true;
+	return wait_for_configure(app, &app->layer);
 }
 
 void matuwall_app_finish(struct matuwall_app *app) {
 	matuwall_layer_destroy(&app->layer);
+	matuwall_layer_destroy(&app->backdrop);
 	matuwall_seat_finish(&app->seat);
 	matuwall_registry_finish(&app->registry);
 	if (app->display != NULL) {

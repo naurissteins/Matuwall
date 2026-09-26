@@ -13,6 +13,22 @@ struct wl_callback;
 struct wp_viewport;
 struct wp_fractional_scale_v1;
 
+// which of the picker's surfaces this is, each has its own namespace
+enum matuwall_layer_role {
+	// keyboard-exclusive grid panel, namespace "matuwall"
+	MATUWALL_LAYER_PANEL,
+	// full-output preview behind the panel, namespace "matuwall-preview"
+	MATUWALL_LAYER_BACKDROP,
+};
+
+// compact placement against one output edge, or centered
+struct matuwall_layer_panel {
+	uint32_t width;
+	uint32_t height;
+	enum matuwall_position position;
+	uint32_t margin;
+};
+
 struct matuwall_layer {
 	// Non-owning, the registry outlives the layer
 	struct wl_compositor *compositor;
@@ -45,17 +61,28 @@ struct matuwall_layer {
 
 	struct wl_callback *frame_callback;
 	struct matuwall_buffer_pool buffer_pool;
+	// stretched transparent pixel that maps the surface before any content
+	struct wl_buffer *clear_buffer;
 	// surplus buffers are freed once this passes quietly, 0 when collected
 	int64_t collect_due_ms;
 };
 
-// Starts bufferless across the selected output so its bounds are known
+// starts bufferless; a NULL panel spans the output so its bounds are known
 bool matuwall_layer_create(struct matuwall_layer *layer,
-	const struct matuwall_registry *reg, struct wl_output *output);
+	const struct matuwall_registry *reg, struct wl_output *output,
+	enum matuwall_layer_role role,
+	const struct matuwall_layer_panel *panel);
 
 // Replace the output probe with the final compact panel geometry
-void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
-	uint32_t height, enum matuwall_position position, uint32_t margin);
+void matuwall_layer_set_panel(
+	struct matuwall_layer *layer, const struct matuwall_layer_panel *panel);
+
+// map a configured surface fully transparent, ahead of its first frame
+bool matuwall_layer_map_clear(struct matuwall_layer *layer, struct wl_shm *shm);
+
+// an unmapped surface may not know its scale yet, borrow a sibling's
+void matuwall_layer_inherit_scale(
+	struct matuwall_layer *layer, const struct matuwall_layer *from);
 
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);

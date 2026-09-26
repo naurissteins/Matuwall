@@ -211,37 +211,6 @@ void matuwall_buffer_pool_collect_idle(
 	}
 }
 
-const struct matuwall_buffer *matuwall_buffer_pool_sibling(
-	const struct matuwall_buffer_pool *pool,
-	const struct matuwall_buffer *buffer) {
-	for (const struct matuwall_buffer *other = pool->buffers; other != NULL;
-		other = other->next) {
-		if (other != buffer && other->frame_valid &&
-			other->width == buffer->width &&
-			other->height == buffer->height) {
-			return other;
-		}
-	}
-	return NULL;
-}
-
-bool matuwall_buffer_pool_painted(const struct matuwall_buffer_pool *pool,
-	uint32_t width, uint32_t height, uint64_t generation) {
-	bool any = false;
-	for (const struct matuwall_buffer *buffer = pool->buffers;
-		buffer != NULL; buffer = buffer->next) {
-		if (buffer->width != width || buffer->height != height) {
-			continue;
-		}
-		if (!buffer->frame_valid ||
-			buffer->backdrop_generation != generation) {
-			return false;
-		}
-		any = true;
-	}
-	return any;
-}
-
 void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool) {
 	while (pool->buffers != NULL) {
 		struct matuwall_buffer *buffer = pool->buffers;
@@ -249,4 +218,27 @@ void matuwall_buffer_pool_destroy(struct matuwall_buffer_pool *pool) {
 		free_buffer(pool, buffer);
 	}
 	pool->drawing = NULL;
+}
+
+// --- clear pixel ---
+
+struct wl_buffer *matuwall_shm_clear_pixel(struct wl_shm *shm) {
+	// a fresh memfd reads as zero, a transparent ARGB8888 pixel
+	int fd = memfd_create("matuwall-clear", MFD_CLOEXEC);
+	if (fd < 0) {
+		return NULL;
+	}
+	if (ftruncate(fd, BYTES_PER_PIXEL) < 0) {
+		close(fd);
+		return NULL;
+	}
+	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, BYTES_PER_PIXEL);
+	close(fd);
+	if (pool == NULL) {
+		return NULL;
+	}
+	struct wl_buffer *buffer = wl_shm_pool_create_buffer(
+		pool, 0, 1, 1, BYTES_PER_PIXEL, WL_SHM_FORMAT_ARGB8888);
+	wl_shm_pool_destroy(pool);
+	return buffer;
 }

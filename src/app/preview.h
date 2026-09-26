@@ -5,14 +5,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "render/backdrop.h"
 #include "thumb/decode.h"
 #include "thumb/worker.h"
 
 struct matuwall_app;
 
-// Capped backdrop with one displayed image and one outstanding decode
+// capped backdrop image on its own surface, with one outstanding decode
 struct matuwall_preview {
+	// decoded but not yet on the backdrop surface, freed once committed
 	struct matuwall_image image;
 	size_t shown;
 	size_t wanted;
@@ -20,11 +20,6 @@ struct matuwall_preview {
 	size_t in_flight;
 	// Dwell deadline stays pending while an older preview runs
 	int64_t due_ms;
-	uint32_t target_w;
-	uint32_t target_h;
-	uint64_t generation;
-	// outlives the image, which is freed once every buffer holds it
-	struct matuwall_backdrop_patch patch;
 	bool enabled;
 };
 
@@ -41,8 +36,8 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms);
 void matuwall_app_preview_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result);
 
-// runs after each frame: frees the painted image, reloads a lost backdrop
-void matuwall_app_preview_trim(struct matuwall_app *app, int64_t now_ms);
+// paints a landed image onto the backdrop surface, then frees it
+void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms);
 
 void matuwall_app_preview_finish(struct matuwall_app *app);
 

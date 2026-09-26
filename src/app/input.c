@@ -98,8 +98,13 @@ static void handle_focus_lost(void *user_data) {
 // --- pointer ---
 
 // Hover selects the tile under the cursor
-static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
+static void handle_pointer_motion(
+	void *user_data, struct wl_surface *surface, int32_t x, int32_t y) {
 	struct matuwall_app *app = user_data;
+	// the backdrop has no tiles, and its coordinates are not the panel's
+	if (surface != app->layer.wl_surface) {
+		return;
+	}
 	int64_t now_ms = matuwall_now_ms();
 	double scroll = matuwall_animation_scroll(&app->animation, now_ms);
 	int64_t slot;
@@ -115,19 +120,22 @@ static void handle_pointer_motion(void *user_data, int32_t x, int32_t y) {
 }
 
 // A left click on a tile picks it, like Enter; off the panel it cancels
-static void handle_pointer_button(
-	void *user_data, int32_t x, int32_t y, bool pressed) {
+static void handle_pointer_button(void *user_data, struct wl_surface *surface,
+	int32_t x, int32_t y, bool pressed) {
 	struct matuwall_app *app = user_data;
 	if (!pressed) {
 		return;
 	}
-	double scroll =
-		matuwall_animation_scroll(&app->animation, matuwall_now_ms());
-	int64_t slot;
-	size_t hit = matuwall_layout_hit(&app->layout, &app->panel, scroll,
-		app->scan.count, &slot, x, y);
+	size_t hit = SIZE_MAX;
+	int64_t slot = 0;
+	if (surface == app->layer.wl_surface) {
+		double scroll = matuwall_animation_scroll(
+			&app->animation, matuwall_now_ms());
+		hit = matuwall_layout_hit(&app->layout, &app->panel, scroll,
+			app->scan.count, &slot, x, y);
+	}
 	if (hit == SIZE_MAX) {
-		// Only a backdrop surface has anywhere to click past the panel
+		// only a backdrop surface has anywhere to click past the panel
 		if (app->config.preview) {
 			matuwall_log_info(
 				"exit", "cancelled by click outside the panel");
