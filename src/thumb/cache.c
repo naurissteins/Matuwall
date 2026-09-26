@@ -9,12 +9,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util/fs.h"
+
 #define CACHE_MAGIC 0x53575443u // "SWTC"
 #define CACHE_VERSION 2u
 #define CACHE_FORMAT_ARGB8888 0u
-
-// Keep cached pixel allocations within the decoder's maximum
-#define MAX_PIXELS (1u << 26)
 
 struct cache_header {
 	uint32_t magic;
@@ -170,14 +169,14 @@ bool matuwall_cache_read(
 	}
 
 	size_t count = (size_t)header.width * header.height;
-	if (count == 0 || count > MAX_PIXELS) {
+	if (count == 0 || count > MATUWALL_IMAGE_MAX_PIXELS) {
 		fclose(fp);
 		return false;
 	}
 	// count is capped above, so this cannot overflow; the explicit bound on
 	// the allocation size itself also keeps static analysis happy
 	size_t bytes = count * sizeof(uint32_t);
-	if (bytes > (size_t)MAX_PIXELS * sizeof(uint32_t)) {
+	if (bytes > (size_t)MATUWALL_IMAGE_MAX_PIXELS * sizeof(uint32_t)) {
 		fclose(fp);
 		return false;
 	}
@@ -201,26 +200,12 @@ bool matuwall_cache_read(
 
 // --- write ---
 
-static bool make_cache_dir(char *dir) {
-	for (char *p = dir + 1; *p != '\0'; p++) {
-		if (*p != '/') {
-			continue;
-		}
-		*p = '\0';
-		if (mkdir(dir, 0755) != 0 && errno != EEXIST) {
-			return false;
-		}
-		*p = '/';
-	}
-	return mkdir(dir, 0755) == 0 || errno == EEXIST;
-}
-
 struct matuwall_cache *matuwall_cache_create(void) {
 	struct matuwall_cache *cache = calloc(1, sizeof(*cache));
 	if (cache == NULL ||
 		!matuwall_cache_dir(
 			cache->directory, sizeof(cache->directory)) ||
-		!make_cache_dir(cache->directory)) {
+		!matuwall_fs_make_dirs(cache->directory, 0755)) {
 		free(cache);
 		return NULL;
 	}

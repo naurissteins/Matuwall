@@ -122,19 +122,7 @@ static int try_lock(int fd) {
 }
 
 static int make_socket(void) {
-	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd < 0) {
-		return -1;
-	}
-	int descriptor_flags = fcntl(fd, F_GETFD);
-	int status_flags = fcntl(fd, F_GETFL);
-	if (descriptor_flags < 0 || status_flags < 0 ||
-		fcntl(fd, F_SETFD, descriptor_flags | FD_CLOEXEC) != 0 ||
-		fcntl(fd, F_SETFL, status_flags | O_NONBLOCK) != 0) {
-		close(fd);
-		return -1;
-	}
-	return fd;
+	return socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
 }
 
 static bool socket_address(

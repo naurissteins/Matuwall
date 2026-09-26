@@ -12,6 +12,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "util/fs.h"
+
 #define LOG_FILE "matuwall.log"
 #define LOG_FILE_1 "matuwall.log.1"
 #define LOG_FILE_2 "matuwall.log.2"
@@ -61,63 +63,13 @@ static const char *level_name(enum log_level level) {
 	return "INFO ";
 }
 
-static bool state_dir(char *out, size_t out_size) {
-	const char *xdg = getenv("XDG_STATE_HOME");
-	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/matuwall", xdg) <
-		       out_size;
-	}
-	const char *home = getenv("HOME");
-	if (home == NULL) {
-		return false;
-	}
-	return (size_t)snprintf(out, out_size, "%s/.local/state/matuwall",
-		       home) < out_size;
-}
-
 bool matuwall_log_path(char *out, size_t out_size) {
 	char dir[PATH_MAX];
-	if (!state_dir(dir, sizeof(dir))) {
+	if (!matuwall_fs_state_dir(dir, sizeof(dir))) {
 		return false;
 	}
 	int length = snprintf(out, out_size, "%s/%s", dir, LOG_FILE);
 	return length > 0 && (size_t)length < out_size;
-}
-
-static bool make_dir(const char *path) {
-	char copy[PATH_MAX];
-	size_t length = strlen(path);
-	if (length >= sizeof(copy)) {
-		return false;
-	}
-	memcpy(copy, path, length + 1);
-
-	for (char *p = copy + 1; *p != '\0'; p++) {
-		if (*p != '/') {
-			continue;
-		}
-		*p = '\0';
-		if (mkdir(copy, 0700) != 0 && errno != EEXIST) {
-			return false;
-		}
-		*p = '/';
-	}
-	return mkdir(copy, 0700) == 0 || errno == EEXIST;
-}
-
-static bool write_all(int fd, const char *data, size_t size) {
-	while (size > 0) {
-		ssize_t count = write(fd, data, size);
-		if (count < 0 && errno == EINTR) {
-			continue;
-		}
-		if (count <= 0) {
-			return false;
-		}
-		data += (size_t)count;
-		size -= (size_t)count;
-	}
-	return true;
 }
 
 static bool open_file(void) {
@@ -164,7 +116,7 @@ static bool persist(const char *line, size_t size) {
 	if (logger.file_size > LOG_MAX_BYTES - size && !rotate()) {
 		return false;
 	}
-	if (!write_all(logger.file_fd, line, size)) {
+	if (!matuwall_fs_write_all(logger.file_fd, line, size)) {
 		return false;
 	}
 	logger.file_size += size;
@@ -287,7 +239,8 @@ bool matuwall_log_activate(void) {
 		return true;
 	}
 	char path[PATH_MAX];
-	if (!state_dir(path, sizeof(path)) || !make_dir(path)) {
+	if (!matuwall_fs_state_dir(path, sizeof(path)) ||
+		!matuwall_fs_make_dirs(path, 0700)) {
 		return false;
 	}
 	logger.dir_fd =

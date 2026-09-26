@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,8 +23,11 @@
 // The run phase. Owns no lifetimes: app.c builds and tears down every
 // subsystem this file drives
 
-// Set from a signal handler; only ever read as a flag by the event loop
+// set from a signal handler; only ever read as a flag by the event loop
 static volatile sig_atomic_t interrupted = 0;
+// mask ppoll waits with: the startup mask, SIGINT and SIGTERM open
+static sigset_t wait_mask;
+static sigset_t startup_mask;
 
 static void handle_signal(int signum) {
 	(void)signum;
@@ -42,7 +46,24 @@ bool matuwall_app_loop_install_signals(void) {
 	if (sigaction(SIGTERM, &action, NULL) != 0) {
 		return false;
 	}
+	// blocked everywhere but inside ppoll, so no signal slips past the
+	// flag check and workers created later never receive one
+	sigset_t stop;
+	sigemptyset(&stop);
+	sigaddset(&stop, SIGINT);
+	sigaddset(&stop, SIGTERM);
+	if (pthread_sigmask(SIG_BLOCK, &stop, &startup_mask) != 0) {
+		return false;
+	}
+	wait_mask = startup_mask;
+	sigdelset(&wait_mask, SIGINT);
+	sigdelset(&wait_mask, SIGTERM);
 	return true;
+}
+
+// backend and hook children inherit the mask across fork and exec
+static void restore_signal_mask(void) {
+	pthread_sigmask(SIG_SETMASK, &startup_mask, NULL);
 }
 
 // --- frames ---
@@ -274,7 +295,11 @@ static bool pump_events(struct matuwall_app *app) {
 	timeout =
 		sooner(timeout, matuwall_layer_idle_timeout(&app->layer, now));
 
-	if (poll(pfd, nfds, timeout) < 0) {
+	struct timespec wait = {
+		.tv_sec = timeout / 1000,
+		.tv_nsec = (long)(timeout % 1000) * 1000000,
+	};
+	if (ppoll(pfd, nfds, timeout < 0 ? NULL : &wait, &wait_mask) < 0) {
 		wl_display_cancel_read(app->display);
 		// A caught signal is a normal wakeup, not a failure
 		return errno == EINTR;
@@ -406,6 +431,7 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		}
 		matuwall_app_preview_trim(app, matuwall_now_ms());
 	}
+	restore_signal_mask();
 	if (interrupted != 0) {
 		matuwall_log_info("exit", "stopped by signal");
 	} else if (app->layer.closed) {

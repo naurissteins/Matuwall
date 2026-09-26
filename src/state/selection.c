@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "util/fs.h"
+
 #define STATE_MAGIC 0x5357534cu // "SWSL"
 #define STATE_VERSION 1u
 #define STATE_FILE "last-selection"
@@ -20,90 +22,24 @@ struct selection_header {
 	uint32_t path_length;
 };
 
-static bool state_dir(char *out, size_t out_size) {
-	const char *xdg = getenv("XDG_STATE_HOME");
-	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/matuwall", xdg) <
-		       out_size;
-	}
-	const char *home = getenv("HOME");
-	if (home == NULL) {
-		return false;
-	}
-	return (size_t)snprintf(out, out_size, "%s/.local/state/matuwall",
-		       home) < out_size;
-}
-
 bool matuwall_selection_path(char *path, size_t path_size) {
 	char dir[PATH_MAX];
-	if (!state_dir(dir, sizeof(dir))) {
+	if (!matuwall_fs_state_dir(dir, sizeof(dir))) {
 		return false;
 	}
 	int length = snprintf(path, path_size, "%s/%s", dir, STATE_FILE);
 	return length > 0 && (size_t)length < path_size;
 }
 
-static bool make_state_dir(const char *path) {
-	char dir[PATH_MAX];
-	if (strlen(path) >= sizeof(dir)) {
-		return false;
-	}
-	memcpy(dir, path, strlen(path) + 1);
-
-	for (char *p = dir + 1; *p != '\0'; p++) {
-		if (*p != '/') {
-			continue;
-		}
-		*p = '\0';
-		if (mkdir(dir, 0700) != 0 && errno != EEXIST) {
-			return false;
-		}
-		*p = '/';
-	}
-	return mkdir(dir, 0700) == 0 || errno == EEXIST;
-}
-
 static int open_state_dir(bool create) {
 	char path[PATH_MAX];
-	if (!state_dir(path, sizeof(path))) {
+	if (!matuwall_fs_state_dir(path, sizeof(path))) {
 		return -1;
 	}
-	if (create && !make_state_dir(path)) {
+	if (create && !matuwall_fs_make_dirs(path, 0700)) {
 		return -1;
 	}
 	return open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-}
-
-static bool read_all(int fd, void *data, size_t size) {
-	uint8_t *bytes = data;
-	while (size > 0) {
-		ssize_t count = read(fd, bytes, size);
-		if (count < 0 && errno == EINTR) {
-			continue;
-		}
-		if (count <= 0) {
-			return false;
-		}
-		bytes += (size_t)count;
-		size -= (size_t)count;
-	}
-	return true;
-}
-
-static bool write_all(int fd, const void *data, size_t size) {
-	const uint8_t *bytes = data;
-	while (size > 0) {
-		ssize_t count = write(fd, bytes, size);
-		if (count < 0 && errno == EINTR) {
-			continue;
-		}
-		if (count <= 0) {
-			return false;
-		}
-		bytes += (size_t)count;
-		size -= (size_t)count;
-	}
-	return true;
 }
 
 bool matuwall_selection_load(char *path, size_t path_size) {
@@ -127,12 +63,12 @@ bool matuwall_selection_load(char *path, size_t path_size) {
 	struct stat info;
 	bool ok =
 		fstat(fd, &info) == 0 && S_ISREG(info.st_mode) &&
-		read_all(fd, &header, sizeof(header)) &&
+		matuwall_fs_read_all(fd, &header, sizeof(header)) &&
 		header.magic == STATE_MAGIC &&
 		header.version == STATE_VERSION && header.path_length > 0 &&
 		header.path_length < path_size && info.st_size >= 0 &&
 		(uint64_t)info.st_size == sizeof(header) + header.path_length &&
-		read_all(fd, path, header.path_length) &&
+		matuwall_fs_read_all(fd, path, header.path_length) &&
 		memchr(path, '\0', header.path_length) == NULL;
 	if (ok) {
 		path[header.path_length] = '\0';
@@ -187,8 +123,8 @@ bool matuwall_selection_save(const char *path) {
 		.version = STATE_VERSION,
 		.path_length = (uint32_t)path_length,
 	};
-	bool ok = write_all(fd, &header, sizeof(header)) &&
-		  write_all(fd, path, path_length);
+	bool ok = matuwall_fs_write_all(fd, &header, sizeof(header)) &&
+		  matuwall_fs_write_all(fd, path, path_length);
 	if (close(fd) != 0) {
 		ok = false;
 	}

@@ -120,7 +120,8 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 
 *width*, *height*
 	Tile size in logical pixels. Defaults to _300_ by _169_. Changing either
-	value regenerates thumbnails at the new size.
+	value regenerates thumbnails at the new size. A tile larger than the
+	output is clipped; the panel never grows past it.
 
 ## [colors]
 
