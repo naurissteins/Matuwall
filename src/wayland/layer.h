@@ -89,6 +89,10 @@ void matuwall_layer_inherit_scale(
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height);
 
+void matuwall_layer_destroy(struct matuwall_layer *layer);
+
+// --- frames and idle buffers ---
+
 enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	struct matuwall_layer *layer, struct wl_shm *shm,
 	struct matuwall_buffer **buffer);
@@ -108,7 +112,5 @@ int matuwall_layer_idle_timeout(
 
 // release surplus buffers after a quiet period with no repaint waiting
 void matuwall_layer_collect_idle(struct matuwall_layer *layer, int64_t now_ms);
-
-void matuwall_layer_destroy(struct matuwall_layer *layer);
 
 #endif
