@@ -87,6 +87,7 @@ executable(
 	'src/thumb/decode.c',
 	'src/thumb/scale.c',
 	'src/thumb/worker.c',
+	'src/util/fs.c',
 	'src/util/log.c',
 	'src/wayland/output.c',
 	'src/wayland/registry.c',

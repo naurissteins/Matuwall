@@ -23,6 +23,9 @@ struct matuwall_decode_budget {
 	void *user_data;
 };
 
+// largest decoded or cached image, in pixels
+#define MATUWALL_IMAGE_MAX_PIXELS (1u << 26)
+
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height);
 
 // budget may be NULL for an unbounded decode

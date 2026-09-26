@@ -31,6 +31,12 @@ struct matuwall_layer {
 	uint32_t opaque_width;
 	uint32_t opaque_height;
 
+	// last buffer scale and viewport destination sent; -1 means unset
+	int32_t sent_scale;
+	int32_t sent_width;
+	int32_t sent_height;
+	bool geometry_sent;
+
 	bool configured;
 	bool needs_repaint;
 	bool layout_dirty;

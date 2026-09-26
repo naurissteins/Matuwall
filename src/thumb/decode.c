@@ -16,7 +16,6 @@
 #include "thumb/scale.h"
 
 #define MAX_DIMENSION 16384u
-#define MAX_PIXELS (1u << 26)
 #define MAX_THUMBNAIL_PIXELS (1u << 24)
 #define WEBP_FILE_LIMIT (64UL * 1024 * 1024)
 // refuse decodes whose transient memory estimate passes this
@@ -53,7 +52,7 @@ bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height) {
 		height > MAX_DIMENSION) {
 		return false;
 	}
-	return (uint64_t)width * height <= MAX_PIXELS;
+	return (uint64_t)width * height <= MATUWALL_IMAGE_MAX_PIXELS;
 }
 
 static bool decode_dimensions_ok(
@@ -63,7 +62,7 @@ static bool decode_dimensions_ok(
 	}
 	uint64_t limit = purpose == MATUWALL_DECODE_THUMBNAIL
 				 ? MAX_THUMBNAIL_PIXELS
-				 : MAX_PIXELS;
+				 : MATUWALL_IMAGE_MAX_PIXELS;
 	return (uint64_t)width * height <= limit;
 }
 

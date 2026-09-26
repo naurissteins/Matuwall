@@ -25,6 +25,24 @@ static bool wait_for_configure(struct matuwall_app *app) {
 	return true;
 }
 
+// layer margin that places panel against its anchored edge
+static uint32_t edge_offset(const struct matuwall_rect *panel,
+	enum matuwall_position position, uint32_t width, uint32_t height) {
+	switch (position) {
+	case MATUWALL_POSITION_LEFT:
+		return (uint32_t)panel->x;
+	case MATUWALL_POSITION_RIGHT:
+		return width - (uint32_t)(panel->x + panel->width);
+	case MATUWALL_POSITION_TOP:
+		return (uint32_t)panel->y;
+	case MATUWALL_POSITION_BOTTOM:
+		return height - (uint32_t)(panel->y + panel->height);
+	case MATUWALL_POSITION_CENTER:
+		break;
+	}
+	return 0;
+}
+
 bool matuwall_app_init(struct matuwall_app *app,
 	const struct matuwall_config *config, const char *output_name) {
 	*app = (struct matuwall_app){
@@ -109,12 +127,15 @@ bool matuwall_app_init(struct matuwall_app *app,
 		app->visible_rows, app->config.preview ? "on" : "off");
 
 	if (!app->config.preview) {
-		uint32_t width;
-		uint32_t height;
-		matuwall_layout_surface_size(&app->layout, app->scan.count,
-			app->visible_rows, &width, &height);
-		matuwall_layer_set_panel(&app->layer, width, height,
-			app->config.position, app->config.edge_margin);
+		// fit the output like preview mode; off-screen rows cost buffer
+		struct matuwall_rect panel = matuwall_layout_panel(&app->layout,
+			app->scan.count, app->visible_rows,
+			app->config.position, app->config.edge_margin,
+			app->output_width, app->output_height);
+		matuwall_layer_set_panel(&app->layer, (uint32_t)panel.width,
+			(uint32_t)panel.height, app->config.position,
+			edge_offset(&panel, app->config.position,
+				app->output_width, app->output_height));
 		if (!wait_for_configure(app)) {
 			return false;
 		}

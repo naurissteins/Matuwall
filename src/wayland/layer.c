@@ -269,15 +269,17 @@ void matuwall_layer_set_panel(struct matuwall_layer *layer, uint32_t width,
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height) {
 	if (layer->fractional_scale > 0) {
+		// fractional-scale-v1 rounds the scaled size halfway away from
+		// 0
 		*pixel_width =
 			(uint32_t)(((uint64_t)layer->width *
 						   layer->fractional_scale +
-					   FRACTIONAL_SCALE_DENOM - 1) /
+					   FRACTIONAL_SCALE_DENOM / 2) /
 				   FRACTIONAL_SCALE_DENOM);
 		*pixel_height =
 			(uint32_t)(((uint64_t)layer->height *
 						   layer->fractional_scale +
-					   FRACTIONAL_SCALE_DENOM - 1) /
+					   FRACTIONAL_SCALE_DENOM / 2) /
 				   FRACTIONAL_SCALE_DENOM);
 		return;
 	}
@@ -321,6 +323,37 @@ static bool update_opaque_region(struct matuwall_layer *layer, bool opaque) {
 	return true;
 }
 
+// surface state persists across commits; resend only what changed
+static void send_geometry(struct matuwall_layer *layer) {
+	bool viewport = layer->viewport != NULL && layer->fractional_scale > 0;
+	int32_t scale = 1;
+	int32_t width = -1;
+	int32_t height = -1;
+	if (viewport) {
+		// viewport maps the scaled buffer back to the logical size
+		width = (int32_t)layer->width;
+		height = (int32_t)layer->height;
+	} else if (layer->buffer_scale > 1) {
+		scale = layer->buffer_scale;
+	}
+	if (layer->geometry_sent && layer->sent_scale == scale &&
+		layer->sent_width == width && layer->sent_height == height) {
+		return;
+	}
+	wl_surface_set_buffer_scale(layer->wl_surface, scale);
+	if (viewport) {
+		wp_viewport_set_destination(layer->viewport, width, height);
+	} else if (layer->viewport != NULL && layer->geometry_sent &&
+		   layer->sent_width >= 0) {
+		// -1, -1 unsets a destination left over from fractional scale
+		wp_viewport_set_destination(layer->viewport, -1, -1);
+	}
+	layer->geometry_sent = true;
+	layer->sent_scale = scale;
+	layer->sent_width = width;
+	layer->sent_height = height;
+}
+
 static bool present(struct matuwall_layer *layer, bool continue_frames,
 	bool opaque, const struct matuwall_damage *damage) {
 	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
@@ -347,16 +380,7 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 		}
 	}
 
-	if (layer->viewport != NULL && layer->fractional_scale > 0) {
-		// The viewport maps the scaled buffer back to the logical size
-		wl_surface_set_buffer_scale(layer->wl_surface, 1);
-		wp_viewport_set_destination(layer->viewport,
-			(int32_t)layer->width, (int32_t)layer->height);
-	} else {
-		int32_t scale =
-			layer->buffer_scale < 1 ? 1 : layer->buffer_scale;
-		wl_surface_set_buffer_scale(layer->wl_surface, scale);
-	}
+	send_geometry(layer);
 
 	wl_surface_attach(layer->wl_surface, buffer->wl_buffer, 0, 0);
 	wl_surface_damage_buffer(layer->wl_surface, damage->x0, damage->y0,
