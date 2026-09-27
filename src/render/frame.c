@@ -136,7 +136,7 @@ static void draw_panel(struct matuwall_buffer *buffer,
 	int32_t bottom =
 		to_pixels(frame->panel.y + frame->panel.height, frame->scale);
 
-	matuwall_draw_rounded_rect(buffer, clip, left, top, right - left,
+	matuwall_draw_rounded_replace(buffer, clip, left, top, right - left,
 		bottom - top, radius, frame->background);
 }
 
@@ -260,8 +260,7 @@ struct matuwall_damage matuwall_frame_draw(
 	}
 	struct matuwall_clip damaged = damage_clip(damage);
 
-	// let the real desktop show outside the rounded panel
-	matuwall_draw_clear_clipped(buffer, &damaged, 0);
+	// one write per damaged pixel, transparent outside the rounded panel
 	draw_panel(buffer, frame, &damaged, panel_radius);
 	buffer->frame_valid = true;
 	buffer->panel_damage = panel;
