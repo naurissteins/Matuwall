@@ -271,7 +271,9 @@ static void draw_shadow(struct matuwall_buffer *buffer,
 	matuwall_draw_rounded_shadow(buffer, &shadow_clip, geometry->left,
 		geometry->top, geometry->width, geometry->height,
 		geometry->radius, width,
-		matuwall_color_fade(frame->shadow, opacity));
+		matuwall_color_fade(
+			frame->shadow, matuwall_alpha_mul(opacity, opacity)),
+		opacity);
 }
 
 static bool focused(const struct matuwall_frame *frame, int64_t slot) {
@@ -372,8 +374,7 @@ static void draw_unfocused_pass(struct matuwall_buffer *buffer,
 				    fading != (layer == LAYER_FADING));
 		if (!skip && layer == LAYER_SHADOWS) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				edge.scale,
-				matuwall_alpha_mul(edge.opacity, edge.opacity));
+				edge.scale, edge.opacity);
 		} else if (!skip) {
 			draw_tile(buffer, frame, &tile_clip, index, &geometry,
 				fading, edge.opacity);
@@ -415,8 +416,7 @@ static void draw_focused_tiles(struct matuwall_buffer *buffer,
 		}
 		if (shadows) {
 			draw_shadow(buffer, frame, clip, &tile_clip, &geometry,
-				focus,
-				matuwall_alpha_mul(edge.opacity, edge.opacity));
+				focus, edge.opacity);
 		}
 		draw_tile(buffer, frame, &tile_clip, index, &geometry, true,
 			edge.opacity);

@@ -17,6 +17,7 @@ struct shadow_shape {
 	int32_t radius;
 	int32_t spread;
 	uint32_t color;
+	uint8_t cover_opacity;
 	int32_t left;
 	int32_t right;
 };
@@ -25,11 +26,27 @@ static uint32_t shadow_coverage(
 	const struct shadow_shape *shape, int32_t px, int32_t py) {
 	double distance = rounded_rect_distance(px, py, shape->x, shape->y,
 		shape->width, shape->height, shape->radius);
-	if (distance < 0.0 || distance >= shape->spread) {
+	if (distance <= -0.5 || distance >= shape->spread) {
 		return 0;
 	}
-	double strength = 1.0 - distance / shape->spread;
-	return (uint32_t)(strength * strength * COVERAGE_MAX + 0.5);
+	double strength = distance > 0.0 ? 1.0 - distance / shape->spread : 1.0;
+	strength *= strength;
+	// under the tile's edge ramp only the uncovered part may show shadow,
+	// scaled so it survives the tile's own blend at its opacity
+	uint32_t cover =
+		distance < CURVE_SOFTEN + 0.5
+			? rect_coverage(px, py, shape->x, shape->y,
+				  shape->width, shape->height, shape->radius)
+			: 0;
+	if (cover > 0) {
+		if (cover == COVERAGE_MAX) {
+			return 0;
+		}
+		double c = (double)cover / COVERAGE_MAX;
+		double alpha = (double)shape->cover_opacity / COVERAGE_MAX;
+		strength *= (1.0 - c) / (1.0 - c * alpha);
+	}
+	return (uint32_t)(strength * COVERAGE_MAX + 0.5);
 }
 
 // exact falloff per pixel, needed wherever the curve bends
@@ -107,7 +124,8 @@ static void shadow_corner_span(uint32_t *row, const struct shadow_shape *shape,
 
 void matuwall_draw_rounded_shadow(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
-	int32_t height, int32_t radius, int32_t shadow_width, uint32_t color) {
+	int32_t height, int32_t radius, int32_t shadow_width, uint32_t color,
+	uint8_t cover_opacity) {
 	if (width <= 0 || height <= 0 || shadow_width <= 0 ||
 		(color >> 24) == 0) {
 		return;
@@ -122,6 +140,7 @@ void matuwall_draw_rounded_shadow(struct matuwall_buffer *buffer,
 		.radius = radius,
 		.spread = shadow_width,
 		.color = color,
+		.cover_opacity = cover_opacity,
 		.left = x - shadow_width < clip->x0 ? clip->x0
 						    : x - shadow_width,
 		.right = x + width + shadow_width > clip->x1

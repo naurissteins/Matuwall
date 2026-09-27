@@ -25,8 +25,11 @@ void matuwall_draw_rounded_ring(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t thickness, uint32_t color);
 
+// cover_opacity is the tile later drawn over the shadow, edge pixels
+// compensate so its partial coverage never uncovers the plain backdrop
 void matuwall_draw_rounded_shadow(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
-	int32_t height, int32_t radius, int32_t shadow_width, uint32_t color);
+	int32_t height, int32_t radius, int32_t shadow_width, uint32_t color,
+	uint8_t cover_opacity);
 
 #endif
