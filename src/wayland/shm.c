@@ -39,16 +39,47 @@ static bool buffer_size(uint32_t width, uint32_t height, uint32_t *stride_out,
 	return true;
 }
 
-static bool matuwall_buffer_create(struct matuwall_buffer *buffer,
-	struct wl_shm *shm, uint32_t width, uint32_t height) {
+// the pool request carries its own dup of fd, so the caller still owns it
+static bool wrap_fd(struct matuwall_buffer *buffer, struct wl_shm *shm, int fd,
+	uint32_t width, uint32_t height) {
 	*buffer = (struct matuwall_buffer){0};
-
 	uint32_t stride;
 	size_t size;
 	if (!buffer_size(width, height, &stride, &size)) {
 		return false;
 	}
+	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, (int32_t)size);
+	if (pool == NULL) {
+		return false;
+	}
+	buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)width,
+		(int32_t)height, (int32_t)stride, WL_SHM_FORMAT_ARGB8888);
+	wl_shm_pool_destroy(pool);
+	if (buffer->wl_buffer == NULL) {
+		return false;
+	}
+	// without release event the buffer could never be reused
+	if (wl_buffer_add_listener(
+		    buffer->wl_buffer, &buffer_listener, buffer) < 0) {
+		wl_buffer_destroy(buffer->wl_buffer);
+		buffer->wl_buffer = NULL;
+		return false;
+	}
+	buffer->size = size;
+	buffer->width = width;
+	buffer->height = height;
+	buffer->stride = stride;
+	buffer->released = true;
+	return true;
+}
 
+static bool matuwall_buffer_create(struct matuwall_buffer *buffer,
+	struct wl_shm *shm, uint32_t width, uint32_t height) {
+	uint32_t stride;
+	size_t size;
+	if (!buffer_size(width, height, &stride, &size)) {
+		return false;
+	}
 	int fd = memfd_create("matuwall-shm", MFD_CLOEXEC);
 	if (fd < 0) {
 		return false;
@@ -57,46 +88,18 @@ static bool matuwall_buffer_create(struct matuwall_buffer *buffer,
 		close(fd);
 		return false;
 	}
-
 	void *data =
 		mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (data == MAP_FAILED) {
-		close(fd);
-		return false;
-	}
-
-	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, (int32_t)size);
-	if (pool == NULL) {
-		munmap(data, size);
-		close(fd);
-		return false;
-	}
-
-	buffer->wl_buffer = wl_shm_pool_create_buffer(pool, 0, (int32_t)width,
-		(int32_t)height, (int32_t)stride, WL_SHM_FORMAT_ARGB8888);
-
-	wl_shm_pool_destroy(pool);
+	bool wrapped =
+		data != MAP_FAILED && wrap_fd(buffer, shm, fd, width, height);
 	close(fd);
-
-	if (buffer->wl_buffer == NULL) {
-		munmap(data, size);
-		return false;
-	}
-
-	// without release event the buffer could never be reused
-	if (wl_buffer_add_listener(
-		    buffer->wl_buffer, &buffer_listener, buffer) < 0) {
-		wl_buffer_destroy(buffer->wl_buffer);
-		buffer->wl_buffer = NULL;
-		munmap(data, size);
+	if (!wrapped) {
+		if (data != MAP_FAILED) {
+			munmap(data, size);
+		}
 		return false;
 	}
 	buffer->data = data;
-	buffer->size = size;
-	buffer->width = width;
-	buffer->height = height;
-	buffer->stride = stride;
-	buffer->released = true;
 	buffer->fresh = true;
 	return true;
 }
@@ -128,8 +131,8 @@ static void collect_stale(
 	struct matuwall_buffer **cursor = &pool->buffers;
 	while (*cursor != NULL) {
 		struct matuwall_buffer *buffer = *cursor;
-		bool matches =
-			buffer->width == width && buffer->height == height;
+		bool matches = buffer->width == width &&
+			       buffer->height == height && !buffer->adopted;
 		if (!buffer->released || matches) {
 			cursor = &buffer->next;
 			continue;
@@ -148,7 +151,8 @@ enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 	size_t matching = 0;
 	for (struct matuwall_buffer *buffer = pool->buffers; buffer != NULL;
 		buffer = buffer->next) {
-		if (buffer->width != width || buffer->height != height) {
+		if (buffer->width != width || buffer->height != height ||
+			buffer->adopted) {
 			continue;
 		}
 		matching++;
@@ -168,6 +172,35 @@ enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 		free(buffer);
 		return MATUWALL_BUFFER_FAILED;
 	}
+	buffer->next = pool->buffers;
+	pool->buffers = buffer;
+	pool->drawing = buffer;
+	*out = buffer;
+	return MATUWALL_BUFFER_READY;
+}
+
+enum matuwall_buffer_acquire matuwall_buffer_pool_adopt(
+	struct matuwall_buffer_pool *pool, struct wl_shm *shm, int fd,
+	uint32_t width, uint32_t height, struct matuwall_buffer **out) {
+	*out = NULL;
+	// single use, so released ones only hold the compositor's mapping
+	struct matuwall_buffer **cursor = &pool->buffers;
+	while (*cursor != NULL) {
+		struct matuwall_buffer *buffer = *cursor;
+		if (buffer->released && buffer->adopted) {
+			*cursor = buffer->next;
+			free_buffer(pool, buffer);
+			continue;
+		}
+		cursor = &buffer->next;
+	}
+
+	struct matuwall_buffer *buffer = calloc(1, sizeof(*buffer));
+	if (buffer == NULL || !wrap_fd(buffer, shm, fd, width, height)) {
+		free(buffer);
+		return MATUWALL_BUFFER_FAILED;
+	}
+	buffer->adopted = true;
 	buffer->next = pool->buffers;
 	pool->buffers = buffer;
 	pool->drawing = buffer;

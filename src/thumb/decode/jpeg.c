@@ -242,10 +242,7 @@ bool matuwall_decode_jpeg(
 		ok = !cinfo.buffered_image || consume_scans(&cinfo, job->stop);
 	}
 	if (ok) {
-		img->width = job->target_w;
-		img->height = job->target_h;
-		img->pixels = alloc_target(job);
-		ok = img->pixels != NULL &&
+		ok = alloc_target(img, job) &&
 		     (direct ? read_jpeg_direct(&cinfo, img, job->stop)
 			     : read_jpeg_streamed(
 				       &cinfo, img, stream, job->stop));

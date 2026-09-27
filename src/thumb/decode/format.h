@@ -42,11 +42,28 @@ static inline uint64_t target_bytes(const struct decode_job *job) {
 	return (uint64_t)job->target_w * job->target_h * sizeof(uint32_t);
 }
 
-// the decoded output, freed through matuwall_image_free
-static inline uint32_t *alloc_target(const struct decode_job *job) {
+bool matuwall_image_alloc_shared(
+	struct matuwall_image *img, uint32_t width, uint32_t height);
+
+// the decoded output at the target size; false leaves img empty
+static inline bool alloc_target(
+	struct matuwall_image *img, const struct decode_job *job) {
 	uint64_t bytes = target_bytes(job);
 	// unreachable after dispatch, but no path may reach malloc(0)
-	return bytes == 0 ? NULL : malloc((size_t)bytes);
+	if (bytes == 0) {
+		return false;
+	}
+	if (job->purpose == MATUWALL_DECODE_PREVIEW) {
+		return matuwall_image_alloc_shared(
+			img, job->target_w, job->target_h);
+	}
+	img->pixels = malloc((size_t)bytes);
+	if (img->pixels == NULL) {
+		return false;
+	}
+	img->width = job->target_w;
+	img->height = job->target_h;
+	return true;
 }
 
 static inline bool decode_dimensions_ok(

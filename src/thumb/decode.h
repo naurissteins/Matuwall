@@ -5,14 +5,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <stddef.h>
+
 struct matuwall_image {
 	uint32_t width;
 	uint32_t height;
 	uint32_t *pixels;
+	// nonzero when pixels map a memfd another process can map too
+	size_t shared_bytes;
+	int shared_fd;
 };
 
 enum matuwall_decode_purpose {
 	MATUWALL_DECODE_THUMBNAIL,
+	// lands in a memfd, so the compositor can show it without a copy
 	MATUWALL_DECODE_PREVIEW,
 };
 
@@ -34,6 +40,10 @@ bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	enum matuwall_decode_purpose purpose, const atomic_bool *stop,
 	const struct matuwall_decode_budget *budget);
 
+// moves heap pixels into a memfd; on failure img is unchanged
+bool matuwall_image_share(struct matuwall_image *img);
+
+// frees heap pixels, or unmaps and closes a memfd
 void matuwall_image_free(struct matuwall_image *img);
 
 #endif

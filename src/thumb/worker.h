@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "thumb/decode.h"
+
 enum matuwall_thumb_state {
 	MATUWALL_THUMB_UNLOADED,
 	MATUWALL_THUMB_PENDING,
@@ -31,9 +33,8 @@ struct matuwall_thumb_result {
 	bool ok;
 	bool cache_hit;
 	bool cancelled;
-	uint32_t *pixels;
-	uint32_t width;
-	uint32_t height;
+	// owned by the drain callback; a preview's is always memfd backed
+	struct matuwall_image image;
 };
 
 typedef void (*matuwall_result_fn)(

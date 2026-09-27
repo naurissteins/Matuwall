@@ -133,7 +133,13 @@ static bool decode_and_scale(struct matuwall_worker_pool *pool,
 			&decoded, job->target_w, job->target_h, out, stop);
 		matuwall_image_free(&decoded);
 	}
-	// the scale pass is part of the decode's reserved peak
+	// only a scaled interlaced PNG is still on the heap here
+	if (ok && purpose == MATUWALL_DECODE_PREVIEW &&
+		!matuwall_image_share(out)) {
+		matuwall_image_free(out);
+		ok = false;
+	}
+	// the scale and share passes are part of the decode's reserved peak
 	release_decode(&ticket);
 	return ok;
 }
@@ -233,9 +239,7 @@ static void *worker_main(void *arg) {
 		struct matuwall_image img;
 		if (produce(pool, job, &img, &job->result.cache_hit)) {
 			job->result.ok = true;
-			job->result.pixels = img.pixels;
-			job->result.width = img.width;
-			job->result.height = img.height;
+			job->result.image = img;
 		}
 
 		job->result.cancelled = flag_set(&job->cancelled);
@@ -494,7 +498,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	job = pool->results;
 	while (job != NULL) {
 		struct job *next = job->next;
-		free(job->result.pixels);
+		matuwall_image_free(&job->result.image);
 		free(job);
 		job = next;
 	}

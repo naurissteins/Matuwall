@@ -27,13 +27,13 @@ static void on_result(
 		return;
 	}
 	if (result->index >= app->thumb_count) {
-		free(result->pixels);
+		free(result->image.pixels);
 		return;
 	}
 
 	struct matuwall_thumb *thumb = &app->thumbs[result->index];
 	if (thumb->state != MATUWALL_THUMB_PENDING) {
-		free(result->pixels);
+		free(result->image.pixels);
 		return;
 	}
 

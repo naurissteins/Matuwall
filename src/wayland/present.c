@@ -178,10 +178,9 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 		layer, shm, pixel_width, pixel_height, out);
 }
 
-enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
-	struct matuwall_layer *layer, struct wl_shm *shm, uint32_t width,
-	uint32_t height, struct matuwall_buffer **out) {
-	*out = NULL;
+// READY means a frame of this size may start now
+static enum matuwall_buffer_acquire frame_gate(
+	const struct matuwall_layer *layer, uint32_t width, uint32_t height) {
 	if (!layer->configured || layer->wl_surface == NULL) {
 		return MATUWALL_BUFFER_FAILED;
 	}
@@ -200,8 +199,31 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
 			return MATUWALL_BUFFER_FAILED;
 		}
 	}
+	return MATUWALL_BUFFER_READY;
+}
+
+enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
+	struct matuwall_layer *layer, struct wl_shm *shm, uint32_t width,
+	uint32_t height, struct matuwall_buffer **out) {
+	*out = NULL;
+	enum matuwall_buffer_acquire gate = frame_gate(layer, width, height);
+	if (gate != MATUWALL_BUFFER_READY) {
+		return gate;
+	}
 	return matuwall_buffer_pool_acquire(
 		&layer->buffer_pool, shm, width, height, out);
+}
+
+enum matuwall_buffer_acquire matuwall_layer_begin_frame_shared(
+	struct matuwall_layer *layer, struct wl_shm *shm, int fd,
+	uint32_t width, uint32_t height, struct matuwall_buffer **out) {
+	*out = NULL;
+	enum matuwall_buffer_acquire gate = frame_gate(layer, width, height);
+	if (gate != MATUWALL_BUFFER_READY) {
+		return gate;
+	}
+	return matuwall_buffer_pool_adopt(
+		&layer->buffer_pool, shm, fd, width, height, out);
 }
 
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,

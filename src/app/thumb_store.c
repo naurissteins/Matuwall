@@ -202,16 +202,17 @@ void matuwall_thumb_store_accept(struct matuwall_app *app,
 	struct matuwall_thumb *thumb = &app->thumbs[result->index];
 	if (!matuwall_thumb_store_in_window(
 		    app, result->index, first, end, wrap_end)) {
-		free(result->pixels);
+		free(result->image.pixels);
 		thumb->state = MATUWALL_THUMB_UNLOADED;
 		app->thumb_discarded++;
 		return;
 	}
 
 	size_t bytes;
-	if (!thumbnail_bytes(result->width, result->height, &bytes) ||
+	if (!thumbnail_bytes(
+		    result->image.width, result->image.height, &bytes) ||
 		bytes > MAX_RESIDENT_BYTES) {
-		free(result->pixels);
+		free(result->image.pixels);
 		thumb->state = MATUWALL_THUMB_FAILED;
 		app->thumb_failed++;
 		matuwall_log_warn("thumbnail",
@@ -222,16 +223,16 @@ void matuwall_thumb_store_accept(struct matuwall_app *app,
 
 	make_room(app, bytes, result->index, first, end, wrap_end);
 	if (bytes > MAX_RESIDENT_BYTES - app->thumb_resident_bytes) {
-		free(result->pixels);
+		free(result->image.pixels);
 		thumb->state = MATUWALL_THUMB_UNLOADED;
 		app->thumb_discarded++;
 		return;
 	}
 
 	thumb->state = MATUWALL_THUMB_READY;
-	thumb->pixels = result->pixels;
-	thumb->width = result->width;
-	thumb->height = result->height;
+	thumb->pixels = result->image.pixels;
+	thumb->width = result->image.width;
+	thumb->height = result->image.height;
 	app->thumb_resident_bytes += bytes;
 	if (app->thumb_resident_bytes > app->thumb_resident_peak_bytes) {
 		app->thumb_resident_peak_bytes = app->thumb_resident_bytes;
