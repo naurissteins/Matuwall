@@ -69,6 +69,12 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->edge_margin_set) {
 		config->edge_margin = options->edge_margin;
 	}
+	if (options->navigation_ms_set) {
+		config->navigation_ms = options->navigation_ms;
+	}
+	if (options->zoom_percent_set) {
+		config->zoom_percent = options->zoom_percent;
+	}
 	if (options->hooks_set) {
 		config->on_apply_count = options->hook_count;
 		for (size_t i = 0; i < options->hook_count; i++) {
@@ -187,6 +193,15 @@ void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
 	if (options->edge_margin_set) {
 		matuwall_log_info("config", "edge margin overridden to %u",
 			config->edge_margin);
+	}
+	if (options->navigation_ms_set) {
+		matuwall_log_info("config",
+			"navigation duration overridden to %u ms",
+			config->navigation_ms);
+	}
+	if (options->zoom_percent_set) {
+		matuwall_log_info("config", "zoom percent overridden to %u",
+			config->zoom_percent);
 	}
 	if (options->hooks_set) {
 		matuwall_log_info("config",

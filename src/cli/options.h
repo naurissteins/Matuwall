@@ -57,6 +57,10 @@ struct matuwall_cli_options {
 	size_t hook_count;
 	bool margin_set;
 	uint32_t margin;
+	bool navigation_ms_set;
+	uint32_t navigation_ms;
+	bool zoom_percent_set;
+	uint32_t zoom_percent;
 	bool edge_set;
 	enum matuwall_edge edge;
 	bool edge_margin_set;

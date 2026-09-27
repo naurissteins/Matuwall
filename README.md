@@ -83,6 +83,8 @@ matuwall --shadow-width 10                       // set the shadow fade distance
 matuwall --ring "#f2cdcd"                        // set the selection ring color
 matuwall --ring-width 0                          // disable the selection ring
 matuwall --spinner "#cdd0e6"                     // set the loading spinner color
+matuwall --navigation-ms 0                       // disable the navigation transition
+matuwall --zoom-percent 5                        // grow the selected tile by 5%
 matuwall -o DP-1                                 // open explicitly on DP-1
 matuwall -p left                                 // move the panel
 matuwall --preview                               // enable the full-screen backdrop
