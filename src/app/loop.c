@@ -1,5 +1,3 @@
-#include "app/loop.h"
-
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
@@ -34,7 +32,9 @@ static void handle_signal(int signum) {
 	interrupted = 1;
 }
 
-bool matuwall_app_loop_install_signals(void) {
+// Until this runs the default dispositions apply, so a signal during startup
+// simply ends the process; the kernel drops the instance lease
+static bool install_signals(void) {
 	struct sigaction action = {
 		.sa_handler = handle_signal,
 	};
@@ -134,7 +134,7 @@ static bool render_if_needed(struct matuwall_app *app) {
 
 	struct matuwall_frame frame = {
 		.layout = &app->layout,
-		.thumbs = app->thumbs,
+		.thumbs = app->thumbs.items,
 		.item_count = app->scan.count,
 		.carousel_slot = app->grid.cursor,
 		.scroll = visual.scroll,
@@ -218,7 +218,7 @@ static int sooner(int timeout, int candidate) {
 
 // Pulse only while an on-screen thumbnail is pending
 static int spinner_timeout(const struct matuwall_app *app, int64_t now_ms) {
-	if (app->visible_pending == 0) {
+	if (app->thumbs.visible_pending == 0) {
 		return -1;
 	}
 	if (app->spinner_due_ms == 0) {
@@ -230,7 +230,7 @@ static int spinner_timeout(const struct matuwall_app *app, int64_t now_ms) {
 
 // A deadline, not a per-wakeup flag: frame callbacks must not drive the pulse
 static void spinner_tick(struct matuwall_app *app, int64_t now_ms) {
-	if (app->visible_pending == 0) {
+	if (app->thumbs.visible_pending == 0) {
 		app->spinner_due_ms = 0;
 		return;
 	}
@@ -407,6 +407,12 @@ bool matuwall_app_run(struct matuwall_app *app) {
 	// send it now, the post-frame startup below must not delay it
 	if (wl_display_flush(app->display) < 0 && errno != EAGAIN) {
 		matuwall_log_error("wayland", "cannot send the first frame");
+		return false;
+	}
+	// before any worker exists, so every thread inherits the blocked mask
+	if (!install_signals()) {
+		matuwall_log_error(
+			"startup", "failed to install signal handlers");
 		return false;
 	}
 	if (!matuwall_log_activate()) {

@@ -8,6 +8,7 @@
 #include "app/animation.h"
 #include "app/instance.h"
 #include "app/preview.h"
+#include "app/thumb_store.h"
 #include "config/config.h"
 #include "grid/navigate.h"
 #include "scan/dirscan.h"
@@ -39,25 +40,8 @@ struct matuwall_app {
 	struct matuwall_preview preview;
 
 	struct matuwall_worker_pool *workers;
-	struct matuwall_thumb *thumbs;
-	size_t thumb_count;
-	size_t pending;
-	size_t visible_pending;
+	struct matuwall_thumb_store thumbs;
 	int64_t spinner_due_ms;
-	size_t thumb_target_bytes;
-	size_t thumb_resident_bytes;
-	size_t thumb_resident_peak_bytes;
-	size_t thumb_evicted;
-	size_t thumb_priority_first;
-	size_t thumb_priority_end;
-	size_t thumb_priority_wrap_end;
-	size_t thumb_cache_hits;
-	size_t thumb_decoded;
-	size_t thumb_failed;
-	// decoded but dropped outside the window, and withdrawn before running
-	size_t thumb_discarded;
-	size_t thumb_withdrawn;
-	bool thumb_priority_set;
 	bool running;
 	bool apply_requested;
 };

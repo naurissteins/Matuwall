@@ -6,7 +6,32 @@
 #include <stdint.h>
 
 struct matuwall_app;
+struct matuwall_thumb;
 struct matuwall_thumb_result;
+
+// every thumbnail field; release resets it in one assignment
+struct matuwall_thumb_store {
+	struct matuwall_thumb *items;
+	size_t count;
+	size_t pending;
+	size_t visible_pending;
+	size_t target_bytes;
+	size_t resident_bytes;
+	size_t resident_peak_bytes;
+	// visible window the job queue was last reordered for
+	size_t priority_first;
+	size_t priority_end;
+	size_t priority_wrap_end;
+	bool priority_set;
+	// exit summary counters
+	size_t cache_hits;
+	size_t decoded;
+	size_t failed;
+	// decoded but dropped outside the window, and withdrawn before running
+	size_t discarded;
+	size_t withdrawn;
+	size_t evicted;
+};
 
 bool matuwall_thumb_store_set_target(
 	struct matuwall_app *app, uint32_t width, uint32_t height);

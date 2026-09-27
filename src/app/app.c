@@ -4,7 +4,6 @@
 #include <wayland-client.h>
 
 #include "app/input.h"
-#include "app/loop.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "util/log.h"
@@ -60,11 +59,6 @@ bool matuwall_app_init(struct matuwall_app *app,
 	matuwall_animation_init(&app->animation, app->config.navigation_ms,
 		app->config.zoom_percent);
 
-	if (!matuwall_app_loop_install_signals()) {
-		matuwall_log_error(
-			"startup", "failed to install signal handlers");
-		return false;
-	}
 	if (!matuwall_instance_init(&app->instance)) {
 		return false;
 	}
