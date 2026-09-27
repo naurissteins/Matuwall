@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -98,9 +99,61 @@ bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	return ok;
 }
 
+// --- image storage ---
+
+bool matuwall_image_alloc_shared(
+	struct matuwall_image *img, uint32_t width, uint32_t height) {
+	*img = (struct matuwall_image){0};
+	size_t bytes = (size_t)width * height * sizeof(uint32_t);
+	if (bytes == 0) {
+		return false;
+	}
+	int fd = memfd_create("matuwall-preview", MFD_CLOEXEC);
+	if (fd < 0) {
+		return false;
+	}
+	if (ftruncate(fd, (off_t)bytes) != 0) {
+		close(fd);
+		return false;
+	}
+	void *pixels =
+		mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (pixels == MAP_FAILED) {
+		close(fd);
+		return false;
+	}
+	// shmem gets huge pages only on request; 4 KiB faults triple the cost
+	madvise(pixels, bytes, MADV_HUGEPAGE);
+	*img = (struct matuwall_image){
+		.width = width,
+		.height = height,
+		.pixels = pixels,
+		.shared_bytes = bytes,
+		.shared_fd = fd,
+	};
+	return true;
+}
+
+bool matuwall_image_share(struct matuwall_image *img) {
+	if (img->shared_bytes != 0) {
+		return true;
+	}
+	struct matuwall_image shared;
+	if (!matuwall_image_alloc_shared(&shared, img->width, img->height)) {
+		return false;
+	}
+	memcpy(shared.pixels, img->pixels, shared.shared_bytes);
+	matuwall_image_free(img);
+	*img = shared;
+	return true;
+}
+
 void matuwall_image_free(struct matuwall_image *img) {
-	free(img->pixels);
-	img->pixels = NULL;
-	img->width = 0;
-	img->height = 0;
+	if (img->shared_bytes != 0) {
+		munmap(img->pixels, img->shared_bytes);
+		close(img->shared_fd);
+	} else {
+		free(img->pixels);
+	}
+	*img = (struct matuwall_image){0};
 }

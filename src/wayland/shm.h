@@ -23,6 +23,8 @@ struct matuwall_buffer {
 	uint32_t height;
 	uint32_t stride;
 	bool released;
+	// wraps a caller's memfd: never mapped here, never drawn into again
+	bool adopted;
 	// Untouched since mmap, so every pixel is still zero
 	bool fresh;
 	// Last rendered scene state advances independently per buffer
@@ -47,7 +49,12 @@ enum matuwall_buffer_acquire matuwall_buffer_pool_acquire(
 	struct matuwall_buffer_pool *pool, struct wl_shm *shm, uint32_t width,
 	uint32_t height, struct matuwall_buffer **buffer);
 
-// Requires a live drawing buffer from a successful acquire
+// wraps a caller-filled memfd without mapping it; the caller keeps fd
+enum matuwall_buffer_acquire matuwall_buffer_pool_adopt(
+	struct matuwall_buffer_pool *pool, struct wl_shm *shm, int fd,
+	uint32_t width, uint32_t height, struct matuwall_buffer **buffer);
+
+// requires a live drawing buffer from a successful acquire or adopt
 void matuwall_buffer_pool_submitted(struct matuwall_buffer_pool *pool);
 
 void matuwall_buffer_pool_collect_idle(

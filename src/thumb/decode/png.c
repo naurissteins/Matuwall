@@ -92,11 +92,9 @@ static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 				  matuwall_row_scaler_bytes(job->target_w))) {
 		return false;
 	}
-	img->width = job->target_w;
-	img->height = job->target_h;
-	img->pixels = alloc_target(job);
+	bool allocated = alloc_target(img, job);
 	buffers->row = malloc((size_t)width * 3);
-	if (img->pixels == NULL || buffers->row == NULL ||
+	if (!allocated || buffers->row == NULL ||
 		!matuwall_row_scaler_init(&buffers->scaler, width, height,
 			job->target_w, job->target_h, img->pixels)) {
 		png_longjmp(png, 1);

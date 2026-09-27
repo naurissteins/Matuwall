@@ -1,9 +1,6 @@
 #include "app/preview.h"
 
-#include <stdlib.h>
-
 #include "app/app.h"
-#include "render/image.h"
 #include "util/log.h"
 
 #define PREVIEW_LONG_EDGE_MAX 4096u
@@ -67,7 +64,8 @@ int matuwall_app_preview_timeout(
 	return left > 0 ? (int)left : 0;
 }
 
-// bound retained backdrop pixels while preserving the output aspect
+// the decode becomes the backdrop buffer as is; only a viewport lets it
+// differ from the surface's native size, so only then is it capped
 static bool preview_target(
 	struct matuwall_app *app, uint32_t *width, uint32_t *height) {
 	matuwall_layer_inherit_scale(&app->backdrop, &app->layer);
@@ -75,7 +73,9 @@ static bool preview_target(
 	if (*width == 0 || *height == 0) {
 		return false;
 	}
-	cap_preview_target(width, height);
+	if (app->backdrop.viewport != NULL) {
+		cap_preview_target(width, height);
+	}
 	return true;
 }
 
@@ -115,9 +115,10 @@ void matuwall_app_preview_tick(struct matuwall_app *app, int64_t now_ms) {
 void matuwall_app_preview_result(
 	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
 	struct matuwall_preview *preview = &app->preview;
+	struct matuwall_image image = result->image;
 	// a decode that outlived preview_disable has nowhere to go
 	if (result->cancelled || !preview->enabled) {
-		free(result->pixels);
+		matuwall_image_free(&image);
 		return;
 	}
 	if (result->index == preview->in_flight) {
@@ -126,28 +127,14 @@ void matuwall_app_preview_result(
 
 	// A superseded decode landed late; the selection has moved on
 	if (!result->ok || result->index != preview->wanted) {
-		free(result->pixels);
+		matuwall_image_free(&image);
 		return;
 	}
 
-	free(preview->image.pixels);
-	preview->image = (struct matuwall_image){
-		.width = result->width,
-		.height = result->height,
-		.pixels = result->pixels,
-	};
+	matuwall_image_free(&preview->image);
+	preview->image = image;
 	preview->shown = result->index;
 	app->backdrop.needs_repaint = true;
-}
-
-// with a viewport the compositor stretches the capped image to the output
-static bool backdrop_buffer_size(
-	struct matuwall_app *app, uint32_t *width, uint32_t *height) {
-	if (app->backdrop.viewport != NULL) {
-		return preview_target(app, width, height);
-	}
-	matuwall_layer_buffer_size(&app->backdrop, width, height);
-	return *width != 0 && *height != 0;
 }
 
 // the picker still works without its backdrop, so a failure only drops it
@@ -179,6 +166,16 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 		return;
 	}
 	layer->layout_dirty = false;
+	uint32_t width;
+	uint32_t height;
+	if (!preview_target(app, &width, &height)) {
+		preview_disable(app, "backdrop has no size");
+		return;
+	}
+	// a decode from before a resize no longer fits the surface
+	if (preview->image.width != width || preview->image.height != height) {
+		matuwall_image_free(&preview->image);
+	}
 	if (preview->image.pixels == NULL) {
 		// resized or rescaled after the image was freed, decode it
 		// again
@@ -190,29 +187,18 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 		return;
 	}
 
-	uint32_t width;
-	uint32_t height;
-	if (!backdrop_buffer_size(app, &width, &height)) {
-		preview_disable(app, "backdrop has no size");
-		return;
-	}
+	// the worker decoded straight into shared memory, so nothing is copied
 	struct matuwall_buffer *buffer;
 	enum matuwall_buffer_acquire acquired =
-		matuwall_layer_begin_frame_sized(
-			layer, app->registry.shm, width, height, &buffer);
+		matuwall_layer_begin_frame_shared(layer, app->registry.shm,
+			preview->image.shared_fd, width, height, &buffer);
 	if (acquired == MATUWALL_BUFFER_BUSY) {
 		return;
 	}
 	if (acquired == MATUWALL_BUFFER_FAILED) {
-		preview_disable(app, "cannot allocate a backdrop buffer");
+		preview_disable(app, "cannot wrap the preview in a buffer");
 		return;
 	}
-	struct matuwall_clip whole = {
-		.x1 = (int32_t)buffer->width,
-		.y1 = (int32_t)buffer->height,
-	};
-	matuwall_draw_image_cover_clipped(buffer, &whole, preview->image.pixels,
-		preview->image.width, preview->image.height);
 	struct matuwall_damage damage = {
 		.x1 = (int32_t)buffer->width,
 		.y1 = (int32_t)buffer->height,
@@ -221,7 +207,7 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 		preview_disable(app, "cannot commit the backdrop");
 		return;
 	}
-	// the surface keeps showing it, only a resize needs the pixels again
+	// the compositor holds the memfd now, a resize decodes it again
 	matuwall_image_free(&preview->image);
 }
 

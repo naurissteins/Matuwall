@@ -100,13 +100,10 @@ bool matuwall_decode_webp(
 
 	size_t stride = (size_t)target_w * sizeof(uint32_t);
 	size_t out_size = stride * target_h;
-	img->pixels = alloc_target(job);
-	if (img->pixels == NULL) {
+	if (!alloc_target(img, job)) {
 		free(data);
 		return false;
 	}
-	img->width = target_w;
-	img->height = target_h;
 	config.output.colorspace = MODE_BGRA;
 	config.output.is_external_memory = 1;
 	config.output.u.RGBA.rgba = (uint8_t *)img->pixels;
