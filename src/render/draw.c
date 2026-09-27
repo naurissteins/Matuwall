@@ -1,9 +1,40 @@
 #include "render/draw.h"
 
-#include <math.h>
 #include <stdbool.h>
 
 #include "render/coverage.h"
+
+// --- corner tables ---
+
+// enough for the radii one frame uses: tile, image inset, panel
+#define CORNER_CACHE_SLOTS 4
+
+// a table depends on its radius alone, so entries never go stale
+static struct corner_table corner_cache[CORNER_CACHE_SLOTS];
+static size_t corner_cache_next;
+
+// the top-left corner of a rect at 0, 0 sees the same exact offsets as any
+const struct corner_table *matuwall_corner_table(int32_t radius) {
+	if (radius <= 0 || radius > CORNER_TABLE_MAX) {
+		return NULL;
+	}
+	for (size_t slot = 0; slot < CORNER_CACHE_SLOTS; slot++) {
+		if (corner_cache[slot].radius == radius) {
+			return &corner_cache[slot];
+		}
+	}
+	struct corner_table *table = &corner_cache[corner_cache_next];
+	corner_cache_next = (corner_cache_next + 1) % CORNER_CACHE_SLOTS;
+	for (int32_t j = 0; j < radius; j++) {
+		for (int32_t i = 0; i < radius; i++) {
+			table->coverage[(size_t)j * (size_t)radius +
+					(size_t)i] = (uint8_t)rect_coverage(i,
+				j, 0, 0, radius * 2, radius * 2, radius);
+		}
+	}
+	table->radius = radius;
+	return table;
+}
 
 // --- rounded fills ---
 
@@ -51,40 +82,6 @@ static void blend_span(struct matuwall_buffer *buffer,
 	}
 }
 
-static uint32_t corner_coverage(
-	int32_t px, int32_t py, double cx, double cy, double radius) {
-	double dx = ((double)px + 0.5) - cx;
-	double dy = ((double)py + 0.5) - cy;
-	double distance = sqrt(dx * dx + dy * dy);
-
-	// One-pixel linear ramp across the edge
-	double coverage = radius + 0.5 - distance;
-	if (coverage <= 0.0) {
-		return 0;
-	}
-	if (coverage >= 1.0) {
-		return COVERAGE_MAX;
-	}
-	return (uint32_t)(coverage * COVERAGE_MAX + 0.5);
-}
-
-// the top-left corner of a rect at 0, 0 sees the same exact offsets as any
-static bool corner_table_fill(struct corner_table *table, int32_t radius) {
-	if (radius <= 0 || radius > CORNER_TABLE_MAX) {
-		return false;
-	}
-	double r = (double)radius;
-	table->radius = radius;
-	for (int32_t j = 0; j < radius; j++) {
-		for (int32_t i = 0; i < radius; i++) {
-			table->coverage[(size_t)j * (size_t)radius +
-					(size_t)i] =
-				(uint8_t)corner_coverage(i, j, r, r, r);
-		}
-	}
-	return true;
-}
-
 // a rounded rect and the table for its corners, if one fits
 struct rounded_shape {
 	int32_t x;
@@ -100,8 +97,8 @@ static uint32_t shape_corner(
 	if (shape->corners != NULL) {
 		return corner_table_at(shape->corners, i, j);
 	}
-	double r = (double)shape->radius;
-	return corner_coverage(i, j, r, r, r);
+	int32_t r = shape->radius;
+	return rect_coverage(i, j, 0, 0, r * 2, r * 2, r);
 }
 
 // j counts rows inward from the top or bottom edge
@@ -131,7 +128,6 @@ void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
 		return;
 	}
 
-	struct corner_table table;
 	struct rounded_shape shape = {
 		.x = x,
 		.y = y,
@@ -139,7 +135,7 @@ void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
 		.bottom = y + height,
 		.radius = clamp_radius(radius, width, height),
 	};
-	shape.corners = corner_table_fill(&table, shape.radius) ? &table : NULL;
+	shape.corners = matuwall_corner_table(shape.radius);
 	radius = shape.radius;
 
 	// Straight middle band: no curvature, so no per-pixel distance work
@@ -219,7 +215,6 @@ void matuwall_draw_rounded_replace(struct matuwall_buffer *buffer,
 		return;
 	}
 
-	struct corner_table table;
 	struct rounded_shape shape = {
 		.x = x,
 		.y = y,
@@ -227,7 +222,7 @@ void matuwall_draw_rounded_replace(struct matuwall_buffer *buffer,
 		.bottom = y + height,
 		.radius = clamp_radius(radius, width, height),
 	};
-	shape.corners = corner_table_fill(&table, shape.radius) ? &table : NULL;
+	shape.corners = matuwall_corner_table(shape.radius);
 	uint32_t inks[COVERAGE_MAX + 1];
 	for (uint32_t c = 0; c <= COVERAGE_MAX; c++) {
 		inks[c] = ink_at(color, c).src;

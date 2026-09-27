@@ -93,6 +93,9 @@ struct corner_table {
 	uint8_t coverage[CORNER_TABLE_MAX * CORNER_TABLE_MAX];
 };
 
+// cached per radius, main thread only, NULL when no table fits
+const struct corner_table *matuwall_corner_table(int32_t radius);
+
 // i and j count inward from the corner's outer edges
 static inline uint32_t corner_table_at(
 	const struct corner_table *table, int32_t i, int32_t j) {
@@ -116,12 +119,17 @@ static inline bool clip_to_buffer(
 	return clip->x0 < clip->x1 && clip->y0 < clip->y1;
 }
 
-static inline double rounded_rect_distance(int32_t px, int32_t py, double x,
-	double y, double width, double height, double radius) {
+// how far a pixel centre lies past the rect's inset straight edges
+static inline void rounded_rect_offsets(int32_t px, int32_t py, double x,
+	double y, double width, double height, double radius, double *dx,
+	double *dy) {
 	double half_w = width / 2.0;
 	double half_h = height / 2.0;
-	double dx = fabs(((double)px + 0.5) - (x + half_w)) - (half_w - radius);
-	double dy = fabs(((double)py + 0.5) - (y + half_h)) - (half_h - radius);
+	*dx = fabs(((double)px + 0.5) - (x + half_w)) - (half_w - radius);
+	*dy = fabs(((double)py + 0.5) - (y + half_h)) - (half_h - radius);
+}
+
+static inline double offsets_distance(double dx, double dy, double radius) {
 	double outside_x = dx > 0.0 ? dx : 0.0;
 	double outside_y = dy > 0.0 ? dy : 0.0;
 	double inside = dx > dy ? dx : dy;
@@ -139,11 +147,31 @@ static inline double rounded_rect_distance(int32_t px, int32_t py, double x,
 	       radius;
 }
 
+static inline double rounded_rect_distance(int32_t px, int32_t py, double x,
+	double y, double width, double height, double radius) {
+	double dx;
+	double dy;
+	rounded_rect_offsets(px, py, x, y, width, height, radius, &dx, &dy);
+	return offsets_distance(dx, dy, radius);
+}
+
+// extra ramp width at 45 degrees, fading to none where the edge runs straight
+#define CURVE_SOFTEN 0.6
+
+// The ramp only widens outward, so inner pixels stay opaque and the curve
+// still meets the hard straight spans without a step
 static inline uint32_t rect_coverage(int32_t px, int32_t py, double x, double y,
 	double width, double height, double radius) {
-	double distance =
-		rounded_rect_distance(px, py, x, y, width, height, radius);
-	double coverage = 0.5 - distance;
+	double dx;
+	double dy;
+	rounded_rect_offsets(px, py, x, y, width, height, radius, &dx, &dy);
+	double distance = offsets_distance(dx, dy, radius);
+	double ramp = 1.0;
+	// a square corner has no curve, only a pixel just past both edges
+	if (radius > 0.0 && dx > 0.0 && dy > 0.0) {
+		ramp += CURVE_SOFTEN * 2.0 * dx * dy / (dx * dx + dy * dy);
+	}
+	double coverage = 1.0 - (distance + 0.5) / ramp;
 	if (coverage <= 0.0) {
 		return 0;
 	}

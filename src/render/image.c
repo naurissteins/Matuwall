@@ -87,22 +87,6 @@ struct image_shape {
 	const struct corner_table *corners;
 };
 
-// the top-left corner of a shape at 0, 0 sees the same exact offsets as any
-static bool corner_table_fill(struct corner_table *table, int32_t radius) {
-	if (radius <= 0 || radius > CORNER_TABLE_MAX) {
-		return false;
-	}
-	table->radius = radius;
-	for (int32_t j = 0; j < radius; j++) {
-		for (int32_t i = 0; i < radius; i++) {
-			table->coverage[(size_t)j * (size_t)radius +
-					(size_t)i] = (uint8_t)rect_coverage(i,
-				j, 0, 0, radius * 2, radius * 2, radius);
-		}
-	}
-	return true;
-}
-
 // edge pixels only ever lie in one of the four corner squares
 static uint32_t edge_coverage(
 	const struct image_shape *shape, int32_t px, int32_t py) {
@@ -238,8 +222,7 @@ static void draw_image_rounded(struct matuwall_buffer *buffer,
 	if (left >= right || top >= bottom) {
 		return;
 	}
-	struct corner_table table;
-	shape.corners = corner_table_fill(&table, shape.radius) ? &table : NULL;
+	shape.corners = matuwall_corner_table(shape.radius);
 	struct matuwall_bilinear_sampler sampler;
 	if (bilinear && !matuwall_bilinear_sampler_init(&sampler, src, src_w,
 				src_h, (uint32_t)width, (uint32_t)height)) {
