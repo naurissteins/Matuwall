@@ -83,6 +83,10 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 *-m* _MARGIN_, *--margin* _MARGIN_
 	Set _window.margin_ to an integer from 0 to 4096.
 
+*--navigation-ms* _MS_
+	Set _animation.navigation_ms_ to an integer from 0 to 1000. Zero disables
+	the transition.
+
 *--no-config*
 	Use built-in defaults without loading the standard configuration file.
 
@@ -135,6 +139,10 @@ Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
 
 *-w* _WIDTH_, *--width* _WIDTH_
 	Set _thumbnail.width_ to an integer from 1 to 16384.
+
+*--zoom-percent* _PERCENT_
+	Set _animation.zoom_percent_ to an integer from 0 to 10. Zero disables
+	scaling.
 
 *--preview*
 	Enable the full-screen live preview.

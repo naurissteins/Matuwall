@@ -28,6 +28,7 @@ enum {
 	OPTION_NO_CAROUSEL,
 	OPTION_NO_CLOSE_ON_FOCUS_LOSS,
 	OPTION_NO_CONFIG,
+	OPTION_NAVIGATION_MS,
 	OPTION_NO_HOOKS,
 	OPTION_PANEL_RADIUS,
 	OPTION_PRINT_CONFIG,
@@ -36,6 +37,7 @@ enum {
 	OPTION_RING_WIDTH,
 	OPTION_SPINNER,
 	OPTION_TILE,
+	OPTION_ZOOM_PERCENT,
 	OPTION_PREVIEW,
 	OPTION_NO_PREVIEW,
 };
@@ -65,6 +67,7 @@ static const struct option long_options[] = {
 	{"height", required_argument, NULL, OPTION_HEIGHT},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"margin", required_argument, NULL, 'm'},
+	{"navigation-ms", required_argument, NULL, OPTION_NAVIGATION_MS},
 	{"no-backend-args", no_argument, NULL, OPTION_NO_BACKEND_ARGS},
 	{"no-carousel", no_argument, NULL, OPTION_NO_CAROUSEL},
 	{"no-close-on-focus-loss", no_argument, NULL,
@@ -83,6 +86,7 @@ static const struct option long_options[] = {
 	{"spinner", required_argument, NULL, OPTION_SPINNER},
 	{"tile", required_argument, NULL, OPTION_TILE},
 	{"width", required_argument, NULL, 'w'},
+	{"zoom-percent", required_argument, NULL, OPTION_ZOOM_PERCENT},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
 	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
@@ -246,6 +250,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 	case 'm':
 		return parse_uint_override("margin", value, 0, 4096,
 			&options->margin, &options->margin_set, err, err_size);
+	case OPTION_NAVIGATION_MS:
+		return parse_uint_override("navigation duration", value, 0,
+			1000, &options->navigation_ms,
+			&options->navigation_ms_set, err, err_size);
 	case OPTION_PANEL_RADIUS:
 		return parse_uint_override("panel radius", value, 0, 4096,
 			&options->panel_radius, &options->panel_radius_set, err,
@@ -267,6 +275,10 @@ static enum parse_result parse_numeric_override(int option, const char *value,
 	case 'w':
 		return parse_uint_override("width", value, 1, 16384,
 			&options->width, &options->width_set, err, err_size);
+	case OPTION_ZOOM_PERCENT:
+		return parse_uint_override("zoom percent", value, 0, 10,
+			&options->zoom_percent, &options->zoom_percent_set, err,
+			err_size);
 	default:
 		return PARSE_UNHANDLED;
 	}
