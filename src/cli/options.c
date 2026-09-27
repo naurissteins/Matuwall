@@ -132,8 +132,8 @@ static enum parse_result parse_color_override(const char *name,
 	size_t err_size) {
 	if (!matuwall_color_parse(value, out)) {
 		snprintf(err, err_size,
-			"invalid %s '%s': expected #rrggbb or #rrggbbaa", name,
-			value);
+			"invalid %s '%s': expected #rrggbb, #rrggbbaa, or none",
+			name, value);
 		return PARSE_ERROR;
 	}
 	*is_set = true;

@@ -59,7 +59,8 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	Defaults to _"bottom"_.
 
 *background*
-	Panel color as _"#rrggbb"_ or _"#rrggbbaa"_. Defaults to _"#11111bff"_.
+	Panel color as _"#rrggbb"_ or _"#rrggbbaa"_. _"none"_ draws no panel.
+	Defaults to _"#11111bff"_.
 
 *margin*
 	Space between the tiles and panel edge, in pixels. Defaults to _34_.
@@ -124,8 +125,9 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	Carousel edge style: _"auto"_, _"clip"_, _"peek"_, or _"fade"_. Defaults to
 	_"auto"_. _clip_ cuts tiles at the panel margin. _peek_ lets them extend into
 	it. _fade_ shrinks and fades tiles as they leave or enter. _auto_ fades when
-	*background* is fully transparent and clips otherwise. The regular grid
-	treats _fade_ as _clip_. The old *edge_peek* key still works but warns.
+	*background* is _"none"_ or fully transparent and clips otherwise. The
+	regular grid treats _fade_ as _clip_. The old *edge_peek* key still works
+	but warns.
 
 ## [thumbnail]
 
@@ -136,7 +138,7 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 
 ## [colors]
 
-All colors use _"#rrggbb"_ or _"#rrggbbaa"_.
+All colors use _"#rrggbb"_ or _"#rrggbbaa"_. _"none"_ hides that element.
 
 *tile*
 	Placeholder color. Defaults to _"#313244ff"_.
