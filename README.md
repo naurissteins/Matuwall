@@ -9,23 +9,30 @@
 
 Simple, fast and lightweight wallpaper picker for Wayland
 
+[< Wiki >](https://github.com/naurissteins/Matuwall/wiki)
+
+
 </div>
+
+https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 
 
 > [!IMPORTANT]
-> Matuwall is a C rewrite of my original GTK/Python application
+> Matuwall is a C rewrite of my original GTK/Python application.
 
 ---
 
 ## 🔥 Features
-- Nativelly supports `sweetbg` and `awww` daemons
-- Opens before image decoding starts
-- Loads thumbnails asynchronously
-- Uses a fast raw thumbnail cache
-- Supports regular grid and carousel layouts
-- Handles fractional scaling and multiple outputs
-- Full-screen wallpaper previews without applying
-- Hooks for tools such as `Matugen` and `Pywal`
+- Nativelly supports [sweetbg](https://github.com/sweetwm/sweetbg) and [awww](https://codeberg.org/LGFae/awww) (default)
+- Fast raw thumbnail cache
+- Grid and carousel layouts
+- Fractional scaling and multiple outputs
+- Full-screen wallpaper previews
+- Supports `Matugen` and `Pywal`
+
+Btw, Matuwall is just a picker. You need a running `awww` or `sweetbg` wallpaper daemon to apply a wallpaper.
+User [sweetbg](https://github.com/sweetwm/sweetbg) if you want something minimal, use [awww](https://codeberg.org/LGFae/awww)
+to have transition animation
 
 ## Install
 
@@ -34,11 +41,8 @@ Simple, fast and lightweight wallpaper picker for Wayland
 On Arch Linux, install Matuwall from the AUR:
 
 ```bash
-# prebuilt release package (recommended)
+# prebuilt release package
 yay -S matuwall-bin
-
-# or latest git build
-yay -S matuwall-git
 ```
 
 ## Build from source
@@ -75,6 +79,7 @@ matuwall --panel-radius 16                       // set the panel corner radius 
 matuwall -w 320                                  // set thumbnail width to 320
 matuwall --height 480                            // set thumbnail height to 480
 matuwall --background "#181825cc"                // set the panel background color
+matuwall --background none                       // draw no panel background
 matuwall --tile "#313244"                        // set the tile color
 matuwall --border "#585b70"                      // set the thumbnail border color
 matuwall --border-width 1                        // set the thumbnail border width
@@ -93,17 +98,18 @@ matuwall --no-hooks                              // apply without running hooks
 matuwall --hook 'matugen image {path}'           // replace hooks for one run
 ```
 
-### Few examples
+### Examples
 
 ```bash
-# Preview with carousel, bottom position
-matuwall -d ~/Pictures/Wallpapers --preview --carousel -b auto -c 5 -w 280 --height 150 -p bottom --background "#181825cc"    
-
-# Preview with carousel, left position
-matuwall -d ~/Pictures/Wallpapers --preview --carousel -b auto -c 3 -w 480 --height 250 -p left  --background "#181825cc"  
-
-# Preview with no carousel, center position
-matuwall -d ~/Pictures/Wallpapers --preview --no-carousel -b auto -c 3 -r 5 -w 280 --height 150 -p center  --background "#181825cc"
+# Examples from a video above
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 5 -w 280 --height 150 -p bottom --background none
+matuwall -d ~/Pictures/Wallpapers --preview --no-carousel -b sweetbg -c 3 -r 3 -w 380 --height 250 -p center --background none
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 3 -w 380 --height 250 -p left
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 3 -w 380 --height 250 -p right --background none
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 5 -w 280 --height 150 -p top
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 5 -w 380 --height 450 -p center --background none
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 2 -w 980 --height 520 -p center --background none
+matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 4 -w 380 --height 520 -p center --background none --radius 0 --shadow-width 0 --border "#ffffff" --border-width 4 --panel-radius 0
 ```
 
 See full [CLI reference](https://github.com/naurissteins/Matuwall/wiki/CLI-Reference)
@@ -120,10 +126,7 @@ You can also use both CLI and config file together. Set fundamental configs via 
 
 See example config [`config/example.toml`](config/example.toml)
 
-### Compositor rules
-
-The panels layer namespace is `matuwall`. With `--preview` the fullscreen preview is a separate layer surface named `matuwall-preview` 
-This is useful if you want to animate panel or preview separately
+---
 
 ## Wallpaper daemons
 
@@ -147,6 +150,8 @@ CLI override example using `--backend-arg` flags
 matuwall -b awww --backend-arg --transition-type --backend-arg grow --backend-arg --transition-duration --backend-arg 2.5
 ```
 
+---
+
 ## Hooks
 
 Hooks run after a successful apply. `{path}` becomes the absolute wallpaper
@@ -163,6 +168,8 @@ shell quoting are not supported
 ```sh
 matuwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
+
+---
 
 ## Maintenance
 
