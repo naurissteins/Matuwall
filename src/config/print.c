@@ -42,6 +42,10 @@ static void print_quoted(FILE *out, const char *value) {
 
 static void print_color(
 	FILE *out, const char *name, struct matuwall_color color) {
+	if (color.a == 0) {
+		fprintf(out, "%s = \"none\"\n", name);
+		return;
+	}
 	fprintf(out, "%s = \"#%02x%02x%02x%02x\"\n", name, color.r, color.g,
 		color.b, color.a);
 }

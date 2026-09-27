@@ -51,9 +51,13 @@ static inline int matuwall_color_hex(char c) {
 	return -1;
 }
 
-// Parse "#rrggbb" (opaque) or "#rrggbbaa" into out; out is untouched on failure
+// Parse "#rrggbb", "#rrggbbaa", or "none" into out, untouched on failure
 static inline bool matuwall_color_parse(
 	const char *s, struct matuwall_color *out) {
+	if (s != NULL && strcmp(s, "none") == 0) {
+		*out = (struct matuwall_color){0};
+		return true;
+	}
 	if (s == NULL || s[0] != '#') {
 		return false;
 	}

@@ -152,10 +152,14 @@ static void apply_name(char *dst, size_t size,
 }
 
 static void apply_color(struct matuwall_color *dst,
-	const struct matuwall_toml_value *v, int line, const char *what) {
+	const struct matuwall_toml_value *v, int line, const char *key) {
 	if (v->type != MATUWALL_TOML_STRING ||
 		!matuwall_color_parse(v->string, dst)) {
-		warn(line, what);
+		char detail[96];
+		snprintf(detail, sizeof(detail),
+			"%s must be \"#rrggbb\", \"#rrggbbaa\", or \"none\"",
+			key);
+		warn(line, detail);
 	}
 }
 
@@ -317,9 +321,7 @@ static bool apply(void *user_data, const char *section, const char *key,
 			return true;
 		}
 		if (strcmp(key, "background") == 0) {
-			apply_color(&cfg->background, v, line,
-				"background must be \"#rrggbb\" or "
-				"\"#rrggbbaa\"");
+			apply_color(&cfg->background, v, line, "background");
 			return true;
 		}
 		if (strcmp(key, "margin") == 0) {
@@ -426,28 +428,23 @@ static bool apply(void *user_data, const char *section, const char *key,
 		}
 	} else if (strcmp(section, "colors") == 0) {
 		if (strcmp(key, "tile") == 0) {
-			apply_color(&cfg->tile, v, line,
-				"tile must be \"#rrggbb\" or \"#rrggbbaa\"");
+			apply_color(&cfg->tile, v, line, "tile");
 			return true;
 		}
 		if (strcmp(key, "border") == 0) {
-			apply_color(&cfg->border, v, line,
-				"border must be \"#rrggbb\" or \"#rrggbbaa\"");
+			apply_color(&cfg->border, v, line, "border");
 			return true;
 		}
 		if (strcmp(key, "shadow") == 0) {
-			apply_color(&cfg->shadow, v, line,
-				"shadow must be \"#rrggbb\" or \"#rrggbbaa\"");
+			apply_color(&cfg->shadow, v, line, "shadow");
 			return true;
 		}
 		if (strcmp(key, "ring") == 0) {
-			apply_color(&cfg->ring, v, line,
-				"ring must be \"#rrggbb\" or \"#rrggbbaa\"");
+			apply_color(&cfg->ring, v, line, "ring");
 			return true;
 		}
 		if (strcmp(key, "spinner") == 0) {
-			apply_color(&cfg->spinner, v, line,
-				"spinner must be \"#rrggbb\" or \"#rrggbbaa\"");
+			apply_color(&cfg->spinner, v, line, "spinner");
 			return true;
 		}
 	} else if (strcmp(section, "hooks") == 0) {

@@ -21,7 +21,7 @@ Wayland display; a new invocation cancels and replaces the existing one.
 
 Options override the loaded configuration for one invocation and do not change
 the configuration file. When opposite options are given, the last one wins.
-Colors use _"#rrggbb"_ or _"#rrggbbaa"_; quote them in the shell.
+Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 
 *--background* _COLOR_
 	Set _window.background_.
