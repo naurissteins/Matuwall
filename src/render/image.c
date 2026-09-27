@@ -75,16 +75,57 @@ static uint32_t image_row_next(struct image_row *row) {
 	return pixel;
 }
 
+// --- rounded edges ---
+
+// the rounded clip a thumbnail is drawn through
+struct image_shape {
+	int32_t x;
+	int32_t y;
+	int32_t width;
+	int32_t height;
+	int32_t radius;
+	const struct corner_table *corners;
+};
+
+// the top-left corner of a shape at 0, 0 sees the same exact offsets as any
+static bool corner_table_fill(struct corner_table *table, int32_t radius) {
+	if (radius <= 0 || radius > CORNER_TABLE_MAX) {
+		return false;
+	}
+	table->radius = radius;
+	for (int32_t j = 0; j < radius; j++) {
+		for (int32_t i = 0; i < radius; i++) {
+			table->coverage[(size_t)j * (size_t)radius +
+					(size_t)i] = (uint8_t)rect_coverage(i,
+				j, 0, 0, radius * 2, radius * 2, radius);
+		}
+	}
+	return true;
+}
+
+// edge pixels only ever lie in one of the four corner squares
+static uint32_t edge_coverage(
+	const struct image_shape *shape, int32_t px, int32_t py) {
+	if (shape->corners == NULL) {
+		return rect_coverage(px, py, shape->x, shape->y, shape->width,
+			shape->height, shape->radius);
+	}
+	int32_t i = px < shape->x + shape->radius
+			    ? px - shape->x
+			    : shape->x + shape->width - 1 - px;
+	int32_t j = py < shape->y + shape->radius
+			    ? py - shape->y
+			    : shape->y + shape->height - 1 - py;
+	return corner_table_at(shape->corners, i, j);
+}
+
 static void draw_image_edge(uint32_t *dst, struct image_row *row, int32_t x0,
-	int32_t x1, int32_t py, int32_t shape_x, int32_t shape_y,
-	int32_t shape_width, int32_t shape_height, int32_t radius,
+	int32_t x1, int32_t py, const struct image_shape *shape,
 	uint8_t opacity) {
 	for (int32_t px = x0; px < x1; px++) {
 		uint32_t pixel = image_row_next(row);
-		uint32_t coverage = fade_coverage(
-			rect_coverage(px, py, shape_x, shape_y, shape_width,
-				shape_height, radius),
-			opacity);
+		uint32_t coverage =
+			fade_coverage(edge_coverage(shape, px, py), opacity);
 		if (coverage > 0) {
 			dst[px] = blend(dst[px], pixel, coverage);
 		}
@@ -136,13 +177,13 @@ static void draw_image_span(uint32_t *dst, struct image_row *row,
 
 static void draw_image_row(struct matuwall_buffer *buffer,
 	struct image_row *row, const struct matuwall_bilinear_axis *axes,
-	int32_t left, int32_t right, int32_t py, int32_t shape_x,
-	int32_t shape_y, int32_t shape_width, int32_t shape_height,
-	int32_t radius, uint8_t opacity) {
-	int32_t full_left = shape_x + radius;
-	int32_t full_right = shape_x + shape_width - radius;
-	if (radius == 0 || (py >= shape_y + radius &&
-				   py < shape_y + shape_height - radius)) {
+	int32_t left, int32_t right, int32_t py,
+	const struct image_shape *shape, uint8_t opacity) {
+	int32_t radius = shape->radius;
+	int32_t full_left = shape->x + radius;
+	int32_t full_right = shape->x + shape->width - radius;
+	if (radius == 0 || (py >= shape->y + radius &&
+				   py < shape->y + shape->height - radius)) {
 		full_left = left;
 		full_right = right;
 	}
@@ -160,13 +201,11 @@ static void draw_image_row(struct matuwall_buffer *buffer,
 	}
 
 	uint32_t *dst = buffer->data + (size_t)py * buffer->width;
-	draw_image_edge(dst, row, left, full_left, py, shape_x, shape_y,
-		shape_width, shape_height, radius, opacity);
+	draw_image_edge(dst, row, left, full_left, py, shape, opacity);
 	const struct matuwall_bilinear_axis *span_axes =
 		axes != NULL ? axes + (full_left - left) : NULL;
 	draw_image_span(dst, row, span_axes, full_left, full_right, opacity);
-	draw_image_edge(dst, row, full_right, right, py, shape_x, shape_y,
-		shape_width, shape_height, radius, opacity);
+	draw_image_edge(dst, row, full_right, right, py, shape, opacity);
 }
 
 static void draw_image_rounded(struct matuwall_buffer *buffer,
@@ -180,23 +219,27 @@ static void draw_image_rounded(struct matuwall_buffer *buffer,
 	}
 
 	radius = clamp_radius(radius, width, height);
-	int32_t inner_radius = radius > inset ? radius - inset : 0;
-	int32_t inner_x = x + inset;
-	int32_t inner_y = y + inset;
-	int32_t inner_width = width - inset * 2;
-	int32_t inner_height = height - inset * 2;
+	struct image_shape shape = {
+		.x = x + inset,
+		.y = y + inset,
+		.width = width - inset * 2,
+		.height = height - inset * 2,
+		.radius = radius > inset ? radius - inset : 0,
+	};
 
-	int32_t top = inner_y < clip->y0 ? clip->y0 : inner_y;
-	int32_t bottom = inner_y + inner_height > clip->y1
+	int32_t top = shape.y < clip->y0 ? clip->y0 : shape.y;
+	int32_t bottom = shape.y + shape.height > clip->y1
 				 ? clip->y1
-				 : inner_y + inner_height;
-	int32_t left = inner_x < clip->x0 ? clip->x0 : inner_x;
-	int32_t right = inner_x + inner_width > clip->x1
+				 : shape.y + shape.height;
+	int32_t left = shape.x < clip->x0 ? clip->x0 : shape.x;
+	int32_t right = shape.x + shape.width > clip->x1
 				? clip->x1
-				: inner_x + inner_width;
+				: shape.x + shape.width;
 	if (left >= right || top >= bottom) {
 		return;
 	}
+	struct corner_table table;
+	shape.corners = corner_table_fill(&table, shape.radius) ? &table : NULL;
 	struct matuwall_bilinear_sampler sampler;
 	if (bilinear && !matuwall_bilinear_sampler_init(&sampler, src, src_w,
 				src_h, (uint32_t)width, (uint32_t)height)) {
@@ -214,8 +257,7 @@ static void draw_image_rounded(struct matuwall_buffer *buffer,
 		struct image_row row;
 		image_row_init(&row, bilinear ? &sampler : NULL, src, src_w,
 			src_h, x, y, width, height, left, py);
-		draw_image_row(buffer, &row, prepared, left, right, py, inner_x,
-			inner_y, inner_width, inner_height, inner_radius,
+		draw_image_row(buffer, &row, prepared, left, right, py, &shape,
 			opacity);
 	}
 }

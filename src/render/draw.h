@@ -12,10 +12,12 @@ struct matuwall_clip {
 	int32_t y1;
 };
 
-void matuwall_draw_clear_clipped(struct matuwall_buffer *buffer,
-	const struct matuwall_clip *clip, uint32_t color);
-
 void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
+	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
+	int32_t height, int32_t radius, uint32_t color);
+
+// writes every clipped pixel once: the rect over transparent, 0 around it
+void matuwall_draw_rounded_replace(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, uint32_t color);
 

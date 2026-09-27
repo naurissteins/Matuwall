@@ -85,6 +85,20 @@ static inline int32_t clamp_radius(
 	return radius < 0 ? 0 : radius;
 }
 
+// one corner square's coverage, mirrored to serve all four corners
+#define CORNER_TABLE_MAX 128
+
+struct corner_table {
+	int32_t radius;
+	uint8_t coverage[CORNER_TABLE_MAX * CORNER_TABLE_MAX];
+};
+
+// i and j count inward from the corner's outer edges
+static inline uint32_t corner_table_at(
+	const struct corner_table *table, int32_t i, int32_t j) {
+	return table->coverage[(size_t)j * (size_t)table->radius + (size_t)i];
+}
+
 static inline bool clip_to_buffer(
 	struct matuwall_clip *clip, const struct matuwall_buffer *buffer) {
 	if (clip->x0 < 0) {
