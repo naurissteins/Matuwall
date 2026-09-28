@@ -13,6 +13,7 @@ enum {
 	OPTION_DIAGNOSE,
 	OPTION_BACKGROUND,
 	OPTION_BACKEND_ARG,
+	OPTION_BACKEND_COMMAND,
 	OPTION_BORDER,
 	OPTION_BORDER_WIDTH,
 	OPTION_SHADOW,
@@ -53,6 +54,7 @@ static const struct option long_options[] = {
 	{"background", required_argument, NULL, OPTION_BACKGROUND},
 	{"backend", required_argument, NULL, 'b'},
 	{"backend-arg", required_argument, NULL, OPTION_BACKEND_ARG},
+	{"backend-command", required_argument, NULL, OPTION_BACKEND_COMMAND},
 	{"border", required_argument, NULL, OPTION_BORDER},
 	{"border-width", required_argument, NULL, OPTION_BORDER_WIDTH},
 	{"shadow", required_argument, NULL, OPTION_SHADOW},
@@ -201,6 +203,26 @@ static enum parse_result parse_backend_arg(const char *value,
 	return PARSE_CONTINUE;
 }
 
+// same rules as [backend.command] apply, but a bad value is fatal here
+static enum parse_result parse_backend_command(const char *value,
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	size_t length = strlen(value);
+	if (length == 0 || length >= MATUWALL_BACKEND_COMMAND_MAX) {
+		snprintf(err, err_size,
+			"invalid backend command: must contain 1 to %d bytes",
+			MATUWALL_BACKEND_COMMAND_MAX - 1);
+		return PARSE_ERROR;
+	}
+	if (strstr(value, "{path}") == NULL) {
+		snprintf(err, err_size,
+			"invalid backend command: must contain {path}");
+		return PARSE_ERROR;
+	}
+	options->backend_command = value;
+	options->backend_command_set = true;
+	return PARSE_CONTINUE;
+}
+
 static bool parse_position(const char *value,
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	if (!matuwall_position_from_name(value, &options->position)) {
@@ -315,6 +337,8 @@ static enum parse_result parse_override(int option, const char *value,
 			       : PARSE_ERROR;
 	case OPTION_BACKEND_ARG:
 		return parse_backend_arg(value, options, err, err_size);
+	case OPTION_BACKEND_COMMAND:
+		return parse_backend_command(value, options, err, err_size);
 	case OPTION_NO_BACKEND_ARGS:
 		options->backend_args_set = true;
 		options->backend_arg_count = 0;

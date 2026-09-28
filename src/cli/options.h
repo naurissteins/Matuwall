@@ -42,6 +42,9 @@ struct matuwall_cli_options {
 	// backend arg pointers borrow argv storage
 	const char *backend_args[MATUWALL_MAX_BACKEND_ARGS];
 	size_t backend_arg_count;
+	bool backend_command_set;
+	// backend command borrows argv storage
+	const char *backend_command;
 	bool columns_set;
 	uint32_t columns;
 	bool carousel_set;

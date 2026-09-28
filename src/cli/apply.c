@@ -51,6 +51,15 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 		apply_backend_args(options, &config->sweetbg_args);
 		apply_backend_args(options, &config->awww_args);
 	}
+	if (options->backend_command_set) {
+		memcpy(config->backend_command, options->backend_command,
+			strlen(options->backend_command) + 1);
+		// a command for this run means using it, unless -b names
+		// another
+		if (!options->backend_set) {
+			memcpy(config->backend, "command", sizeof("command"));
+		}
+	}
 	if (options->columns_set) {
 		config->layout.columns = options->columns;
 	}
@@ -169,6 +178,11 @@ void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
 			"backend args overridden with %zu arg%s",
 			options->backend_arg_count,
 			options->backend_arg_count == 1 ? "" : "s");
+	}
+	if (options->backend_command_set) {
+		// the command itself may carry secrets, so it is not logged
+		matuwall_log_info("config", "backend command overridden%s",
+			options->backend_set ? "" : ", backend set to command");
 	}
 	if (options->columns_set) {
 		matuwall_log_info("config", "columns overridden to %u",
