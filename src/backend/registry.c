@@ -13,8 +13,10 @@
 
 #include "util/log.h"
 
-// Probe order for backend = "auto", command never detects itself
+// Probe order for backend = "auto", command never detects itself. Plasma
+// leads: its desktop covers anything another daemon draws
 static const struct matuwall_backend *const backends[] = {
+	&matuwall_backend_plasma,
 	&matuwall_backend_sweetbg,
 	&matuwall_backend_awww,
 	&matuwall_backend_command,

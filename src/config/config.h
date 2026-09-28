@@ -31,6 +31,7 @@ struct matuwall_config {
 	char backend[32];
 	struct matuwall_backend_args sweetbg_args;
 	struct matuwall_backend_args awww_args;
+	struct matuwall_backend_args plasma_args;
 	// [backend.command] apply template, empty when unset
 	char backend_command[MATUWALL_BACKEND_COMMAND_MAX];
 	enum matuwall_position position;

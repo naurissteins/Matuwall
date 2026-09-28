@@ -59,6 +59,7 @@ static bool awww_apply(
 
 const struct matuwall_backend matuwall_backend_awww = {
 	.name = "awww",
+	.client = "awww",
 	.detect = awww_detect,
 	.apply = awww_apply,
 };

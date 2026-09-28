@@ -7,8 +7,9 @@
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
 directory = "~/Pictures/Wallpapers"
 
-# Wallpaper daemon used to apply the selection: "sweetbg", "awww", "command",
-# or "auto". "auto" probes sweetbg then awww and picks the first one running
+# Wallpaper daemon used to apply the selection: "sweetbg", "awww", "plasma",
+# "command", or "auto". "auto" picks the first one running: plasma, sweetbg,
+# then awww
 backend = "awww"
 
 # Extra flags for each backend's img command, one argument per item
@@ -21,6 +22,10 @@ args = []
 [backend.awww]
 args = []
 # args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+
+[backend.plasma]
+args = []
+# args = ["--fill-mode", "preserveAspectCrop"]
 
 # Any other setter, used with backend = "command". {path} is the wallpaper
 # Runs without a shell; Matuwall waits for it and reports a non-zero exit

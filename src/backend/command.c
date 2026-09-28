@@ -33,6 +33,7 @@ static bool command_apply(
 
 const struct matuwall_backend matuwall_backend_command = {
 	.name = "command",
+	.client = NULL,
 	.detect = command_detect,
 	.apply = command_apply,
 };

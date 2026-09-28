@@ -61,6 +61,7 @@ executable(
 	'src/app/thumbs.c',
 	'src/backend/awww.c',
 	'src/backend/command.c',
+	'src/backend/plasma.c',
 	'src/backend/registry.c',
 	'src/backend/sweetbg.c',
 	'src/cli/apply.c',
