@@ -50,6 +50,7 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 	if (options->backend_args_set) {
 		apply_backend_args(options, &config->sweetbg_args);
 		apply_backend_args(options, &config->awww_args);
+		apply_backend_args(options, &config->plasma_args);
 	}
 	if (options->backend_command_set) {
 		memcpy(config->backend_command, options->backend_command,

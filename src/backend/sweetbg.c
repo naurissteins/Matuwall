@@ -31,6 +31,7 @@ static bool sweetbg_apply(
 
 const struct matuwall_backend matuwall_backend_sweetbg = {
 	.name = "sweetbg",
+	.client = "sweetbg",
 	.detect = sweetbg_detect,
 	.apply = sweetbg_apply,
 };

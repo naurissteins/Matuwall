@@ -288,6 +288,9 @@ static struct matuwall_backend_args *backend_args(
 	if (strcmp(backend, "awww") == 0) {
 		return &cfg->awww_args;
 	}
+	if (strcmp(backend, "plasma") == 0) {
+		return &cfg->plasma_args;
+	}
 	return NULL;
 }
 
@@ -327,7 +330,7 @@ static bool apply(void *user_data, const char *section, const char *key,
 		if (strcmp(key, "backend") == 0) {
 			apply_name(cfg->backend, sizeof(cfg->backend), v, line,
 				"backend must be \"sweetbg\", \"awww\", "
-				"\"command\", or \"auto\"");
+				"\"plasma\", \"command\", or \"auto\"");
 			return true;
 		}
 	} else if (strcmp(section, "window") == 0) {

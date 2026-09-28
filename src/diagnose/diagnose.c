@@ -269,6 +269,7 @@ static void report_backends(
 	struct diagnose_report *report, const struct matuwall_config *config) {
 	puts("\nBackends");
 	struct backend_probe probes[] = {
+		{.backend = &matuwall_backend_plasma},
 		{.backend = &matuwall_backend_sweetbg},
 		{.backend = &matuwall_backend_awww},
 	};
@@ -276,13 +277,13 @@ static void report_backends(
 	const struct backend_probe *automatic = NULL;
 	for (size_t i = 0; i < sizeof(probes) / sizeof(probes[0]); i++) {
 		probes[i].client =
-			matuwall_backend_available(probes[i].backend->name);
+			matuwall_backend_available(probes[i].backend->client);
 		probes[i].ready =
 			probes[i].client && probes[i].backend->detect();
-		const char *detail =
-			probes[i].ready	   ? "client found, daemon detected"
-			: probes[i].client ? "client found, daemon not detected"
-					   : "client not found on PATH";
+		const char *detail = probes[i].ready ? "client found, running"
+				     : probes[i].client
+					     ? "client found, not running"
+					     : "client not found on PATH";
 		const struct matuwall_backend_args *args =
 			matuwall_config_backend_args(
 				config, probes[i].backend->name);
@@ -321,10 +322,10 @@ static void report_backends(
 			clean(config->backend, shown, sizeof(shown)));
 	} else if (!configured->client) {
 		report_line(report, DIAG_ERROR, "configured",
-			"%s is not on PATH", configured->backend->name);
+			"%s is not on PATH", configured->backend->client);
 	} else if (!configured->ready) {
 		report_line(report, DIAG_WARN, "configured",
-			"%s daemon not detected; explicit selection still runs",
+			"%s not running; explicit selection still runs",
 			configured->backend->name);
 	} else {
 		report_line(report, DIAG_OK, "configured", "%s is ready",

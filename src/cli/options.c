@@ -121,7 +121,7 @@ static bool parse_backend(const char *value,
 	if (!matuwall_backend_name_valid(value)) {
 		snprintf(err, err_size,
 			"invalid backend '%s': expected sweetbg, awww, "
-			"command, or auto",
+			"plasma, command, or auto",
 			value);
 		return false;
 	}

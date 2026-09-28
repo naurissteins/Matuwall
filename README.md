@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 ---
 
 ## 🔥 Features
-- Nativelly supports [sweetbg](https://github.com/sweetwm/sweetbg) and [awww](https://codeberg.org/LGFae/awww) (default)
+- Nativelly supports [sweetbg](https://github.com/sweetwm/sweetbg), [awww](https://codeberg.org/LGFae/awww) (default) and KDE Plasma
 - Custom backend command for any other setter (hyprpaper, swaybg, ...)
 - Fast raw thumbnail cache
 - Grid and carousel layouts
@@ -64,6 +64,7 @@ matuwall --no-config -d ~/Pictures/Wallpapers    // defaults plus CLI overrides
 matuwall --print-config                          // show the effective config and exit
 matuwall -d ~/Pictures/Photography               // use another directory
 matuwall -b awww                                 // use awww once
+matuwall -b plasma                               // KDE Plasma
 matuwall --backend auto                          // detect a running backend
 matuwall --backend-arg --persist                 // replace backend flags for one run
 matuwall --no-backend-args                       // apply without configured flags
@@ -133,7 +134,7 @@ See example config [`config/example.toml`](config/example.toml)
 ## Wallpaper daemons
 
 The built-in default is `awww`. Set `backend = "sweetbg"` or use `-b sweetbg`
-to select sweetbg instead.
+to select sweetbg instead. On KDE Plasma, use `backend = "plasma"`
 
 Pass extra flags to a backend with `args`. Each item is one argument, placed
 before the wallpaper path
@@ -144,6 +145,9 @@ args = ["--persist"]            # keep the wallpaper after a sweetbg restart
 
 [backend.awww]
 args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+
+[backend.plasma]
+args = ["--fill-mode", "preserveAspectCrop"]
 ```
 
 CLI override example using `--backend-arg` flags

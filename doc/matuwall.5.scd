@@ -26,18 +26,22 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	directory. Defaults to _"~/Pictures/Wallpapers"_.
 
 *backend*
-	Wallpaper backend: _"awww"_, _"sweetbg"_, _"command"_, or _"auto"_.
-	Defaults to _"awww"_.
+	Wallpaper backend: _"awww"_, _"sweetbg"_, _"plasma"_, _"command"_, or
+	_"auto"_. Defaults to _"awww"_.
 
-	_"auto"_ selects the first running backend, checking sweetbg before awww.
+	_"plasma"_ runs *plasma-apply-wallpaperimage*. It cannot set a path that
+	contains a single quote.
+
+	_"auto"_ selects the first running backend: plasma, then sweetbg, then
+	awww. Plasma counts as running when _XDG_CURRENT_DESKTOP_ contains _KDE_.
 	It never selects _"command"_.
 	Explicit backends are used without probing. Apply failures leave the
 	wallpaper unchanged and exit non-zero.
 
-## [backend.sweetbg], [backend.awww]
+## [backend.sweetbg], [backend.awww], [backend.plasma]
 
 *args*
-	Extra flags for that backend's _img_ command. Defaults to an empty array.
+	Extra flags for that backend's command. Defaults to an empty array.
 	Each item is one argument, placed before the wallpaper path. For awww they
 	come before _--_. Only the selected backend's args are used.
 

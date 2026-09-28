@@ -14,6 +14,8 @@ struct matuwall_apply_opts {
 
 struct matuwall_backend {
 	const char *name;
+	// program run on apply, NULL when it comes from config
+	const char *client;
 	bool (*detect)(void); // is this daemon available
 	// set the wallpaper, wait, report
 	bool (*apply)(const char *path, const struct matuwall_apply_opts *opts);
@@ -35,5 +37,6 @@ bool matuwall_backend_run(const char *file, const char *const head[],
 extern const struct matuwall_backend matuwall_backend_sweetbg;
 extern const struct matuwall_backend matuwall_backend_awww;
 extern const struct matuwall_backend matuwall_backend_command;
+extern const struct matuwall_backend matuwall_backend_plasma;
 
 #endif
