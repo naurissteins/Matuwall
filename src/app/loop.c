@@ -371,7 +371,10 @@ static bool apply_selection(struct matuwall_app *app) {
 	const struct matuwall_backend_args *extra =
 		matuwall_config_backend_args(&app->config, backend->name);
 	const char *args[MATUWALL_MAX_BACKEND_ARGS];
-	struct matuwall_apply_opts opts = {.args = args};
+	struct matuwall_apply_opts opts = {
+		.args = args,
+		.command = app->config.backend_command,
+	};
 	for (size_t i = 0; extra != NULL && i < extra->count; i++) {
 		args[opts.arg_count++] = extra->items[i];
 	}

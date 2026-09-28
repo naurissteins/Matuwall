@@ -78,6 +78,9 @@ bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
 	fputc('\n', out);
 	print_backend_args(out, "sweetbg", &config->sweetbg_args);
 	print_backend_args(out, "awww", &config->awww_args);
+	fputs("\n[backend.command]\napply = ", out);
+	print_quoted(out, config->backend_command);
+	fputc('\n', out);
 
 	fputs("\n[window]\npreview = ", out);
 	fputs(config->preview ? "true\n" : "false\n", out);

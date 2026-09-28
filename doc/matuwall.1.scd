@@ -27,13 +27,13 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Set _window.background_.
 
 *-b* _BACKEND_, *--backend* _BACKEND_
-	Use _sweetbg_, _awww_, or _auto_. Named backends are not probed; _auto_
-	probes when applying the wallpaper.
+	Use _sweetbg_, _awww_, _command_, or _auto_. Named backends are not probed;
+	_auto_ probes when applying the wallpaper and never picks _command_.
 
 *--backend-arg* _ARG_
 	Replace the configured _backend.<name>.args_ for this run. Later
 	occurrences append in command-line order. Applies to whichever backend
-	runs. Up to 32 non-empty arguments of up to 255 bytes are accepted.
+	runs, except _command_. Up to 32 non-empty arguments of up to 255 bytes are accepted.
 
 *--border* _COLOR_
 	Set _colors.border_.
@@ -193,8 +193,9 @@ clicking outside the panel cancels.
 
 # BACKENDS
 
-The default backend is *awww*. Set _general.backend_ to _sweetbg_ or _auto_ to
-change it. Extra flags come from _backend.<name>.args_ or *--backend-arg*.
+The default backend is *awww*. Set _general.backend_ to _sweetbg_, _command_, or
+_auto_ to change it. Extra flags come from _backend.<name>.args_ or
+*--backend-arg*. The _command_ backend runs _backend.command.apply_ instead.
 Backend commands receive the path directly, never through a shell.
 Failed applies leave the wallpaper unchanged and exit non-zero.
 

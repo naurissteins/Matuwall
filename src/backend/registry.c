@@ -13,10 +13,11 @@
 
 #include "util/log.h"
 
-// Probe order for backend = "auto"
+// Probe order for backend = "auto", command never detects itself
 static const struct matuwall_backend *const backends[] = {
 	&matuwall_backend_sweetbg,
 	&matuwall_backend_awww,
+	&matuwall_backend_command,
 };
 
 static const struct matuwall_backend *backend_by_name(const char *name) {

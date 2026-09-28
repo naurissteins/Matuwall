@@ -265,6 +265,21 @@ static void apply_backend_args(struct matuwall_backend_args *args,
 	}
 }
 
+// empty means unset, anything else must say where the wallpaper goes
+static void apply_backend_command(
+	char *dst, const struct matuwall_toml_value *v, int line) {
+	if (v->type != MATUWALL_TOML_STRING ||
+		strlen(v->string) >= MATUWALL_BACKEND_COMMAND_MAX) {
+		warn(line, "apply must be a command string up to 511 bytes");
+		return;
+	}
+	if (v->string[0] != '\0' && strstr(v->string, "{path}") == NULL) {
+		warn(line, "apply must contain {path}");
+		return;
+	}
+	memcpy(dst, v->string, strlen(v->string) + 1);
+}
+
 static struct matuwall_backend_args *backend_args(
 	struct matuwall_config *cfg, const char *backend) {
 	if (strcmp(backend, "sweetbg") == 0) {
@@ -311,8 +326,8 @@ static bool apply(void *user_data, const char *section, const char *key,
 		}
 		if (strcmp(key, "backend") == 0) {
 			apply_name(cfg->backend, sizeof(cfg->backend), v, line,
-				"backend must be \"sweetbg\", \"awww\", or "
-				"\"auto\"");
+				"backend must be \"sweetbg\", \"awww\", "
+				"\"command\", or \"auto\"");
 			return true;
 		}
 	} else if (strcmp(section, "window") == 0) {
@@ -450,6 +465,11 @@ static bool apply(void *user_data, const char *section, const char *key,
 	} else if (strcmp(section, "hooks") == 0) {
 		if (strcmp(key, "on_apply") == 0) {
 			apply_hooks(cfg, v, line);
+			return true;
+		}
+	} else if (strcmp(section, "backend.command") == 0) {
+		if (strcmp(key, "apply") == 0) {
+			apply_backend_command(cfg->backend_command, v, line);
 			return true;
 		}
 	} else if (args != NULL) {

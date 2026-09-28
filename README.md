@@ -24,6 +24,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 
 ## 🔥 Features
 - Nativelly supports [sweetbg](https://github.com/sweetwm/sweetbg) and [awww](https://codeberg.org/LGFae/awww) (default)
+- Custom backend command for any other setter (hyprpaper, swaybg, ...)
 - Fast raw thumbnail cache
 - Grid and carousel layouts
 - Fractional scaling and multiple outputs
@@ -149,6 +150,23 @@ CLI override example using `--backend-arg` flags
 ```sh
 matuwall -b awww --backend-arg --transition-type --backend-arg grow --backend-arg --transition-duration --backend-arg 2.5
 ```
+
+### Custom command
+
+Use any other wallpaper setter with `backend = "command"`. `{path}` becomes the
+absolute wallpaper path
+
+```toml
+[general]
+backend = "command"
+
+[backend.command]
+apply = "swww img {path}"
+# apply = "hyprctl hyprpaper wallpaper ,{path}"
+```
+
+Tools that keep running, like `swaybg` need a small wrapper script. See the
+[wiki](https://github.com/naurissteins/Matuwall/wiki/Backends#custom-command)
 
 ---
 

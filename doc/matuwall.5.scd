@@ -26,10 +26,11 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	directory. Defaults to _"~/Pictures/Wallpapers"_.
 
 *backend*
-	Wallpaper backend: _"awww"_, _"sweetbg"_, or _"auto"_. Defaults to
-	_"awww"_.
+	Wallpaper backend: _"awww"_, _"sweetbg"_, _"command"_, or _"auto"_.
+	Defaults to _"awww"_.
 
 	_"auto"_ selects the first running backend, checking sweetbg before awww.
+	It never selects _"command"_.
 	Explicit backends are used without probing. Apply failures leave the
 	wallpaper unchanged and exit non-zero.
 
@@ -42,6 +43,17 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 
 	Arguments are passed as-is, without a shell. The daemon rejects flags it
 	does not know. At most 32 arguments of up to 255 bytes each are accepted.
+
+## [backend.command]
+
+*apply*
+	Command run by the _"command"_ backend. Defaults to empty. It must contain
+	_{path}_, which becomes the absolute wallpaper path.
+
+	Split on spaces and tabs, then run without a shell. Quoting is not
+	supported. Matuwall waits for it; a non-zero exit fails the apply. Up to
+	511 bytes. Setters that keep running, like swaybg, need a wrapper script
+	that starts them in the background.
 
 ## [window]
 
