@@ -125,7 +125,7 @@ spinner = "#cdd0e6ff"
 
 [hooks]
 # Commands run after the wallpaper is applied, e.g. to regenerate a colorscheme
-# More info: https://github.com/naurissteins/Matuwall/wiki/Backends-and-Hooks#hooks
+# More info: https://github.com/naurissteins/Matuwall/wiki/Hooks
 # on_apply = [
 #   "matugen image {path} --source-color-index 1",
 #   "wal -i {path} -n",
