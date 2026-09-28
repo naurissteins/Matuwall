@@ -7,8 +7,8 @@
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
 directory = "~/Pictures/Wallpapers"
 
-# Wallpaper daemon used to apply the selection: "sweetbg", "awww", or "auto"
-# "auto" probes sweetbg then awww and picks the first one actually running
+# Wallpaper daemon used to apply the selection: "sweetbg", "awww", "command",
+# or "auto". "auto" probes sweetbg then awww and picks the first one running
 backend = "awww"
 
 # Extra flags for each backend's img command, one argument per item
@@ -21,6 +21,13 @@ args = []
 [backend.awww]
 args = []
 # args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+
+# Any other setter, used with backend = "command". {path} is the wallpaper
+# Runs without a shell; Matuwall waits for it and reports a non-zero exit
+[backend.command]
+apply = ""
+# apply = "swww img {path}"
+# apply = "hyprctl hyprpaper wallpaper ,{path}"
 
 [window]
 # Show the selected wallpaper full-screen behind the grid

@@ -118,7 +118,8 @@ static bool parse_backend(const char *value,
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	if (!matuwall_backend_name_valid(value)) {
 		snprintf(err, err_size,
-			"invalid backend '%s': expected sweetbg, awww, or auto",
+			"invalid backend '%s': expected sweetbg, awww, "
+			"command, or auto",
 			value);
 		return false;
 	}

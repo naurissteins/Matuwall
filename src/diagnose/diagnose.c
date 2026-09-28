@@ -209,6 +209,62 @@ static void report_configuration(
 	report_directory(report, config->directory);
 }
 
+static bool command_name(const char *command, char *out, size_t out_size) {
+	while (*command == ' ' || *command == '\t') {
+		command++;
+	}
+	size_t length = 0;
+	while (command[length] != '\0' && command[length] != ' ' &&
+		command[length] != '\t') {
+		length++;
+	}
+	if (length == 0 || length >= out_size) {
+		return false;
+	}
+	memcpy(out, command, length);
+	out[length] = '\0';
+	return true;
+}
+
+static bool command_available(const char *command) {
+	if (strchr(command, '/') != NULL) {
+		return access(command, X_OK) == 0;
+	}
+	return matuwall_backend_available(command);
+}
+
+// The command row never detects itself, only its executable is checked
+static void report_command(
+	struct diagnose_report *report, const struct matuwall_config *config) {
+	char executable[PATH_MAX];
+	char shown[PATH_MAX];
+	bool set = command_name(
+		config->backend_command, executable, sizeof(executable));
+	bool found = set && command_available(executable);
+	const char *visible =
+		clean(set ? executable : "", shown, sizeof(shown));
+	if (set) {
+		report_line(report, DIAG_INFO, "command", "%s %s", visible,
+			found ? "found" : "not found");
+	} else {
+		report_line(report, DIAG_INFO, "command", "apply not set");
+	}
+
+	if (strcmp(config->backend, "command") != 0) {
+		return;
+	}
+	if (!set) {
+		report_line(report, DIAG_ERROR, "configured",
+			"command backend needs [backend.command] apply");
+	} else if (!found) {
+		report_line(report, DIAG_ERROR, "configured", "%s not found",
+			visible);
+	} else {
+		report_line(report, DIAG_OK, "configured", "command runs %s",
+			visible);
+	}
+}
+
 static void report_backends(
 	struct diagnose_report *report, const struct matuwall_config *config) {
 	puts("\nBackends");
@@ -245,6 +301,10 @@ static void report_backends(
 		}
 	}
 
+	report_command(report, config);
+	if (strcmp(config->backend, "command") == 0) {
+		return;
+	}
 	if (strcmp(config->backend, "auto") == 0) {
 		if (automatic != NULL) {
 			report_line(report, DIAG_OK, "configured",
@@ -270,30 +330,6 @@ static void report_backends(
 		report_line(report, DIAG_OK, "configured", "%s is ready",
 			configured->backend->name);
 	}
-}
-
-static bool command_name(const char *command, char *out, size_t out_size) {
-	while (*command == ' ' || *command == '\t') {
-		command++;
-	}
-	size_t length = 0;
-	while (command[length] != '\0' && command[length] != ' ' &&
-		command[length] != '\t') {
-		length++;
-	}
-	if (length == 0 || length >= out_size) {
-		return false;
-	}
-	memcpy(out, command, length);
-	out[length] = '\0';
-	return true;
-}
-
-static bool command_available(const char *command) {
-	if (strchr(command, '/') != NULL) {
-		return access(command, X_OK) == 0;
-	}
-	return matuwall_backend_available(command);
 }
 
 static void report_hooks(

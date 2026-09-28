@@ -4,10 +4,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-// user flags for the daemon's img command, placed before the path
 struct matuwall_apply_opts {
+	// user flags for the daemon's img command, placed before the path
 	const char *const *args;
 	size_t arg_count;
+	// [backend.command] apply template, the command row's whole argv
+	const char *command;
 };
 
 struct matuwall_backend {
@@ -32,5 +34,6 @@ bool matuwall_backend_run(const char *file, const char *const head[],
 
 extern const struct matuwall_backend matuwall_backend_sweetbg;
 extern const struct matuwall_backend matuwall_backend_awww;
+extern const struct matuwall_backend matuwall_backend_command;
 
 #endif
