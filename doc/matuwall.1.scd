@@ -35,6 +35,10 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	occurrences append in command-line order. Applies to whichever backend
 	runs, except _command_. Up to 32 non-empty arguments of up to 255 bytes are accepted.
 
+*--backend-command* _CMD_
+	Set _backend.command.apply_ for this run. _CMD_ must contain _{path}_.
+	Selects the _command_ backend unless *-b* names another. The last one wins.
+
 *--border* _COLOR_
 	Set _colors.border_.
 

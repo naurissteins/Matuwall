@@ -67,6 +67,7 @@ matuwall -b awww                                 // use awww once
 matuwall --backend auto                          // detect a running backend
 matuwall --backend-arg --persist                 // replace backend flags for one run
 matuwall --no-backend-args                       // apply without configured flags
+matuwall --backend-command "swww img {path}"     // use your own setter once
 matuwall --carousel                              // enable the centered carousel
 matuwall --no-carousel                           // use the regular grid
 matuwall --edge fade                             // fade tiles at carousel edges
@@ -164,6 +165,9 @@ backend = "command"
 apply = "swww img {path}"
 # apply = "hyprctl hyprpaper wallpaper ,{path}"
 ```
+
+For one run, use `--backend-command "swww img {path}"`. It selects the command
+backend unless `-b` names another one
 
 Tools that keep running, like `swaybg` need a small wrapper script. See the
 [wiki](https://github.com/naurissteins/Matuwall/wiki/Backends#custom-command)
