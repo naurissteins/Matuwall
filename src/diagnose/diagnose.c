@@ -74,7 +74,7 @@ static const char *clean(const char *input, char *out, size_t out_size) {
 	size_t written = 0;
 	for (const unsigned char *p = (const unsigned char *)input;
 		*p != '\0' && written + 1 < out_size; p++) {
-		out[written++] = *p < 0x20 || *p == 0x7f ? '?' : (char)*p;
+		out[written++] = (char)(*p < 0x20 || *p == 0x7f ? '?' : *p);
 	}
 	out[written] = '\0';
 	return out;

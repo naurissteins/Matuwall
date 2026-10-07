@@ -46,6 +46,26 @@ On Arch Linux, install Matuwall from the AUR:
 yay -S matuwall-bin
 ```
 
+### NixOS
+
+Add the flake input and overlay, then install `pkgs.matuwall`:
+
+```nix
+# flake.nix
+inputs.matuwall = {
+  url = "github:naurissteins/Matuwall";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+
+# in your nixosSystem modules
+{ nixpkgs.overlays = [ matuwall.overlays.default ]; }
+
+# then, e.g. in home.packages or environment.systemPackages
+pkgs.matuwall
+```
+
+Or try it without installing: `nix run github:naurissteins/Matuwall`
+
 ## Build from source
 ```sh
 meson setup build --buildtype=release

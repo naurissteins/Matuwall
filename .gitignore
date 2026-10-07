@@ -20,3 +20,7 @@ compile_commands.json
 core
 core.*
 *.log
+
+# nix build output
+/result
+.direnv/
