@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdbool.h>
 
+#include "render/coverage.h"
 #include "render/draw.h"
 #include "render/tiles.h"
 
@@ -16,34 +17,16 @@ static int32_t scaled(double logical, double scale) {
 	return (int32_t)lround(logical * scale);
 }
 
-static struct matuwall_damage full_damage(
-	const struct matuwall_buffer *buffer) {
-	return (struct matuwall_damage){
+static struct matuwall_clip full_damage(const struct matuwall_buffer *buffer) {
+	return (struct matuwall_clip){
 		.x1 = (int32_t)buffer->width,
 		.y1 = (int32_t)buffer->height,
 	};
 }
 
-static struct matuwall_damage clip_damage(
-	struct matuwall_damage damage, const struct matuwall_buffer *buffer) {
-	if (damage.x0 < 0) {
-		damage.x0 = 0;
-	}
-	if (damage.y0 < 0) {
-		damage.y0 = 0;
-	}
-	if (damage.x1 > (int32_t)buffer->width) {
-		damage.x1 = (int32_t)buffer->width;
-	}
-	if (damage.y1 > (int32_t)buffer->height) {
-		damage.y1 = (int32_t)buffer->height;
-	}
-	return damage;
-}
-
-static struct matuwall_damage union_damage(
-	struct matuwall_damage a, struct matuwall_damage b) {
-	return (struct matuwall_damage){
+static struct matuwall_clip union_damage(
+	struct matuwall_clip a, struct matuwall_clip b) {
+	return (struct matuwall_clip){
 		.x0 = a.x0 < b.x0 ? a.x0 : b.x0,
 		.y0 = a.y0 < b.y0 ? a.y0 : b.y0,
 		.x1 = a.x1 > b.x1 ? a.x1 : b.x1,
@@ -51,32 +34,18 @@ static struct matuwall_damage union_damage(
 	};
 }
 
-static struct matuwall_damage panel_damage(const struct matuwall_buffer *buffer,
+static struct matuwall_clip panel_damage(const struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame) {
-	return clip_damage(
-		(struct matuwall_damage){
-			.x0 = to_pixels(frame->panel.x, frame->scale),
-			.y0 = to_pixels(frame->panel.y, frame->scale),
-			.x1 = to_pixels(frame->panel.x + frame->panel.width,
-				frame->scale),
-			.y1 = to_pixels(frame->panel.y + frame->panel.height,
-				frame->scale),
-		},
-		buffer);
-}
-
-static struct matuwall_clip damage_clip(struct matuwall_damage damage) {
-	return (struct matuwall_clip){
-		.x0 = damage.x0,
-		.y0 = damage.y0,
-		.x1 = damage.x1,
-		.y1 = damage.y1,
+	struct matuwall_clip panel = {
+		.x0 = to_pixels(frame->panel.x, frame->scale),
+		.y0 = to_pixels(frame->panel.y, frame->scale),
+		.x1 = to_pixels(
+			frame->panel.x + frame->panel.width, frame->scale),
+		.y1 = to_pixels(
+			frame->panel.y + frame->panel.height, frame->scale),
 	};
-}
-
-static uint32_t ring_color(struct matuwall_color color, uint8_t alpha) {
-	color.a = (uint8_t)(((uint32_t)color.a * alpha + 127) / 255);
-	return matuwall_color_argb(color);
+	clip_to_buffer(&panel, buffer);
+	return panel;
 }
 
 static int32_t content_overflow(const struct matuwall_frame *frame) {
@@ -200,14 +169,14 @@ static struct matuwall_frame_ring edge_ring(const struct matuwall_frame *frame,
 	struct matuwall_tile_edge edge =
 		matuwall_tiles_edge(frame, frame->carousel_slot);
 	struct matuwall_frame_ring out = *ring;
-	out.width = ring->width * edge.scale;
-	out.height = ring->height * edge.scale;
-	out.x += (ring->width - out.width) / 2.0;
-	out.y += (ring->height - out.height) / 2.0;
+	out.rect.width = ring->rect.width * edge.scale;
+	out.rect.height = ring->rect.height * edge.scale;
+	out.rect.x += (ring->rect.width - out.rect.width) / 2.0;
+	out.rect.y += (ring->rect.height - out.rect.height) / 2.0;
 	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-		out.x += edge.shift;
+		out.rect.x += edge.shift;
 	} else {
-		out.y += edge.shift;
+		out.rect.y += edge.shift;
 	}
 	out.alpha = matuwall_alpha_mul(ring->alpha, edge.opacity);
 	return out;
@@ -219,12 +188,13 @@ static void draw_ring(struct matuwall_buffer *buffer,
 	if (ring->alpha == 0) {
 		return;
 	}
-	int32_t left = scaled(frame->panel.x + ring->x, frame->scale);
-	int32_t top = scaled(frame->panel.y + ring->y, frame->scale);
-	int32_t right =
-		scaled(frame->panel.x + ring->x + ring->width, frame->scale);
+	int32_t left = scaled(frame->panel.x + ring->rect.x, frame->scale);
+	int32_t top = scaled(frame->panel.y + ring->rect.y, frame->scale);
+	int32_t right = scaled(
+		frame->panel.x + ring->rect.x + ring->rect.width, frame->scale);
 	int32_t bottom =
-		scaled(frame->panel.y + ring->y + ring->height, frame->scale);
+		scaled(frame->panel.y + ring->rect.y + ring->rect.height,
+			frame->scale);
 	if (frame->layout->flow == MATUWALL_FLOW_HORIZONTAL) {
 		int32_t offset = scaled(frame->scroll, frame->scale);
 		left -= offset;
@@ -236,40 +206,41 @@ static void draw_ring(struct matuwall_buffer *buffer,
 	}
 	int32_t inset = gap + width;
 	double focus = frame->layout->tile_width > 0
-			       ? ring->width / frame->layout->tile_width
+			       ? ring->rect.width / frame->layout->tile_width
 			       : 1.0;
 	int32_t radius = scaled(frame->layout->radius * focus, frame->scale);
 	int32_t ring_radius = radius == 0 ? 0 : radius + inset;
+	struct matuwall_color color = frame->ring;
+	color.a = matuwall_alpha_mul(color.a, ring->alpha);
 	matuwall_draw_rounded_ring(buffer, clip, left - inset, top - inset,
 		(right - left) + inset * 2, (bottom - top) + inset * 2,
-		ring_radius, width, ring_color(frame->ring, ring->alpha));
+		ring_radius, width, matuwall_color_argb(color));
 }
 
-struct matuwall_damage matuwall_frame_draw(
+struct matuwall_clip matuwall_frame_draw(
 	struct matuwall_buffer *buffer, const struct matuwall_frame *frame) {
 	int32_t panel_radius =
 		to_pixels((int32_t)frame->panel_radius, frame->scale);
-	struct matuwall_damage panel = panel_damage(buffer, frame);
-	bool full = !buffer->frame_valid;
-	struct matuwall_damage damage =
-		full ? full_damage(buffer)
-		     : clip_damage(union_damage(buffer->panel_damage, panel),
-			       buffer);
-	if (damage.x0 >= damage.x1 || damage.y0 >= damage.y1) {
-		damage = full_damage(buffer);
+	struct matuwall_clip panel = panel_damage(buffer, frame);
+	struct matuwall_clip damage = full_damage(buffer);
+	if (buffer->frame_valid) {
+		struct matuwall_clip dirty =
+			union_damage(buffer->panel_damage, panel);
+		if (clip_to_buffer(&dirty, buffer)) {
+			damage = dirty;
+		}
 	}
-	struct matuwall_clip damaged = damage_clip(damage);
 
 	// one write per damaged pixel, transparent outside the rounded panel
-	draw_panel(buffer, frame, &damaged, panel_radius);
+	draw_panel(buffer, frame, &damage, panel_radius);
 	buffer->frame_valid = true;
 	buffer->panel_damage = panel;
 	if (frame->directory_unavailable) {
-		draw_directory_unavailable(buffer, frame, &damaged);
+		draw_directory_unavailable(buffer, frame, &damage);
 		return damage;
 	}
 
-	struct matuwall_clip clip = content_clip(frame, &damaged);
+	struct matuwall_clip clip = content_clip(frame, &damage);
 
 	int32_t ring_gap = to_pixels(RING_GAP, frame->scale);
 	int32_t ring_width =
@@ -281,12 +252,9 @@ struct matuwall_damage matuwall_frame_draw(
 	matuwall_tiles_draw(buffer, frame, &clip);
 
 	if (ring_width > 0 && frame->ring.a > 0) {
-		for (size_t i = 0; i < frame->ring_count; i++) {
-			struct matuwall_frame_ring ring =
-				edge_ring(frame, &frame->rings[i]);
-			draw_ring(buffer, frame, &clip, &ring, ring_gap,
-				ring_width);
-		}
+		struct matuwall_frame_ring ring =
+			edge_ring(frame, &frame->focus_ring);
+		draw_ring(buffer, frame, &clip, &ring, ring_gap, ring_width);
 	}
 	return damage;
 }

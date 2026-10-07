@@ -254,7 +254,7 @@ bool matuwall_layer_map_clear(
 	// without a viewport the only way to cover the surface is a full buffer
 	if (layer->viewport == NULL) {
 		struct matuwall_buffer *buffer;
-		struct matuwall_damage damage = {.x1 = 1, .y1 = 1};
+		struct matuwall_clip damage = {.x1 = 1, .y1 = 1};
 		return matuwall_layer_begin_frame(layer, shm, &buffer) ==
 			       MATUWALL_BUFFER_READY &&
 		       matuwall_layer_commit_frame(

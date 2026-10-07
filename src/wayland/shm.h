@@ -8,7 +8,8 @@
 struct wl_buffer;
 struct wl_shm;
 
-struct matuwall_damage {
+// buffer pixels, x1 and y1 exclusive
+struct matuwall_clip {
 	int32_t x0;
 	int32_t y0;
 	int32_t x1;
@@ -29,7 +30,7 @@ struct matuwall_buffer {
 	bool fresh;
 	// Last rendered scene state advances independently per buffer
 	bool frame_valid;
-	struct matuwall_damage panel_damage;
+	struct matuwall_clip panel_damage;
 	struct matuwall_buffer *next;
 };
 

@@ -129,9 +129,14 @@ static void send_geometry(
 	layer->sent_height = height;
 }
 
+<<<<<<< HEAD
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
 	bool continue_frames, bool opaque,
 	const struct matuwall_damage *damage) {
+=======
+static bool present(struct matuwall_layer *layer, bool continue_frames,
+	bool opaque, const struct matuwall_clip *damage) {
+>>>>>>> 06b6399 (refactor: share rect, ring and focus types between animation)
 	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
 	if (buffer == NULL) {
 		return false;
@@ -222,3 +227,14 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame_shared(
 	return matuwall_buffer_pool_adopt(
 		&layer->buffer_pool, shm, fd, width, height, out);
 }
+<<<<<<< HEAD
+=======
+
+bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
+	bool continue_frames, bool opaque, const struct matuwall_clip *damage) {
+	if (layer->buffer_pool.drawing == NULL) {
+		return false;
+	}
+	return present(layer, continue_frames, opaque, damage);
+}
+>>>>>>> 06b6399 (refactor: share rect, ring and focus types between animation)

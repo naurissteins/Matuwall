@@ -156,26 +156,11 @@ static bool render_if_needed(struct matuwall_app *app) {
 		.spinner_alpha = matuwall_spinner_alpha(matuwall_now_ms()),
 	};
 	if (app->scan.count > 0) {
-		frame.ring_count = visual.ring_count;
-		for (size_t i = 0; i < visual.ring_count; i++) {
-			frame.rings[i] = (struct matuwall_frame_ring){
-				.x = visual.rings[i].rect.x,
-				.y = visual.rings[i].rect.y,
-				.width = visual.rings[i].rect.width,
-				.height = visual.rings[i].rect.height,
-				.alpha = visual.rings[i].alpha,
-			};
-		}
+		frame.focus_ring = visual.ring;
 		frame.focus_count = visual.focus_count;
-		for (size_t i = 0; i < visual.focus_count; i++) {
-			frame.focuses[i] = (struct matuwall_frame_focus){
-				.index = visual.focuses[i].index,
-				.slot = visual.focuses[i].slot,
-				.scale = visual.focuses[i].scale,
-			};
-		}
+		memcpy(frame.focuses, visual.focuses, sizeof(frame.focuses));
 	}
-	struct matuwall_damage damage = matuwall_frame_draw(buffer, &frame);
+	struct matuwall_clip damage = matuwall_frame_draw(buffer, &frame);
 	if (!matuwall_layer_commit_frame(
 		    &app->layer, visual.active, false, &damage)) {
 		matuwall_log_error("render", "failed to commit a frame");
