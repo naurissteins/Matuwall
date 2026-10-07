@@ -5,13 +5,6 @@
 
 #include "wayland/shm.h"
 
-struct matuwall_clip {
-	int32_t x0;
-	int32_t y0;
-	int32_t x1;
-	int32_t y1;
-};
-
 void matuwall_draw_rounded_rect(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, uint32_t color);

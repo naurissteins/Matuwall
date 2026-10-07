@@ -11,10 +11,7 @@
 #include "wayland/shm.h"
 
 struct matuwall_frame_ring {
-	double x;
-	double y;
-	double width;
-	double height;
+	struct matuwall_layout_rect rect;
 	uint8_t alpha;
 };
 
@@ -30,8 +27,8 @@ struct matuwall_frame {
 	size_t item_count;
 	int64_t carousel_slot;
 	double scroll;
-	struct matuwall_frame_ring rings[1];
-	size_t ring_count;
+	// alpha 0 draws no ring
+	struct matuwall_frame_ring focus_ring;
 	struct matuwall_frame_focus focuses[2];
 	size_t focus_count;
 	// Panel geometry in logical, surface-local units
@@ -55,7 +52,7 @@ struct matuwall_frame {
 	uint8_t spinner_alpha;
 };
 
-struct matuwall_damage matuwall_frame_draw(
+struct matuwall_clip matuwall_frame_draw(
 	struct matuwall_buffer *buffer, const struct matuwall_frame *frame);
 
 #endif

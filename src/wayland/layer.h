@@ -103,8 +103,7 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame_shared(
 	uint32_t width, uint32_t height, struct matuwall_buffer **buffer);
 
 bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
-	bool continue_frames, bool opaque,
-	const struct matuwall_damage *damage);
+	bool continue_frames, bool opaque, const struct matuwall_clip *damage);
 
 // poll deadline for idle collection, -1 when nothing is due
 int matuwall_layer_idle_timeout(

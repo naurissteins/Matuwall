@@ -199,7 +199,7 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 		preview_disable(app, "cannot wrap the preview in a buffer");
 		return;
 	}
-	struct matuwall_damage damage = {
+	struct matuwall_clip damage = {
 		.x1 = (int32_t)buffer->width,
 		.y1 = (int32_t)buffer->height,
 	};

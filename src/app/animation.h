@@ -6,30 +6,12 @@
 #include <stdint.h>
 
 #include "grid/layout.h"
-
-struct matuwall_animation_rect {
-	double x;
-	double y;
-	double width;
-	double height;
-};
-
-struct matuwall_animation_ring {
-	struct matuwall_animation_rect rect;
-	uint8_t alpha;
-};
-
-struct matuwall_animation_focus {
-	size_t index;
-	int64_t slot;
-	double scale;
-};
+#include "render/frame.h"
 
 struct matuwall_animation_sample {
 	double scroll;
-	struct matuwall_animation_ring rings[1];
-	size_t ring_count;
-	struct matuwall_animation_focus focuses[2];
+	struct matuwall_frame_ring ring;
+	struct matuwall_frame_focus focuses[2];
 	size_t focus_count;
 	bool active;
 };
@@ -45,7 +27,7 @@ struct matuwall_animation {
 	int64_t started_ms;
 	double from_scroll;
 	double to_scroll;
-	struct matuwall_animation_rect to_ring;
+	struct matuwall_layout_rect to_ring;
 	double focus_scale;
 	size_t from_focus;
 	size_t to_focus;
