@@ -7,7 +7,7 @@
 
 #include "app/app.h"
 #include "cli/options.h"
-#include "config/print.h"
+#include "config/config.h"
 #include "diagnose/diagnose.h"
 #include "thumb/cache.h"
 #include "util/log.h"

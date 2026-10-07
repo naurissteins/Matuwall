@@ -69,14 +69,6 @@ bool matuwall_bilinear_sampler_init(struct matuwall_bilinear_sampler *sampler,
 	return true;
 }
 
-uint32_t matuwall_bilinear_sample(
-	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
-	uint32_t y) {
-	struct matuwall_bilinear_row row;
-	matuwall_bilinear_row_init(&row, sampler, x, y);
-	return matuwall_bilinear_row_next(&row);
-}
-
 void matuwall_bilinear_row_init(struct matuwall_bilinear_row *row,
 	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
 	uint32_t y) {

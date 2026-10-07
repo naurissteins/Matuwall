@@ -31,10 +31,6 @@ bool matuwall_bilinear_sampler_init(struct matuwall_bilinear_sampler *sampler,
 	const uint32_t *pixels, uint32_t width, uint32_t height,
 	uint32_t target_width, uint32_t target_height);
 
-uint32_t matuwall_bilinear_sample(
-	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
-	uint32_t y);
-
 void matuwall_bilinear_row_init(struct matuwall_bilinear_row *row,
 	const struct matuwall_bilinear_sampler *sampler, uint32_t x,
 	uint32_t y);

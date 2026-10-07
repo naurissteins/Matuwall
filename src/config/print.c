@@ -1,4 +1,4 @@
-#include "config/print.h"
+#include "config/config.h"
 
 #include <stdint.h>
 

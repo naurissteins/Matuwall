@@ -139,8 +139,8 @@ double matuwall_layout_scroll(const struct matuwall_layout *layout,
 	       (double)panel->height / 2.0;
 }
 
-void matuwall_layout_surface_size(const struct matuwall_layout *layout,
-	size_t count, uint32_t max_rows, uint32_t *width, uint32_t *height) {
+static void surface_size(const struct matuwall_layout *layout, size_t count,
+	uint32_t max_rows, uint32_t *width, uint32_t *height) {
 	uint32_t columns = layout->columns;
 	if (columns == 0) {
 		columns = 1;
@@ -180,7 +180,7 @@ struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 	uint32_t edge_margin, uint32_t surface_width, uint32_t surface_height) {
 	uint32_t width;
 	uint32_t height;
-	matuwall_layout_surface_size(layout, count, max_rows, &width, &height);
+	surface_size(layout, count, max_rows, &width, &height);
 	if (width > surface_width) {
 		width = surface_width;
 	}
