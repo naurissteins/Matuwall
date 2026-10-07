@@ -129,9 +129,13 @@ static void send_geometry(
 	layer->sent_height = height;
 }
 
-static bool present(struct matuwall_layer *layer, bool continue_frames,
-	bool opaque, const struct matuwall_damage *damage) {
+bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
+	bool continue_frames, bool opaque,
+	const struct matuwall_damage *damage) {
 	struct matuwall_buffer *buffer = layer->buffer_pool.drawing;
+	if (buffer == NULL) {
+		return false;
+	}
 	if (damage == NULL || damage->x0 < 0 || damage->y0 < 0 ||
 		damage->x1 > (int32_t)buffer->width ||
 		damage->y1 > (int32_t)buffer->height ||
@@ -168,16 +172,6 @@ static bool present(struct matuwall_layer *layer, bool continue_frames,
 	return true;
 }
 
-enum matuwall_buffer_acquire matuwall_layer_begin_frame(
-	struct matuwall_layer *layer, struct wl_shm *shm,
-	struct matuwall_buffer **out) {
-	uint32_t pixel_width;
-	uint32_t pixel_height;
-	matuwall_layer_buffer_size(layer, &pixel_width, &pixel_height);
-	return matuwall_layer_begin_frame_sized(
-		layer, shm, pixel_width, pixel_height, out);
-}
-
 // READY means a frame of this size may start now
 static enum matuwall_buffer_acquire frame_gate(
 	const struct matuwall_layer *layer, uint32_t width, uint32_t height) {
@@ -202,10 +196,13 @@ static enum matuwall_buffer_acquire frame_gate(
 	return MATUWALL_BUFFER_READY;
 }
 
-enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
-	struct matuwall_layer *layer, struct wl_shm *shm, uint32_t width,
-	uint32_t height, struct matuwall_buffer **out) {
+enum matuwall_buffer_acquire matuwall_layer_begin_frame(
+	struct matuwall_layer *layer, struct wl_shm *shm,
+	struct matuwall_buffer **out) {
 	*out = NULL;
+	uint32_t width;
+	uint32_t height;
+	matuwall_layer_buffer_size(layer, &width, &height);
 	enum matuwall_buffer_acquire gate = frame_gate(layer, width, height);
 	if (gate != MATUWALL_BUFFER_READY) {
 		return gate;
@@ -224,13 +221,4 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame_shared(
 	}
 	return matuwall_buffer_pool_adopt(
 		&layer->buffer_pool, shm, fd, width, height, out);
-}
-
-bool matuwall_layer_commit_frame(struct matuwall_layer *layer,
-	bool continue_frames, bool opaque,
-	const struct matuwall_damage *damage) {
-	if (layer->buffer_pool.drawing == NULL) {
-		return false;
-	}
-	return present(layer, continue_frames, opaque, damage);
 }

@@ -192,7 +192,7 @@ static void draw_image_row(struct matuwall_buffer *buffer,
 	draw_image_edge(dst, row, full_right, right, py, shape, opacity);
 }
 
-static void draw_image_rounded(struct matuwall_buffer *buffer,
+void matuwall_draw_image_rounded(struct matuwall_buffer *buffer,
 	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
 	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
 	uint32_t src_w, uint32_t src_h, bool bilinear, uint8_t opacity) {
@@ -243,20 +243,4 @@ static void draw_image_rounded(struct matuwall_buffer *buffer,
 		draw_image_row(buffer, &row, prepared, left, right, py, &shape,
 			opacity);
 	}
-}
-
-void matuwall_draw_image_rounded(struct matuwall_buffer *buffer,
-	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
-	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h, uint8_t opacity) {
-	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
-		src, src_w, src_h, false, opacity);
-}
-
-void matuwall_draw_image_rounded_bilinear(struct matuwall_buffer *buffer,
-	const struct matuwall_clip *clip, int32_t x, int32_t y, int32_t width,
-	int32_t height, int32_t radius, int32_t inset, const uint32_t *src,
-	uint32_t src_w, uint32_t src_h, uint8_t opacity) {
-	draw_image_rounded(buffer, clip, x, y, width, height, radius, inset,
-		src, src_w, src_h, true, opacity);
 }
