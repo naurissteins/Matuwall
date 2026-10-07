@@ -210,16 +210,10 @@ static void draw_tile(struct matuwall_buffer *buffer,
 
 	if (thumb != NULL && thumb->state == MATUWALL_THUMB_READY &&
 		thumb->pixels != NULL) {
-		void (*draw)(struct matuwall_buffer *,
-			const struct matuwall_clip *, int32_t, int32_t, int32_t,
-			int32_t, int32_t, int32_t, const uint32_t *, uint32_t,
-			uint32_t, uint8_t) =
-			bilinear ? matuwall_draw_image_rounded_bilinear
-				 : matuwall_draw_image_rounded;
-		draw(buffer, clip, geometry->left, geometry->top,
-			geometry->width, geometry->height, geometry->radius,
-			border, thumb->pixels, thumb->width, thumb->height,
-			opacity);
+		matuwall_draw_image_rounded(buffer, clip, geometry->left,
+			geometry->top, geometry->width, geometry->height,
+			geometry->radius, border, thumb->pixels, thumb->width,
+			thumb->height, bilinear, opacity);
 		return;
 	}
 

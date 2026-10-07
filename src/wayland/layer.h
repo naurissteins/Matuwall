@@ -97,11 +97,6 @@ enum matuwall_buffer_acquire matuwall_layer_begin_frame(
 	struct matuwall_layer *layer, struct wl_shm *shm,
 	struct matuwall_buffer **buffer);
 
-// a buffer at any size, scaled to the surface, needs a viewport unless native
-enum matuwall_buffer_acquire matuwall_layer_begin_frame_sized(
-	struct matuwall_layer *layer, struct wl_shm *shm, uint32_t width,
-	uint32_t height, struct matuwall_buffer **buffer);
-
 // a frame from a filled memfd, never mapped here, the caller keeps fd
 enum matuwall_buffer_acquire matuwall_layer_begin_frame_shared(
 	struct matuwall_layer *layer, struct wl_shm *shm, int fd,
