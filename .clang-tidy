@@ -11,6 +11,7 @@ Checks: >
   readability-simplify-boolean-expr,
   -bugprone-easily-swappable-parameters,
   -bugprone-macro-parentheses,
+  -bugprone-signed-bitwise,
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
   -cert-dcl37-c,
   -cert-err33-c,

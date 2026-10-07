@@ -87,14 +87,15 @@ static bool collect_array_text(char *text, size_t text_size, FILE *fp,
 		}
 		(*line)++;
 		char *piece = trim(more);
-		if (len + 1 + strlen(piece) >= text_size) {
+		size_t piece_len = strlen(piece);
+		if (len + 1 + piece_len >= text_size) {
 			snprintf(err, err_size, "%s:%d: array too large", name,
 				*line);
 			return false;
 		}
 		text[len++] = ' ';
-		memcpy(text + len, piece, strlen(piece) + 1);
-		len += strlen(piece);
+		memcpy(text + len, piece, piece_len + 1);
+		len += piece_len;
 	}
 }
 

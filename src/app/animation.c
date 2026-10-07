@@ -104,7 +104,7 @@ static void add_focus(struct matuwall_animation_sample *sample, size_t index,
 				.index = index,
 				.slot = slot,
 				.scale = scale,
-			};
+		};
 	}
 }
 

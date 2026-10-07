@@ -27,7 +27,8 @@
       default = pkgs.mkShell {
         inputsFrom = [self.packages.${pkgs.stdenv.hostPlatform.system}.matuwall];
         packages = with pkgs; [
-          clang-tools
+          # Newest LLVM, to match the rolling Arch CI image
+          llvmPackages_latest.clang-tools
           valgrind
           shellcheck
           actionlint
