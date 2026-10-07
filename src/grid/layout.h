@@ -76,9 +76,6 @@ double matuwall_layout_scroll(const struct matuwall_layout *layout,
 	const struct matuwall_rect *panel, int64_t selected_slot,
 	uint32_t first_row);
 
-void matuwall_layout_surface_size(const struct matuwall_layout *layout,
-	size_t count, uint32_t max_rows, uint32_t *width, uint32_t *height);
-
 // Where the panel sits inside a surface that may be larger than it
 struct matuwall_rect matuwall_layout_panel(const struct matuwall_layout *layout,
 	size_t count, uint32_t max_rows, enum matuwall_position position,

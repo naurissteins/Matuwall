@@ -16,10 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The project's declared stack; slices link these in as they land
   PACMAN_DEPS: >-
     base-devel git meson ninja pkgconf clang ccache
-    wayland wayland-protocols libxkbcommon pixman
+    wayland wayland-protocols libxkbcommon
     libpng libjpeg-turbo libwebp scdoc
   PACMAN_LINT_DEPS: >-
     git actionlint shellcheck

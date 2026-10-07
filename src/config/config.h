@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "grid/layout.h"
 #include "render/color.h"
@@ -77,5 +78,7 @@ bool matuwall_config_load_path(struct matuwall_config *cfg, const char *path,
 size_t matuwall_config_warning_count(void);
 
 bool matuwall_config_path(char *out, size_t out_size);
+
+bool matuwall_config_print(FILE *out, const struct matuwall_config *config);
 
 #endif
