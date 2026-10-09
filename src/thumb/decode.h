@@ -34,14 +34,11 @@ struct matuwall_decode_budget {
 
 bool matuwall_image_dimensions_ok(uint32_t width, uint32_t height);
 
-// budget may be NULL for an unbounded decode
+// cover scaled to exactly target_w x target_h; budget may be NULL
 bool matuwall_image_decode(struct matuwall_image *img, const char *path,
 	uint32_t target_w, uint32_t target_h,
 	enum matuwall_decode_purpose purpose, const atomic_bool *stop,
 	const struct matuwall_decode_budget *budget);
-
-// moves heap pixels into a memfd; on failure img is unchanged
-bool matuwall_image_share(struct matuwall_image *img);
 
 // frees heap pixels, or unmaps and closes a memfd
 void matuwall_image_free(struct matuwall_image *img);

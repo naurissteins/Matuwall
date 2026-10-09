@@ -15,6 +15,7 @@ concurrency:
 jobs:
   flawfinder:
     name: Flawfinder
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

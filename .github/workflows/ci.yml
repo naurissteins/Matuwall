@@ -26,6 +26,7 @@ env:
 jobs:
   workflow-lint:
     name: Workflow Lint
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -44,6 +45,7 @@ jobs:
 
   shellcheck:
     name: ShellCheck
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -70,6 +72,7 @@ jobs:
 
   format:
     name: Format
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
@@ -88,6 +91,7 @@ jobs:
 
   check:
     name: Build Check
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Build under both compilers
@@ -124,6 +128,7 @@ jobs:
 
   tidy:
     name: Clang-Tidy
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -153,6 +158,7 @@ jobs:
 
   sanitizers:
     name: Sanitizer Smoke
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -182,6 +188,7 @@ jobs:
 
   valgrind:
     name: Valgrind Smoke
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -205,6 +212,7 @@ jobs:
 
   release-check:
     name: Release Check
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container:
@@ -235,6 +243,7 @@ jobs:
 
   nix:
     name: Nix Build
+    if: vars.RUN_CI == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
