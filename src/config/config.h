@@ -81,4 +81,56 @@ bool matuwall_config_path(char *out, size_t out_size);
 
 bool matuwall_config_print(FILE *out, const struct matuwall_config *config);
 
+// --- key table ---
+
+enum matuwall_config_type {
+	MATUWALL_CONFIG_UINT,
+	MATUWALL_CONFIG_BOOL,
+	MATUWALL_CONFIG_COLOR,
+	MATUWALL_CONFIG_POSITION,
+	MATUWALL_CONFIG_EDGE,
+	MATUWALL_CONFIG_PATH,
+	MATUWALL_CONFIG_BACKEND,
+	MATUWALL_CONFIG_COMMAND,
+	MATUWALL_CONFIG_HOOKS,
+	MATUWALL_CONFIG_ARGS,
+};
+
+// one config key: where TOML puts it, its field, and its command-line flags
+struct matuwall_config_key {
+	const char *section;
+	const char *name;
+	enum matuwall_config_type type;
+	size_t offset;
+	// integer bounds, or a string's capacity in max
+	int64_t min;
+	int64_t max;
+	// long flag, NULL when the key is config only
+	const char *flag;
+	// boolean flag that sets false
+	const char *off_flag;
+	char short_flag;
+};
+
+#define MATUWALL_CONFIG_MAX_KEYS 48
+
+extern const struct matuwall_config_key matuwall_config_keys[];
+extern const size_t matuwall_config_key_count;
+
+struct matuwall_toml_value;
+
+// scalar keys only, cfg is untouched on false, and NULL only validates
+bool matuwall_config_set(struct matuwall_config *cfg,
+	const struct matuwall_config_key *key,
+	const struct matuwall_toml_value *value);
+// same, from command-line text; booleans take "true" or "false"
+bool matuwall_config_set_text(struct matuwall_config *cfg,
+	const struct matuwall_config_key *key, const char *text);
+// what a valid value looks like, for messages
+const char *matuwall_config_expect(
+	const struct matuwall_config_key *key, char *buf, size_t size);
+// a scalar value as config text, strings unquoted
+void matuwall_config_format(const struct matuwall_config *cfg,
+	const struct matuwall_config_key *key, char *out, size_t size);
+
 #endif

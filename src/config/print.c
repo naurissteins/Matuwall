@@ -1,6 +1,7 @@
 #include "config/config.h"
 
 #include <stdint.h>
+#include <string.h>
 
 static void print_quoted(FILE *out, const char *value) {
 	fputc('"', out);
@@ -40,86 +41,62 @@ static void print_quoted(FILE *out, const char *value) {
 	fputc('"', out);
 }
 
-static void print_color(
-	FILE *out, const char *name, struct matuwall_color color) {
-	if (color.a == 0) {
-		fprintf(out, "%s = \"none\"\n", name);
-		return;
-	}
-	fprintf(out, "%s = \"#%02x%02x%02x%02x\"\n", name, color.r, color.g,
-		color.b, color.a);
-}
-
 static void print_hooks(FILE *out, const struct matuwall_config *config) {
-	fputs("[hooks]\non_apply = [\n", out);
+	fputs("[\n", out);
 	for (size_t i = 0; i < config->on_apply_count; i++) {
 		fputs("  ", out);
 		print_quoted(out, config->on_apply[i]);
 		fputs(",\n", out);
 	}
-	fputs("]\n", out);
+	fputs("]", out);
 }
 
-static void print_backend_args(FILE *out, const char *backend,
-	const struct matuwall_backend_args *args) {
-	fprintf(out, "\n[backend.%s]\nargs = [", backend);
+static void print_args(FILE *out, const struct matuwall_backend_args *args) {
+	fputc('[', out);
 	for (size_t i = 0; i < args->count; i++) {
 		fputs(i == 0 ? "" : ", ", out);
 		print_quoted(out, args->items[i]);
 	}
-	fputs("]\n", out);
+	fputc(']', out);
+}
+
+static void print_value(FILE *out, const struct matuwall_config *config,
+	const struct matuwall_config_key *key) {
+	char text[PATH_MAX];
+	switch (key->type) {
+	case MATUWALL_CONFIG_HOOKS:
+		print_hooks(out, config);
+		return;
+	case MATUWALL_CONFIG_ARGS:
+		print_args(out,
+			(const struct matuwall_backend_args *)(const void
+					*)((const char *)config + key->offset));
+		return;
+	case MATUWALL_CONFIG_UINT:
+	case MATUWALL_CONFIG_BOOL:
+		matuwall_config_format(config, key, text, sizeof(text));
+		fputs(text, out);
+		return;
+	default:
+		matuwall_config_format(config, key, text, sizeof(text));
+		print_quoted(out, text);
+		return;
+	}
 }
 
 bool matuwall_config_print(FILE *out, const struct matuwall_config *config) {
-	fputs("[general]\ndirectory = ", out);
-	print_quoted(out, config->directory);
-	fputs("\nbackend = ", out);
-	print_quoted(out, config->backend);
-	fputc('\n', out);
-	print_backend_args(out, "sweetbg", &config->sweetbg_args);
-	print_backend_args(out, "awww", &config->awww_args);
-	print_backend_args(out, "plasma", &config->plasma_args);
-	fputs("\n[backend.command]\napply = ", out);
-	print_quoted(out, config->backend_command);
-	fputc('\n', out);
-
-	fputs("\n[window]\npreview = ", out);
-	fputs(config->preview ? "true\n" : "false\n", out);
-	fputs("close_on_focus_loss = ", out);
-	fputs(config->close_on_focus_loss ? "true\n" : "false\n", out);
-	fputs("position = ", out);
-	print_quoted(out, matuwall_position_name(config->position));
-	fputc('\n', out);
-	print_color(out, "background", config->background);
-	fprintf(out, "margin = %u\nedge_margin = %u\nradius = %u\n",
-		config->layout.margin, config->edge_margin,
-		config->panel_radius);
-	fputs("\n[input]\nmouse = ", out);
-	fputs(config->mouse_enabled ? "true\n" : "false\n", out);
-	fprintf(out, "\n[animation]\nnavigation_ms = %u\nzoom_percent = %u\n",
-		config->navigation_ms, config->zoom_percent);
-
-	fprintf(out,
-		"\n[grid]\ncolumns = %u\nvisible_rows = %u\ncarousel = %s\n"
-		"edge = \"%s\"\n"
-		"spacing = %u\n"
-		"radius = %u\nborder_width = %u\nshadow_width = %u\n"
-		"ring_width = %u\n",
-		config->layout.columns, config->visible_rows,
-		config->carousel ? "true" : "false",
-		matuwall_edge_name(config->edge), config->layout.spacing,
-		config->layout.radius, config->border_width,
-		config->shadow_width, config->ring_width);
-	fprintf(out, "\n[thumbnail]\nwidth = %u\nheight = %u\n",
-		config->layout.tile_width, config->layout.tile_height);
-
-	fputs("\n[colors]\n", out);
-	print_color(out, "tile", config->tile);
-	print_color(out, "border", config->border);
-	print_color(out, "shadow", config->shadow);
-	print_color(out, "ring", config->ring);
-	print_color(out, "spinner", config->spinner);
-	fputc('\n', out);
-	print_hooks(out, config);
+	const char *section = NULL;
+	for (size_t i = 0; i < matuwall_config_key_count; i++) {
+		const struct matuwall_config_key *key =
+			&matuwall_config_keys[i];
+		if (section == NULL || strcmp(section, key->section) != 0) {
+			fprintf(out, "%s[%s]\n", section == NULL ? "" : "\n",
+				key->section);
+			section = key->section;
+		}
+		fprintf(out, "%s = ", key->name);
+		print_value(out, config, key);
+		fputc('\n', out);
+	}
 	return ferror(out) == 0;
 }

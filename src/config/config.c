@@ -125,81 +125,6 @@ static void warn(int line, const char *detail) {
 	matuwall_log_warn("config", "line %d: %s; using default", line, detail);
 }
 
-static void apply_string(char *dst, size_t size,
-	const struct matuwall_toml_value *v, int line, const char *what) {
-	if (v->type != MATUWALL_TOML_STRING) {
-		warn(line, what);
-		return;
-	}
-	char tmp[PATH_MAX];
-	if (!matuwall_config_expand_path(v->string, tmp, sizeof(tmp)) ||
-		strlen(tmp) >= size) {
-		warn(line, what);
-		return;
-	}
-	memcpy(dst, tmp, strlen(tmp) + 1);
-}
-
-// A bare name (no path expansion), e.g. the backend identifier
-static void apply_name(char *dst, size_t size,
-	const struct matuwall_toml_value *v, int line, const char *what) {
-	if (v->type != MATUWALL_TOML_STRING || v->string[0] == '\0' ||
-		strlen(v->string) >= size) {
-		warn(line, what);
-		return;
-	}
-	memcpy(dst, v->string, strlen(v->string) + 1);
-}
-
-static void apply_color(struct matuwall_color *dst,
-	const struct matuwall_toml_value *v, int line, const char *key) {
-	if (v->type != MATUWALL_TOML_STRING ||
-		!matuwall_color_parse(v->string, dst)) {
-		char detail[96];
-		snprintf(detail, sizeof(detail),
-			"%s must be \"#rrggbb\", \"#rrggbbaa\", or \"none\"",
-			key);
-		warn(line, detail);
-	}
-}
-
-static void apply_uint(uint32_t *dst, const struct matuwall_toml_value *v,
-	int line, const char *what, int64_t lo, int64_t hi) {
-	if (v->type != MATUWALL_TOML_INTEGER || v->integer < lo ||
-		v->integer > hi) {
-		warn(line, what);
-		return;
-	}
-	*dst = (uint32_t)v->integer;
-}
-
-static void apply_bool(bool *dst, const struct matuwall_toml_value *v, int line,
-	const char *what) {
-	if (v->type != MATUWALL_TOML_BOOLEAN) {
-		warn(line, what);
-		return;
-	}
-	*dst = v->boolean;
-}
-
-static void apply_position(enum matuwall_position *dst,
-	const struct matuwall_toml_value *v, int line) {
-	if (v->type != MATUWALL_TOML_STRING ||
-		!matuwall_position_from_name(v->string, dst)) {
-		warn(line, "position must be \"center\", \"left\", \"right\", "
-			   "\"top\", or \"bottom\"");
-	}
-}
-
-static void apply_edge(enum matuwall_edge *dst,
-	const struct matuwall_toml_value *v, int line) {
-	if (v->type != MATUWALL_TOML_STRING ||
-		!matuwall_edge_from_name(v->string, dst)) {
-		warn(line, "edge must be \"auto\", \"clip\", \"peek\", or "
-			   "\"fade\"");
-	}
-}
-
 // TODO: drop the edge_peek alias after a couple of releases
 static void apply_edge_peek(enum matuwall_edge *dst,
 	const struct matuwall_toml_value *v, int line) {
@@ -265,228 +190,73 @@ static void apply_backend_args(struct matuwall_backend_args *args,
 	}
 }
 
-// empty means unset, anything else must say where the wallpaper goes
-static void apply_backend_command(
-	char *dst, const struct matuwall_toml_value *v, int line) {
-	if (v->type != MATUWALL_TOML_STRING ||
-		strlen(v->string) >= MATUWALL_BACKEND_COMMAND_MAX) {
-		warn(line, "apply must be a command string up to 511 bytes");
-		return;
-	}
-	if (v->string[0] != '\0' && strstr(v->string, "{path}") == NULL) {
-		warn(line, "apply must contain {path}");
-		return;
-	}
-	memcpy(dst, v->string, strlen(v->string) + 1);
-}
-
-static struct matuwall_backend_args *backend_args(
-	struct matuwall_config *cfg, const char *backend) {
-	if (strcmp(backend, "sweetbg") == 0) {
-		return &cfg->sweetbg_args;
-	}
-	if (strcmp(backend, "awww") == 0) {
-		return &cfg->awww_args;
-	}
-	if (strcmp(backend, "plasma") == 0) {
-		return &cfg->plasma_args;
+const struct matuwall_backend_args *matuwall_config_backend_args(
+	const struct matuwall_config *cfg, const char *backend) {
+	for (size_t i = 0; i < matuwall_config_key_count; i++) {
+		const struct matuwall_config_key *key =
+			&matuwall_config_keys[i];
+		if (key->type == MATUWALL_CONFIG_ARGS &&
+			strcmp(key->section + strlen("backend."), backend) ==
+				0) {
+			return (const struct matuwall_backend_args *)(const void
+					*)((const char *)cfg + key->offset);
+		}
 	}
 	return NULL;
 }
 
-const struct matuwall_backend_args *matuwall_config_backend_args(
-	const struct matuwall_config *cfg, const char *backend) {
-	// read-only view of the same lookup
-	return backend_args((struct matuwall_config *)cfg, backend);
-}
-
-static bool unknown(const char *section, const char *key, int line, char *err,
-	size_t err_size) {
-	if (section[0] == '\0') {
-		snprintf(err, err_size,
-			"line %d: '%s' must be inside a [section]", line, key);
-	} else {
-		snprintf(err, err_size, "line %d: unknown key '%s' in [%s]",
-			line, key, section);
+static void apply_key(struct matuwall_config *cfg,
+	const struct matuwall_config_key *key,
+	const struct matuwall_toml_value *v, int line) {
+	if (key->type == MATUWALL_CONFIG_HOOKS) {
+		apply_hooks(cfg, v, line);
+		return;
 	}
-	return false;
+	if (key->type == MATUWALL_CONFIG_ARGS) {
+		apply_backend_args(
+			(struct matuwall_backend_args *)(void *)((char *)cfg +
+								 key->offset),
+			v, line);
+		return;
+	}
+	if (!matuwall_config_set(cfg, key, v)) {
+		char expect[32];
+		char detail[128];
+		snprintf(detail, sizeof(detail), "%s must be %s", key->name,
+			matuwall_config_expect(key, expect, sizeof(expect)));
+		warn(line, detail);
+	}
 }
 
-static bool apply(void *user_data, const char *section, const char *key,
+static bool apply(void *user_data, const char *section, const char *name,
 	const struct matuwall_toml_value *v, int line, char *err,
 	size_t err_size) {
 	struct matuwall_config *cfg = user_data;
-	struct matuwall_backend_args *args =
-		strncmp(section, "backend.", 8) == 0
-			? backend_args(cfg, section + 8)
-			: NULL;
-
-	if (strcmp(section, "general") == 0) {
-		if (strcmp(key, "directory") == 0) {
-			apply_string(cfg->directory, sizeof(cfg->directory), v,
-				line, "directory must be a string path");
+	if (strcmp(section, "grid") == 0 && strcmp(name, "edge_peek") == 0) {
+		apply_edge_peek(&cfg->edge, v, line);
+		return true;
+	}
+	bool known_section = false;
+	for (size_t i = 0; i < matuwall_config_key_count; i++) {
+		const struct matuwall_config_key *key =
+			&matuwall_config_keys[i];
+		if (strcmp(key->section, section) != 0) {
+			continue;
+		}
+		known_section = true;
+		if (strcmp(key->name, name) == 0) {
+			apply_key(cfg, key, v, line);
 			return true;
 		}
-		if (strcmp(key, "backend") == 0) {
-			apply_name(cfg->backend, sizeof(cfg->backend), v, line,
-				"backend must be \"sweetbg\", \"awww\", "
-				"\"plasma\", \"command\", or \"auto\"");
-			return true;
-		}
-	} else if (strcmp(section, "window") == 0) {
-		if (strcmp(key, "position") == 0) {
-			apply_position(&cfg->position, v, line);
-			return true;
-		}
-		if (strcmp(key, "background") == 0) {
-			apply_color(&cfg->background, v, line, "background");
-			return true;
-		}
-		if (strcmp(key, "margin") == 0) {
-			apply_uint(&cfg->layout.margin, v, line,
-				"margin must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "edge_margin") == 0) {
-			apply_uint(&cfg->edge_margin, v, line,
-				"edge_margin must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "radius") == 0) {
-			apply_uint(&cfg->panel_radius, v, line,
-				"window radius must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "preview") == 0) {
-			apply_bool(&cfg->preview, v, line,
-				"preview must be true or false");
-			return true;
-		}
-		if (strcmp(key, "close_on_focus_loss") == 0) {
-			apply_bool(&cfg->close_on_focus_loss, v, line,
-				"close_on_focus_loss must be true or false");
-			return true;
-		}
-	} else if (strcmp(section, "input") == 0) {
-		if (strcmp(key, "mouse") == 0) {
-			apply_bool(&cfg->mouse_enabled, v, line,
-				"mouse must be true or false");
-			return true;
-		}
-	} else if (strcmp(section, "animation") == 0) {
-		if (strcmp(key, "navigation_ms") == 0) {
-			apply_uint(&cfg->navigation_ms, v, line,
-				"navigation_ms must be 0..1000", 0, 1000);
-			return true;
-		}
-		if (strcmp(key, "zoom_percent") == 0) {
-			apply_uint(&cfg->zoom_percent, v, line,
-				"zoom_percent must be 0..10", 0, 10);
-			return true;
-		}
-	} else if (strcmp(section, "grid") == 0) {
-		if (strcmp(key, "columns") == 0) {
-			apply_uint(&cfg->layout.columns, v, line,
-				"columns must be 1..1024", 1, 1024);
-			return true;
-		}
-		if (strcmp(key, "spacing") == 0) {
-			apply_uint(&cfg->layout.spacing, v, line,
-				"spacing must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "radius") == 0) {
-			apply_uint(&cfg->layout.radius, v, line,
-				"grid radius must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "border_width") == 0) {
-			apply_uint(&cfg->border_width, v, line,
-				"border_width must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "shadow_width") == 0) {
-			apply_uint(&cfg->shadow_width, v, line,
-				"shadow_width must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "ring_width") == 0) {
-			apply_uint(&cfg->ring_width, v, line,
-				"ring_width must be 0..4096", 0, 4096);
-			return true;
-		}
-		if (strcmp(key, "visible_rows") == 0) {
-			apply_uint(&cfg->visible_rows, v, line,
-				"visible_rows must be 1..1024", 1, 1024);
-			return true;
-		}
-		if (strcmp(key, "carousel") == 0) {
-			apply_bool(&cfg->carousel, v, line,
-				"carousel must be true or false");
-			return true;
-		}
-		if (strcmp(key, "edge") == 0) {
-			apply_edge(&cfg->edge, v, line);
-			return true;
-		}
-		if (strcmp(key, "edge_peek") == 0) {
-			apply_edge_peek(&cfg->edge, v, line);
-			return true;
-		}
-	} else if (strcmp(section, "thumbnail") == 0) {
-		if (strcmp(key, "width") == 0) {
-			apply_uint(&cfg->layout.tile_width, v, line,
-				"width must be 1..16384", 1, 16384);
-			return true;
-		}
-		if (strcmp(key, "height") == 0) {
-			apply_uint(&cfg->layout.tile_height, v, line,
-				"height must be 1..16384", 1, 16384);
-			return true;
-		}
-	} else if (strcmp(section, "colors") == 0) {
-		if (strcmp(key, "tile") == 0) {
-			apply_color(&cfg->tile, v, line, "tile");
-			return true;
-		}
-		if (strcmp(key, "border") == 0) {
-			apply_color(&cfg->border, v, line, "border");
-			return true;
-		}
-		if (strcmp(key, "shadow") == 0) {
-			apply_color(&cfg->shadow, v, line, "shadow");
-			return true;
-		}
-		if (strcmp(key, "ring") == 0) {
-			apply_color(&cfg->ring, v, line, "ring");
-			return true;
-		}
-		if (strcmp(key, "spinner") == 0) {
-			apply_color(&cfg->spinner, v, line, "spinner");
-			return true;
-		}
-	} else if (strcmp(section, "hooks") == 0) {
-		if (strcmp(key, "on_apply") == 0) {
-			apply_hooks(cfg, v, line);
-			return true;
-		}
-	} else if (strcmp(section, "backend.command") == 0) {
-		if (strcmp(key, "apply") == 0) {
-			apply_backend_command(cfg->backend_command, v, line);
-			return true;
-		}
-	} else if (args != NULL) {
-		if (strcmp(key, "args") == 0) {
-			apply_backend_args(args, v, line);
-			return true;
-		}
-	} else {
+	}
+	if (!known_section) {
 		snprintf(err, err_size, "line %d: unknown section [%s]", line,
 			section);
-		return false;
+	} else {
+		snprintf(err, err_size, "line %d: unknown key '%s' in [%s]",
+			line, name, section);
 	}
-
-	return unknown(section, key, line, err, err_size);
+	return false;
 }
 
 // --- loading ---
