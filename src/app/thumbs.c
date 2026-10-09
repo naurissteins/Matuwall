@@ -10,9 +10,6 @@
 #include "thumb/worker.h"
 #include "util/log.h"
 
-static void accept_thumbnail_result(
-	struct matuwall_app *app, const struct matuwall_thumb_result *result);
-
 static void on_result(
 	void *user_data, const struct matuwall_thumb_result *result) {
 	struct matuwall_app *app = user_data;
@@ -38,15 +35,11 @@ static void on_result(
 	}
 
 	if (result->ok) {
-		accept_thumbnail_result(app, result);
+		matuwall_thumb_store_accept(app, result);
 	} else {
 		thumb->state = MATUWALL_THUMB_FAILED;
-		app->thumbs.failed++;
 		matuwall_log_warn("thumbnail", "could not decode %s",
 			app->scan.paths[result->index]);
-	}
-	if (app->thumbs.pending > 0) {
-		app->thumbs.pending--;
 	}
 	// lookahead lands off screen, and the next visit repaints anyway
 	if (matuwall_thumb_store_drawable(app, result->index)) {
@@ -89,15 +82,6 @@ static bool thumbnail_target(
 	return true;
 }
 
-static void accept_thumbnail_result(
-	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
-	size_t first;
-	size_t end;
-	size_t wrap_end;
-	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
-	matuwall_thumb_store_accept(app, result, first, end, wrap_end);
-}
-
 static size_t pending_in_range(
 	const struct matuwall_app *app, size_t first, size_t end) {
 	if (end > app->thumbs.count) {
@@ -110,22 +94,17 @@ static size_t pending_in_range(
 	return pending;
 }
 
-static void refresh_visible_pending(
-	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end) {
+static void refresh_visible_pending(struct matuwall_app *app) {
 	if (app->thumbs.items == NULL) {
 		app->thumbs.visible_pending = 0;
 		return;
 	}
-	app->thumbs.visible_pending = pending_in_range(app, first, end) +
-				      pending_in_range(app, 0, wrap_end);
-}
-
-static void refresh_current_visible_pending(struct matuwall_app *app) {
 	size_t first;
 	size_t end;
 	size_t wrap_end;
 	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
-	refresh_visible_pending(app, first, end, wrap_end);
+	app->thumbs.visible_pending = pending_in_range(app, first, end) +
+				      pending_in_range(app, 0, wrap_end);
 }
 
 static void submit_index(struct matuwall_app *app, size_t index) {
@@ -136,11 +115,9 @@ static void submit_index(struct matuwall_app *app, size_t index) {
 	if (matuwall_worker_submit(
 		    app->workers, index, app->scan.paths[index])) {
 		app->thumbs.items[index].state = MATUWALL_THUMB_PENDING;
-		app->thumbs.pending++;
 		return;
 	}
 	app->thumbs.items[index].state = MATUWALL_THUMB_FAILED;
-	app->thumbs.failed++;
 	matuwall_log_warn(
 		"thumbnail", "could not queue %s", app->scan.paths[index]);
 }
@@ -219,17 +196,7 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 		return;
 	}
 
-	size_t first;
-	size_t end;
-	size_t wrap_end;
-	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
-	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
-	submit_visible_window(app, first, end, wrap_end);
-	app->thumbs.priority_first = first;
-	app->thumbs.priority_end = end;
-	app->thumbs.priority_wrap_end = wrap_end;
-	app->thumbs.priority_set = true;
-	refresh_visible_pending(app, first, end, wrap_end);
+	matuwall_app_thumbs_prioritize_visible(app);
 }
 
 struct thumb_window {
@@ -255,9 +222,6 @@ static void withdraw_queued(void *user_data, size_t index) {
 		return;
 	}
 	app->thumbs.items[index].state = MATUWALL_THUMB_UNLOADED;
-	if (app->thumbs.pending > 0) {
-		app->thumbs.pending--;
-	}
 	app->thumbs.withdrawn++;
 }
 
@@ -273,7 +237,7 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
 	submit_visible_window(app, first, end, wrap_end);
-	refresh_visible_pending(app, first, end, wrap_end);
+	refresh_visible_pending(app);
 	if (app->thumbs.priority_set && first == app->thumbs.priority_first &&
 		end == app->thumbs.priority_end &&
 		wrap_end == app->thumbs.priority_wrap_end) {
@@ -303,27 +267,26 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 void matuwall_app_thumbs_drain(struct matuwall_app *app) {
 	if (app->workers != NULL) {
 		matuwall_worker_drain(app->workers, on_result, app);
-		refresh_current_visible_pending(app);
+		refresh_visible_pending(app);
 	}
 }
 
 static void release_thumbs(struct matuwall_app *app) {
 	if (app->thumbs.count > 0) {
-		size_t unrequested = 0;
+		size_t states[MATUWALL_THUMB_FAILED + 1] = {0};
 		for (size_t i = 0; i < app->thumbs.count; i++) {
-			unrequested += app->thumbs.items[i].state ==
-				       MATUWALL_THUMB_UNLOADED;
+			states[app->thumbs.items[i].state]++;
 		}
-		size_t unfinished = app->thumbs.pending;
 		matuwall_log_info("thumbnail",
 			"summary: %zu cache hit%s, %zu decoded, %zu failed, "
 			"%zu discarded, %zu withdrawn, %zu unrequested, "
 			"%zu unfinished, %zu evicted, %zu KiB peak resident",
 			app->thumbs.cache_hits,
 			app->thumbs.cache_hits == 1 ? "" : "s",
-			app->thumbs.decoded, app->thumbs.failed,
+			app->thumbs.decoded, states[MATUWALL_THUMB_FAILED],
 			app->thumbs.discarded, app->thumbs.withdrawn,
-			unrequested, unfinished, app->thumbs.evicted,
+			states[MATUWALL_THUMB_UNLOADED],
+			states[MATUWALL_THUMB_PENDING], app->thumbs.evicted,
 			app->thumbs.resident_peak_bytes / 1024);
 	}
 	if (app->thumbs.items != NULL) {
