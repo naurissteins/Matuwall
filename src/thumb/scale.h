@@ -16,11 +16,7 @@ struct matuwall_span {
 struct matuwall_span matuwall_axis_span(
 	uint32_t origin, uint32_t extent, uint32_t output, uint32_t index);
 
-bool matuwall_scale_cover(const struct matuwall_image *src, uint32_t out_w,
-	uint32_t out_h, struct matuwall_image *out, const atomic_bool *stop);
-
-// cover box filter fed packed RGB source rows in order, one at a time, the
-// same boxes and sums as matuwall_scale_cover, without the whole source
+// cover box filter fed packed RGB source rows in order, one at a time
 struct matuwall_row_scaler {
 	uint32_t *pixels;
 	uint32_t out_w;

@@ -8,7 +8,6 @@
 
 #include "thumb/cache.h"
 #include "thumb/decode.h"
-#include "thumb/scale.h"
 
 #define MAX_WORKERS 4
 // transient decode memory shared by all workers, see reserve_decode
@@ -122,24 +121,8 @@ static bool decode_and_scale(struct matuwall_worker_pool *pool,
 		job->result.kind == MATUWALL_JOB_THUMB
 			? MATUWALL_DECODE_THUMBNAIL
 			: MATUWALL_DECODE_PREVIEW;
-	struct matuwall_image decoded;
-	bool ok = matuwall_image_decode(&decoded, job->path, job->target_w,
+	bool ok = matuwall_image_decode(out, job->path, job->target_w,
 		job->target_h, purpose, stop, &budget);
-	if (ok && decoded.width == job->target_w &&
-		decoded.height == job->target_h) {
-		*out = decoded;
-	} else if (ok) {
-		ok = matuwall_scale_cover(
-			&decoded, job->target_w, job->target_h, out, stop);
-		matuwall_image_free(&decoded);
-	}
-	// only a scaled interlaced PNG is still on the heap here
-	if (ok && purpose == MATUWALL_DECODE_PREVIEW &&
-		!matuwall_image_share(out)) {
-		matuwall_image_free(out);
-		ok = false;
-	}
-	// the scale and share passes are part of the decode's reserved peak
 	release_decode(&ticket);
 	return ok;
 }

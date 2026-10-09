@@ -134,20 +134,6 @@ bool matuwall_image_alloc_shared(
 	return true;
 }
 
-bool matuwall_image_share(struct matuwall_image *img) {
-	if (img->shared_bytes != 0) {
-		return true;
-	}
-	struct matuwall_image shared;
-	if (!matuwall_image_alloc_shared(&shared, img->width, img->height)) {
-		return false;
-	}
-	memcpy(shared.pixels, img->pixels, shared.shared_bytes);
-	matuwall_image_free(img);
-	*img = shared;
-	return true;
-}
-
 void matuwall_image_free(struct matuwall_image *img) {
 	if (img->shared_bytes != 0) {
 		munmap(img->pixels, img->shared_bytes);

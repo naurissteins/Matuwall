@@ -9,19 +9,19 @@
 #include "thumb/scale.h"
 
 struct png_decode_buffers {
-	png_bytep *rows;
-	png_bytep row;
+	// one RGB row, or the whole image when interlaced
+	png_bytep rows;
 	struct matuwall_row_scaler scaler;
 };
 
 static void png_buffers_free(struct png_decode_buffers *buffers) {
-	free((void *)buffers->rows);
-	free(buffers->row);
+	free(buffers->rows);
 	matuwall_row_scaler_finish(&buffers->scaler);
 	*buffers = (struct png_decode_buffers){0};
 }
 
-static void normalize_png(png_structp png, png_infop info, bool argb) {
+// every format lands in packed 8-bit RGB
+static void normalize_png(png_structp png, png_infop info) {
 	int bit_depth = png_get_bit_depth(png, info);
 	int color_type = png_get_color_type(png, info);
 	if (bit_depth == 16) {
@@ -41,71 +41,43 @@ static void normalize_png(png_structp png, png_infop info, bool argb) {
 		png_set_gray_to_rgb(png);
 	}
 	png_set_strip_alpha(png);
-	// whole image decode lands in opaque ARGB8888, streaming keeps RGB
-	if (argb) {
-		png_set_bgr(png);
-		png_set_filler(png, 0xff, PNG_FILLER_AFTER);
-	}
 }
 
-static bool decode_interlaced_png(png_structp png, struct matuwall_image *img,
+// an interlaced row is final only in the last pass, so every row is kept
+static bool decode_png_rows(png_structp png, struct matuwall_image *img,
 	uint32_t width, uint32_t height, int passes,
 	struct png_decode_buffers *buffers, const struct decode_job *job) {
-	uint64_t whole = (uint64_t)width * height * sizeof(uint32_t);
-	// the worker's cover scale holds its output beside the whole image
-	if (!decode_dimensions_ok(width, height, job->purpose) ||
+	bool interlaced = passes > 1;
+	size_t row_bytes = (size_t)width * 3;
+	uint32_t kept = interlaced ? height : 1;
+	if ((interlaced &&
+		    !decode_dimensions_ok(width, height, job->purpose)) ||
 		!reserve(job,
-			whole + target_bytes(job) +
+			target_bytes(job) + (uint64_t)row_bytes * kept +
 				matuwall_row_scaler_bytes(job->target_w))) {
 		return false;
 	}
-	img->width = width;
-	img->height = height;
-	img->pixels = calloc((size_t)width * height, sizeof(uint32_t));
-	buffers->rows =
-		(png_bytep *)malloc((size_t)height * sizeof(*buffers->rows));
-	if (img->pixels == NULL || buffers->rows == NULL) {
-		png_longjmp(png, 1);
-	}
-	for (uint32_t y = 0; y < height; y++) {
-		buffers->rows[y] = (png_bytep)(img->pixels + (size_t)y * width);
-	}
-	for (int pass = 0; pass < passes; pass++) {
-		for (uint32_t y = 0; y < height; y++) {
-			if (stop_requested(job->stop)) {
-				png_longjmp(png, 1);
-			}
-			png_read_row(png, buffers->rows[y], NULL);
-		}
-	}
-	png_read_end(png, NULL);
-
-	free((void *)buffers->rows);
-	buffers->rows = NULL;
-	return true;
-}
-
-static bool decode_png_rows(png_structp png, struct matuwall_image *img,
-	uint32_t width, uint32_t height, struct png_decode_buffers *buffers,
-	const struct decode_job *job) {
-	if (!reserve(job, target_bytes(job) + (uint64_t)width * 3 +
-				  matuwall_row_scaler_bytes(job->target_w))) {
-		return false;
-	}
 	bool allocated = alloc_target(img, job);
-	buffers->row = malloc((size_t)width * 3);
-	if (!allocated || buffers->row == NULL ||
+	buffers->rows = malloc(row_bytes * kept);
+	if (!allocated || buffers->rows == NULL ||
 		!matuwall_row_scaler_init(&buffers->scaler, width, height,
 			job->target_w, job->target_h, img->pixels)) {
 		png_longjmp(png, 1);
 	}
 
-	for (uint32_t y = 0; y < height; y++) {
-		if (stop_requested(job->stop)) {
-			png_longjmp(png, 1);
+	for (int pass = 0; pass < passes; pass++) {
+		for (uint32_t y = 0; y < height; y++) {
+			if (stop_requested(job->stop)) {
+				png_longjmp(png, 1);
+			}
+			png_bytep row = buffers->rows +
+					(interlaced ? y * row_bytes : 0);
+			png_read_row(png, row, NULL);
+			if (pass == passes - 1) {
+				matuwall_row_scaler_push(
+					&buffers->scaler, y, row);
+			}
 		}
-		png_read_row(png, buffers->row, NULL);
-		matuwall_row_scaler_push(&buffers->scaler, y, buffers->row);
 	}
 	png_read_end(png, NULL);
 	return true;
@@ -156,23 +128,18 @@ bool matuwall_decode_png(
 		return false;
 	}
 
-	bool interlaced =
-		png_get_interlace_type(png, info) != PNG_INTERLACE_NONE;
-	normalize_png(png, info, interlaced);
+	normalize_png(png, info);
 	int passes = 1;
-	if (interlaced) {
+	if (png_get_interlace_type(png, info) != PNG_INTERLACE_NONE) {
 		passes = png_set_interlace_handling(png);
 	}
 	png_read_update_info(png, info);
-	size_t pixel_bytes = interlaced ? sizeof(uint32_t) : 3;
-	if (png_get_rowbytes(png, info) != (size_t)width * pixel_bytes) {
+	if (png_get_rowbytes(png, info) != (size_t)width * 3) {
 		png_longjmp(png, 1);
 	}
 
-	bool ok = interlaced ? decode_interlaced_png(png, img, width, height,
-				       passes, buffers, job)
-			     : decode_png_rows(
-				       png, img, width, height, buffers, job);
+	bool ok =
+		decode_png_rows(png, img, width, height, passes, buffers, job);
 	png_buffers_free(buffers);
 	free(buffers);
 	png_destroy_read_struct(&png, &info, NULL);
