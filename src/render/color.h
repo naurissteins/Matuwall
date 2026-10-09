@@ -73,17 +73,14 @@ static inline bool matuwall_color_parse(
 		}
 		v = (v << 4) | (uint32_t)digit;
 	}
+	// "#rrggbb" is opaque
 	if (len == 6) {
-		out->r = (uint8_t)(v >> 16);
-		out->g = (uint8_t)(v >> 8);
-		out->b = (uint8_t)v;
-		out->a = 0xff;
-	} else {
-		out->r = (uint8_t)(v >> 24);
-		out->g = (uint8_t)(v >> 16);
-		out->b = (uint8_t)(v >> 8);
-		out->a = (uint8_t)v;
+		v = v << 8 | 0xff;
 	}
+	out->r = (uint8_t)(v >> 24);
+	out->g = (uint8_t)(v >> 16);
+	out->b = (uint8_t)(v >> 8);
+	out->a = (uint8_t)v;
 	return true;
 }
 
