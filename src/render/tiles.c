@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 #include "render/image.h"
-#include "render/spinner.h"
 
 #define SPINNER_DIVISOR 14
 // size a fading tile reaches one full step past the margin
@@ -230,11 +229,16 @@ static void draw_tile(struct matuwall_buffer *buffer,
 		int32_t shorter = geometry->width < geometry->height
 					  ? geometry->width
 					  : geometry->height;
-		matuwall_spinner_draw(buffer, clip,
-			geometry->left + geometry->width / 2,
-			geometry->top + geometry->height / 2,
-			shorter / SPINNER_DIVISOR, frame->spinner,
-			matuwall_alpha_mul(frame->spinner_alpha, opacity));
+		int32_t radius = shorter / SPINNER_DIVISOR;
+		struct matuwall_color dot = frame->spinner;
+		dot.a = matuwall_alpha_mul(frame->spinner_alpha, opacity);
+		if (radius > 0) {
+			matuwall_draw_rounded_rect(buffer, clip,
+				geometry->left + geometry->width / 2 - radius,
+				geometry->top + geometry->height / 2 - radius,
+				radius * 2, radius * 2, radius,
+				matuwall_color_argb(dot));
+		}
 	}
 }
 

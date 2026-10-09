@@ -13,7 +13,6 @@
 #include "backend/backend.h"
 #include "hooks/hooks.h"
 #include "render/frame.h"
-#include "render/spinner.h"
 #include "state/selection.h"
 #include "util/clock.h"
 #include "util/log.h"
