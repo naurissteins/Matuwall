@@ -13,7 +13,6 @@ struct matuwall_thumb_result;
 struct matuwall_thumb_store {
 	struct matuwall_thumb *items;
 	size_t count;
-	size_t pending;
 	size_t visible_pending;
 	size_t target_bytes;
 	size_t resident_bytes;
@@ -26,7 +25,6 @@ struct matuwall_thumb_store {
 	// exit summary counters
 	size_t cache_hits;
 	size_t decoded;
-	size_t failed;
 	// decoded but dropped outside the window, and withdrawn before running
 	size_t discarded;
 	size_t withdrawn;
@@ -52,8 +50,7 @@ bool matuwall_thumb_store_in_window(const struct matuwall_app *app,
 void matuwall_thumb_store_evict_outside(
 	struct matuwall_app *app, size_t first, size_t end, size_t wrap_end);
 
-void matuwall_thumb_store_accept(struct matuwall_app *app,
-	const struct matuwall_thumb_result *result, size_t first, size_t end,
-	size_t wrap_end);
+void matuwall_thumb_store_accept(
+	struct matuwall_app *app, const struct matuwall_thumb_result *result);
 
 #endif

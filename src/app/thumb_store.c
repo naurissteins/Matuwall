@@ -196,9 +196,12 @@ static void make_room(struct matuwall_app *app, size_t bytes, size_t preserve,
 	}
 }
 
-void matuwall_thumb_store_accept(struct matuwall_app *app,
-	const struct matuwall_thumb_result *result, size_t first, size_t end,
-	size_t wrap_end) {
+void matuwall_thumb_store_accept(
+	struct matuwall_app *app, const struct matuwall_thumb_result *result) {
+	size_t first;
+	size_t end;
+	size_t wrap_end;
+	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	struct matuwall_thumb *thumb = &app->thumbs.items[result->index];
 	if (!matuwall_thumb_store_in_window(
 		    app, result->index, first, end, wrap_end)) {
@@ -214,7 +217,6 @@ void matuwall_thumb_store_accept(struct matuwall_app *app,
 		bytes > MAX_RESIDENT_BYTES) {
 		free(result->image.pixels);
 		thumb->state = MATUWALL_THUMB_FAILED;
-		app->thumbs.failed++;
 		matuwall_log_warn("thumbnail",
 			"thumbnail exceeds the resident memory limit: %s",
 			app->scan.paths[result->index]);
