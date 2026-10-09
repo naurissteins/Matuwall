@@ -14,21 +14,14 @@ static void cap_preview_target(uint32_t *width, uint32_t *height) {
 		return;
 	}
 
-	if (*width >= *height) {
-		uint32_t scaled =
-			(uint32_t)(((uint64_t)*height * PREVIEW_LONG_EDGE_MAX +
-					   *width / 2) /
-				   *width);
-		*width = PREVIEW_LONG_EDGE_MAX;
-		*height = scaled > 0 ? scaled : 1;
-	} else {
-		uint32_t scaled =
-			(uint32_t)(((uint64_t)*width * PREVIEW_LONG_EDGE_MAX +
-					   *height / 2) /
-				   *height);
-		*width = scaled > 0 ? scaled : 1;
-		*height = PREVIEW_LONG_EDGE_MAX;
-	}
+	uint32_t *long_edge = *width >= *height ? width : height;
+	uint32_t *short_edge = long_edge == width ? height : width;
+	uint32_t scaled =
+		(uint32_t)(((uint64_t)*short_edge * PREVIEW_LONG_EDGE_MAX +
+				   *long_edge / 2) /
+			   *long_edge);
+	*long_edge = PREVIEW_LONG_EDGE_MAX;
+	*short_edge = scaled > 0 ? scaled : 1;
 }
 
 void matuwall_app_preview_init(struct matuwall_app *app) {
