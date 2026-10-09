@@ -5,6 +5,11 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+// $var/matuwall<leaf>, or $HOME<fallback>/matuwall<leaf>, a relative
+// $var is ignored, as the XDG spec says
+bool matuwall_fs_xdg_path(const char *var, const char *fallback,
+	const char *leaf, char *out, size_t out_size);
+
 // $XDG_STATE_HOME/matuwall, or ~/.local/state/matuwall
 bool matuwall_fs_state_dir(char *out, size_t out_size);
 

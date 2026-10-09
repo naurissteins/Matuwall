@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "config/toml.h"
+#include "util/fs.h"
 #include "util/log.h"
 
 #define DEFAULT_DIRECTORY "Pictures/Wallpapers"
@@ -262,18 +263,8 @@ static bool apply(void *user_data, const char *section, const char *name,
 // --- loading ---
 
 bool matuwall_config_path(char *out, size_t out_size) {
-	const char *xdg = getenv("XDG_CONFIG_HOME");
-	if (xdg != NULL && xdg[0] != '\0') {
-		int n = snprintf(out, out_size, "%s/matuwall/config.toml", xdg);
-		return n > 0 && (size_t)n < out_size;
-	}
-	const char *home = getenv("HOME");
-	if (home != NULL && home[0] != '\0') {
-		int n = snprintf(
-			out, out_size, "%s/.config/matuwall/config.toml", home);
-		return n > 0 && (size_t)n < out_size;
-	}
-	return false;
+	return matuwall_fs_xdg_path(
+		"XDG_CONFIG_HOME", "/.config", "/config.toml", out, out_size);
 }
 
 static bool load_path(struct matuwall_config *cfg, const char *path,
