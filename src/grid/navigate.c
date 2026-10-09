@@ -89,6 +89,52 @@ static bool scroll_into_view(struct matuwall_grid *grid,
 	return true;
 }
 
+// +1 or -1 along a carousel's scroll axis, 0 for any other move
+static int carousel_step(enum matuwall_flow flow, enum matuwall_move move) {
+	if (flow == MATUWALL_FLOW_GRID) {
+		return 0;
+	}
+	bool horizontal = flow == MATUWALL_FLOW_HORIZONTAL;
+	if (move == (horizontal ? MATUWALL_MOVE_RIGHT : MATUWALL_MOVE_DOWN)) {
+		return 1;
+	}
+	if (move == (horizontal ? MATUWALL_MOVE_LEFT : MATUWALL_MOVE_UP)) {
+		return -1;
+	}
+	return 0;
+}
+
+static size_t grid_step(struct matuwall_grid *grid,
+	const struct matuwall_layout *layout, uint32_t surface_height,
+	enum matuwall_move move) {
+	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
+	size_t last = grid->count - 1;
+	size_t selected = grid->selected;
+	switch (move) {
+	case MATUWALL_MOVE_LEFT:
+		// Linear across row boundaries, like an icon grid
+		return selected > 0 ? selected - 1 : 0;
+	case MATUWALL_MOVE_RIGHT:
+		return selected < last ? selected + 1 : selected;
+	case MATUWALL_MOVE_UP:
+		return selected >= columns ? selected - columns : selected;
+	case MATUWALL_MOVE_DOWN:
+		if (selected + columns <= last) {
+			return selected + columns;
+		}
+		// short final row still deserves to be reachable
+		return row_of(layout, selected) < row_of(layout, last)
+			       ? last
+			       : selected;
+	case MATUWALL_MOVE_PAGE_UP:
+		return move_page(grid, layout, surface_height, false);
+	case MATUWALL_MOVE_PAGE_DOWN:
+		return move_page(grid, layout, surface_height, true);
+	default:
+		return selected;
+	}
+}
+
 bool matuwall_grid_move(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
 	enum matuwall_move move) {
@@ -96,102 +142,28 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 		return false;
 	}
 
-	uint32_t columns = layout->columns == 0 ? 1 : layout->columns;
 	size_t last = grid->count - 1;
 	size_t selected = grid->selected;
 	size_t previous_selected = grid->selected;
 	int64_t previous_cursor = grid->cursor;
 	uint32_t first_row = grid->first_row;
 
-	switch (move) {
-	case MATUWALL_MOVE_LEFT:
-		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			break;
+	int step = carousel_step(layout->flow, move);
+	if (step != 0) {
+		if (step < 0 ? grid->cursor > INT64_MIN
+			     : grid->cursor < INT64_MAX) {
+			grid->cursor += step;
 		}
-		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-			if (grid->cursor > INT64_MIN) {
-				grid->cursor--;
-			}
-			selected = matuwall_layout_carousel_index(
-				grid->cursor, grid->count);
-			break;
-		}
-		// Linear across row boundaries, like an icon grid
-		if (selected > 0) {
-			selected--;
-		}
-		break;
-	case MATUWALL_MOVE_RIGHT:
-		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			break;
-		}
-		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-			if (grid->cursor < INT64_MAX) {
-				grid->cursor++;
-			}
-			selected = matuwall_layout_carousel_index(
-				grid->cursor, grid->count);
-			break;
-		}
-		if (selected < last) {
-			selected++;
-		}
-		break;
-	case MATUWALL_MOVE_UP:
-		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-			break;
-		}
-		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			if (grid->cursor > INT64_MIN) {
-				grid->cursor--;
-			}
-			selected = matuwall_layout_carousel_index(
-				grid->cursor, grid->count);
-			break;
-		}
-		if (selected >= columns) {
-			selected -= columns;
-		}
-		break;
-	case MATUWALL_MOVE_DOWN:
-		if (layout->flow == MATUWALL_FLOW_HORIZONTAL) {
-			break;
-		}
-		if (layout->flow == MATUWALL_FLOW_VERTICAL) {
-			if (grid->cursor < INT64_MAX) {
-				grid->cursor++;
-			}
-			selected = matuwall_layout_carousel_index(
-				grid->cursor, grid->count);
-			break;
-		}
-		if (selected + columns <= last) {
-			selected += columns;
-		} else if (row_of(layout, selected) < row_of(layout, last)) {
-			// A short final row still deserves to be reachable
-			selected = last;
-		}
-		break;
-	case MATUWALL_MOVE_PAGE_UP:
-		if (layout->flow != MATUWALL_FLOW_GRID) {
-			break;
-		}
-		selected = move_page(grid, layout, surface_height, false);
-		break;
-	case MATUWALL_MOVE_PAGE_DOWN:
-		if (layout->flow != MATUWALL_FLOW_GRID) {
-			break;
-		}
-		selected = move_page(grid, layout, surface_height, true);
-		break;
-	case MATUWALL_MOVE_FIRST:
+		selected = matuwall_layout_carousel_index(
+			grid->cursor, grid->count);
+	} else if (move == MATUWALL_MOVE_FIRST) {
 		selected = 0;
 		grid->cursor = 0;
-		break;
-	case MATUWALL_MOVE_LAST:
+	} else if (move == MATUWALL_MOVE_LAST) {
 		selected = last;
 		grid->cursor = (int64_t)last;
-		break;
+	} else if (layout->flow == MATUWALL_FLOW_GRID) {
+		selected = grid_step(grid, layout, surface_height, move);
 	}
 
 	grid->selected = selected;
