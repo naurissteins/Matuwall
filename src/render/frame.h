@@ -55,4 +55,9 @@ struct matuwall_frame {
 struct matuwall_clip matuwall_frame_draw(
 	struct matuwall_buffer *buffer, const struct matuwall_frame *frame);
 
+// pending tiles repaint at this pace while the spinner pulses
+#define MATUWALL_SPINNER_INTERVAL_MS 125
+
+uint8_t matuwall_spinner_alpha(int64_t now_ms);
+
 #endif

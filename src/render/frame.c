@@ -8,6 +8,9 @@
 #include "render/tiles.h"
 
 #define RING_GAP 3
+#define PULSE_PERIOD_MS 1400
+#define PULSE_ALPHA_MIN 60
+#define PULSE_ALPHA_MAX 220
 
 static int32_t to_pixels(int32_t logical, double scale) {
 	return (int32_t)lround((double)logical * scale);
@@ -257,4 +260,13 @@ struct matuwall_clip matuwall_frame_draw(
 		draw_ring(buffer, frame, &clip, &ring, ring_gap, ring_width);
 	}
 	return damage;
+}
+
+uint8_t matuwall_spinner_alpha(int64_t now_ms) {
+	int64_t phase = now_ms % PULSE_PERIOD_MS;
+	int64_t half = PULSE_PERIOD_MS / 2;
+
+	int64_t up = phase < half ? phase : PULSE_PERIOD_MS - phase;
+	int64_t span = PULSE_ALPHA_MAX - PULSE_ALPHA_MIN;
+	return (uint8_t)(PULSE_ALPHA_MIN + up * span / half);
 }

@@ -82,7 +82,6 @@ executable(
 	'src/render/frame.c',
 	'src/render/image.c',
 	'src/render/sample.c',
-	'src/render/spinner.c',
 	'src/render/tiles.c',
 	'src/scan/dirscan.c',
 	'src/state/selection.c',
