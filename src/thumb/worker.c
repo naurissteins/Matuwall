@@ -37,8 +37,7 @@ struct matuwall_worker_pool {
 
 	pthread_mutex_t mutex;
 	pthread_cond_t wakeup;
-	struct job *jobs_head;
-	struct job *jobs_tail;
+	struct job_list jobs;
 	struct job *results;
 	// newest preview a worker has taken, cleared when it publishes
 	struct job *running_preview;
@@ -50,10 +49,6 @@ struct matuwall_worker_pool {
 	int event_fd;
 	struct matuwall_cache *cache;
 };
-
-static bool stop_requested(const struct matuwall_worker_pool *pool) {
-	return atomic_load_explicit(&pool->stopping, memory_order_relaxed);
-}
 
 static bool flag_set(const atomic_bool *flag) {
 	return atomic_load_explicit(flag, memory_order_relaxed);
@@ -166,16 +161,16 @@ static bool produce(struct matuwall_worker_pool *pool, const struct job *job,
 }
 
 static struct job *take_job(struct matuwall_worker_pool *pool) {
-	while (pool->jobs_head == NULL && !stop_requested(pool)) {
+	while (pool->jobs.head == NULL && !flag_set(&pool->stopping)) {
 		pthread_cond_wait(&pool->wakeup, &pool->mutex);
 	}
-	if (stop_requested(pool)) {
+	if (flag_set(&pool->stopping)) {
 		return NULL;
 	}
-	struct job *job = pool->jobs_head;
-	pool->jobs_head = job->next;
-	if (pool->jobs_head == NULL) {
-		pool->jobs_tail = NULL;
+	struct job *job = pool->jobs.head;
+	pool->jobs.head = job->next;
+	if (pool->jobs.head == NULL) {
+		pool->jobs.tail = NULL;
 	}
 	if (job->result.kind == MATUWALL_JOB_PREVIEW) {
 		pool->running_preview = job;
@@ -314,7 +309,7 @@ static void job_list_extend(struct job_list *list, struct job_list *addition) {
 
 // Caller holds the mutex
 static void drop_queued_previews(struct matuwall_worker_pool *pool) {
-	struct job **cursor = &pool->jobs_head;
+	struct job **cursor = &pool->jobs.head;
 	struct job *prev = NULL;
 
 	while (*cursor != NULL) {
@@ -325,8 +320,8 @@ static void drop_queued_previews(struct matuwall_worker_pool *pool) {
 			continue;
 		}
 		*cursor = job->next;
-		if (pool->jobs_tail == job) {
-			pool->jobs_tail = prev;
+		if (pool->jobs.tail == job) {
+			pool->jobs.tail = prev;
 		}
 		free(job);
 	}
@@ -341,12 +336,7 @@ bool matuwall_worker_submit(
 	}
 
 	pthread_mutex_lock(&pool->mutex);
-	if (pool->jobs_tail != NULL) {
-		pool->jobs_tail->next = job;
-	} else {
-		pool->jobs_head = job;
-	}
-	pool->jobs_tail = job;
+	job_list_append(&pool->jobs, job);
 	pthread_cond_signal(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 	return true;
@@ -365,7 +355,7 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	struct job_list withdrawn = {0};
 
 	pthread_mutex_lock(&pool->mutex);
-	struct job *job = pool->jobs_head;
+	struct job *job = pool->jobs.head;
 	while (job != NULL) {
 		struct job *next = job->next;
 		if (job->result.kind == MATUWALL_JOB_PREVIEW) {
@@ -385,8 +375,7 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 
 	job_list_extend(&previews, &visible);
 	job_list_extend(&previews, &remaining);
-	pool->jobs_head = previews.head;
-	pool->jobs_tail = previews.tail;
+	pool->jobs = previews;
 	pthread_mutex_unlock(&pool->mutex);
 
 	job = withdrawn.head;
@@ -409,10 +398,10 @@ bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,
 	pthread_mutex_lock(&pool->mutex);
 	drop_queued_previews(pool);
 	cancel_running_preview(pool);
-	job->next = pool->jobs_head;
-	pool->jobs_head = job;
-	if (pool->jobs_tail == NULL) {
-		pool->jobs_tail = job;
+	job->next = pool->jobs.head;
+	pool->jobs.head = job;
+	if (pool->jobs.tail == NULL) {
+		pool->jobs.tail = job;
 	}
 	pthread_cond_signal(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
@@ -472,7 +461,7 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	}
 
 	// nothing is running now, free the queues without locking
-	struct job *job = pool->jobs_head;
+	struct job *job = pool->jobs.head;
 	while (job != NULL) {
 		struct job *next = job->next;
 		free(job);
