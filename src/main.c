@@ -106,9 +106,7 @@ int main(int argc, char *argv[]) {
 	matuwall_cli_log_overrides(&options, &config);
 
 	struct matuwall_app app;
-	const char *output_name =
-		options.output_set ? options.output_name : NULL;
-	bool ok = matuwall_app_init(&app, &config, output_name) &&
+	bool ok = matuwall_app_init(&app, &config, options.output_name) &&
 		  matuwall_app_run(&app);
 	matuwall_app_finish(&app);
 	matuwall_log_info("exit", "status %s", ok ? "success" : "failure");

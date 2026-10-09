@@ -68,6 +68,7 @@ executable(
 	'src/cli/options.c',
 	'src/cli/usage.c',
 	'src/config/config.c',
+	'src/config/keys.c',
 	'src/config/path.c',
 	'src/config/print.c',
 	'src/config/string.c',
