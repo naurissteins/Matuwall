@@ -46,17 +46,8 @@ static uint64_t fnv1a(uint64_t hash, const void *data, size_t len) {
 }
 
 bool matuwall_cache_dir(char *out, size_t out_size) {
-	const char *xdg = getenv("XDG_CACHE_HOME");
-	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/matuwall/thumbs",
-			       xdg) < out_size;
-	}
-	const char *home = getenv("HOME");
-	if (home == NULL) {
-		return false;
-	}
-	return (size_t)snprintf(out, out_size, "%s/.cache/matuwall/thumbs",
-		       home) < out_size;
+	return matuwall_fs_xdg_path(
+		"XDG_CACHE_HOME", "/.cache", "/thumbs", out, out_size);
 }
 
 bool matuwall_cache_key(const struct matuwall_cache *cache,

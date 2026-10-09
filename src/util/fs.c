@@ -9,18 +9,25 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+bool matuwall_fs_xdg_path(const char *var, const char *fallback,
+	const char *leaf, char *out, size_t out_size) {
+	const char *base = getenv(var);
+	if (base == NULL || base[0] != '/') {
+		base = getenv("HOME");
+		if (base == NULL || base[0] == '\0') {
+			return false;
+		}
+	} else {
+		fallback = "";
+	}
+	int n = snprintf(
+		out, out_size, "%s%s/matuwall%s", base, fallback, leaf);
+	return n > 0 && (size_t)n < out_size;
+}
+
 bool matuwall_fs_state_dir(char *out, size_t out_size) {
-	const char *xdg = getenv("XDG_STATE_HOME");
-	if (xdg != NULL && xdg[0] == '/') {
-		return (size_t)snprintf(out, out_size, "%s/matuwall", xdg) <
-		       out_size;
-	}
-	const char *home = getenv("HOME");
-	if (home == NULL) {
-		return false;
-	}
-	return (size_t)snprintf(out, out_size, "%s/.local/state/matuwall",
-		       home) < out_size;
+	return matuwall_fs_xdg_path(
+		"XDG_STATE_HOME", "/.local/state", "", out, out_size);
 }
 
 bool matuwall_fs_make_dirs(const char *path, mode_t mode) {
