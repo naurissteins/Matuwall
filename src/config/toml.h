@@ -22,9 +22,8 @@ struct matuwall_toml_value {
 	size_t item_count;
 };
 
-typedef bool (*matuwall_toml_visitor)(void *user_data, const char *section,
-	const char *key, const struct matuwall_toml_value *value, int line,
-	char *err, size_t err_size);
+typedef void (*matuwall_toml_visitor)(void *user_data, const char *section,
+	const char *key, const struct matuwall_toml_value *value, int line);
 
 bool matuwall_toml_parse(FILE *fp, const char *name,
 	matuwall_toml_visitor visit, void *user_data, char *err,

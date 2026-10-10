@@ -229,13 +229,12 @@ static void apply_key(struct matuwall_config *cfg,
 	}
 }
 
-static bool apply(void *user_data, const char *section, const char *name,
-	const struct matuwall_toml_value *v, int line, char *err,
-	size_t err_size) {
+static void apply(void *user_data, const char *section, const char *name,
+	const struct matuwall_toml_value *v, int line) {
 	struct matuwall_config *cfg = user_data;
 	if (strcmp(section, "grid") == 0 && strcmp(name, "edge_peek") == 0) {
 		apply_edge_peek(&cfg->edge, v, line);
-		return true;
+		return;
 	}
 	bool known_section = false;
 	for (size_t i = 0; i < matuwall_config_key_count; i++) {
@@ -247,17 +246,21 @@ static bool apply(void *user_data, const char *section, const char *name,
 		known_section = true;
 		if (strcmp(key->name, name) == 0) {
 			apply_key(cfg, key, v, line);
-			return true;
+			return;
 		}
 	}
+	// A typo or a key from another version must not cost the rest of the
+	// file
+	warning_count++;
 	if (!known_section) {
-		snprintf(err, err_size, "line %d: unknown section [%s]", line,
+		matuwall_log_warn("config",
+			"line %d: unknown section [%s]; ignored", line,
 			section);
 	} else {
-		snprintf(err, err_size, "line %d: unknown key '%s' in [%s]",
-			line, name, section);
+		matuwall_log_warn("config",
+			"line %d: unknown key '%s' in [%s]; ignored", line,
+			name, section);
 	}
-	return false;
 }
 
 // --- loading ---
