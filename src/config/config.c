@@ -126,24 +126,6 @@ static void warn(int line, const char *detail) {
 	matuwall_log_warn("config", "line %d: %s; using default", line, detail);
 }
 
-// TODO: drop the edge_peek alias after a couple of releases
-static void apply_edge_peek(enum matuwall_edge *dst,
-	const struct matuwall_toml_value *v, int line) {
-	if (v->type != MATUWALL_TOML_BOOLEAN) {
-		warn(line, "edge_peek must be true or false");
-		return;
-	}
-	warning_count++;
-	matuwall_log_warn("config",
-		"line %d: edge_peek is deprecated; use edge = \"peek\" or "
-		"\"clip\"",
-		line);
-	// An explicit edge wins wherever it appears
-	if (v->boolean && *dst == MATUWALL_EDGE_AUTO) {
-		*dst = MATUWALL_EDGE_PEEK;
-	}
-}
-
 static void apply_hooks(struct matuwall_config *cfg,
 	const struct matuwall_toml_value *v, int line) {
 	if (v->type != MATUWALL_TOML_ARRAY) {
@@ -232,10 +214,6 @@ static void apply_key(struct matuwall_config *cfg,
 static void apply(void *user_data, const char *section, const char *name,
 	const struct matuwall_toml_value *v, int line) {
 	struct matuwall_config *cfg = user_data;
-	if (strcmp(section, "grid") == 0 && strcmp(name, "edge_peek") == 0) {
-		apply_edge_peek(&cfg->edge, v, line);
-		return;
-	}
 	bool known_section = false;
 	for (size_t i = 0; i < matuwall_config_key_count; i++) {
 		const struct matuwall_config_key *key =
