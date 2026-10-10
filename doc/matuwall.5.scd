@@ -10,8 +10,8 @@ matuwall - configuration file for the matuwall wallpaper picker
 _~/.config/matuwall/config.toml_. A missing file uses built-in defaults.
 
 Syntax errors include a line number and cause the whole file to be ignored.
-Invalid known values produce a warning and use that key's default. Unknown keys
-or sections cause the whole file to be ignored.
+Invalid values produce a warning and use that key's default. Unknown keys and
+sections produce a warning and are ignored.
 
 The supported TOML subset has _[section]_ tables and _key = value_ pairs. Values
 may be double-quoted strings, integers, booleans, or arrays of double-quoted

@@ -273,15 +273,11 @@ bool matuwall_toml_parse(FILE *fp, const char *name,
 			return false;
 		}
 
-		bool ok = visit(
-			user_data, section, key, &parsed, line, err, err_size);
+		visit(user_data, section, key, &parsed, line);
 		if (is_array) {
 			for (size_t i = 0; i < parsed.item_count; i++) {
 				free(items[i]);
 			}
-		}
-		if (!ok) {
-			return false;
 		}
 	}
 	return true;

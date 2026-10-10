@@ -187,7 +187,7 @@ static void report_configuration(
 	size_t warnings = matuwall_config_warning_count();
 	if (warnings > 0) {
 		report_line(report, DIAG_WARN, "config values",
-			"%zu invalid value%s used defaults", warnings,
+			"%zu value%s ignored or defaulted", warnings,
 			warnings == 1 ? "" : "s");
 	}
 	char backend[sizeof(config->backend)];
