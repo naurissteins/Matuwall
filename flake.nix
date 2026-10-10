@@ -1,5 +1,5 @@
 {
-  description = "Matuwall - minimal, instant-open wallpaper picker for Wayland";
+  description = "Matuwall - Fast and lightweight wallpaper picker for Wayland";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
