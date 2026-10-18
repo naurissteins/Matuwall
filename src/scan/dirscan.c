@@ -2,16 +2,13 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
-
+#include <stdio.h>
 #include "util/log.h"
 
-// A picker, not a file browser; refuse to build an unbounded grid
 #define MAX_ITEMS 4096
 #define INITIAL_CAPACITY 64
 
@@ -44,31 +41,40 @@ static bool may_be_image(unsigned char type) {
 
 static bool push_path(struct matuwall_dirscan *scan, char *path) {
 	if (scan->count == scan->capacity) {
-		size_t capacity = scan->capacity == 0 ? INITIAL_CAPACITY
-						      : scan->capacity * 2;
+		size_t capacity = scan->capacity == 0
+			? INITIAL_CAPACITY
+			: scan->capacity * 2;
+
 		char **paths = (char **)realloc(
 			(void *)scan->paths, capacity * sizeof(*scan->paths));
 		if (paths == NULL) {
 			return false;
 		}
+
 		scan->paths = paths;
 		scan->capacity = capacity;
 	}
+
 	scan->paths[scan->count++] = path;
 	return true;
 }
 
 static char *join_path(const char *dir, const char *name) {
 	size_t dir_len = strlen(dir);
+
 	// Tolerate a trailing slash on the configured directory
 	bool needs_slash = dir_len > 0 && dir[dir_len - 1] != '/';
-	size_t size = dir_len + (needs_slash ? 1 : 0) + strlen(name) + 1;
+	size_t size =
+		dir_len + (needs_slash ? 1 : 0) + strlen(name) + 1;
 
 	char *path = malloc(size);
 	if (path == NULL) {
 		return NULL;
 	}
-	snprintf(path, size, "%s%s%s", dir, needs_slash ? "/" : "", name);
+
+	snprintf(path, size, "%s%s%s",
+		dir, needs_slash ? "/" : "", name);
+
 	return path;
 }
 
@@ -78,14 +84,21 @@ static int compare_paths(const void *a, const void *b) {
 	return strcmp(*lhs, *rhs);
 }
 
-bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir) {
-	*scan = (struct matuwall_dirscan){0};
-
+// Recursively scan directories without following directory symlinks.
+static bool scan_directory(
+	struct matuwall_dirscan *scan, const char *dir, bool root) {
 	DIR *handle = opendir(dir);
 	if (handle == NULL) {
-		scan->unavailable = true;
-		matuwall_log_error("wallpapers",
-			"directory unavailable: %s: %s", dir, strerror(errno));
+		if (root) {
+			scan->unavailable = true;
+			matuwall_log_error("wallpapers",
+				"directory unavailable: %s: %s",
+				dir, strerror(errno));
+		} else {
+			matuwall_log_warn("wallpapers",
+				"cannot scan subdirectory %s: %s",
+				dir, strerror(errno));
+		}
 		return true;
 	}
 
@@ -94,38 +107,96 @@ bool matuwall_dirscan_run(struct matuwall_dirscan *scan, const char *dir) {
 		if (entry->d_name[0] == '.') {
 			continue;
 		}
-		if (!may_be_image(entry->d_type)) {
-			continue;
-		}
-		if (!has_supported_extension(entry->d_name)) {
-			continue;
-		}
-		if (scan->count == MAX_ITEMS) {
-			scan->truncated = true;
-			break;
-		}
 
 		char *path = join_path(dir, entry->d_name);
-		if (path == NULL || !push_path(scan, path)) {
-			free(path);
+		if (path == NULL) {
 			closedir(handle);
-			matuwall_dirscan_finish(scan);
 			return false;
+		}
+
+		unsigned char type = entry->d_type;
+
+		// Determine unknown entry types without following symlinks.
+		if (type == DT_UNKNOWN) {
+			struct stat st;
+
+			if (lstat(path, &st) != 0) {
+				free(path);
+				continue;
+			}
+
+			if (S_ISDIR(st.st_mode)) {
+				type = DT_DIR;
+			} else if (S_ISREG(st.st_mode)) {
+				type = DT_REG;
+			} else if (S_ISLNK(st.st_mode)) {
+				type = DT_LNK;
+			} else {
+				free(path);
+				continue;
+			}
+		}
+
+		if (type == DT_DIR) {
+			if (scan->count < MAX_ITEMS &&
+				!scan_directory(scan, path, false)) {
+				free(path);
+				closedir(handle);
+				return false;
+			}
+
+			free(path);
+
+			if (scan->truncated) {
+				break;
+			}
+
+			continue;
+		}
+
+		if (may_be_image(type) &&
+			has_supported_extension(entry->d_name)) {
+			if (scan->count == MAX_ITEMS) {
+				scan->truncated = true;
+				free(path);
+				break;
+			}
+
+			if (!push_path(scan, path)) {
+				free(path);
+				closedir(handle);
+				return false;
+			}
+		} else {
+			free(path);
 		}
 	}
 
 	closedir(handle);
+	return true;
+}
+
+bool matuwall_dirscan_run(
+	struct matuwall_dirscan *scan, const char *dir) {
+	*scan = (struct matuwall_dirscan){0};
+
+	if (!scan_directory(scan, dir, true)) {
+		matuwall_dirscan_finish(scan);
+		return false;
+	}
 
 	if (scan->truncated) {
 		matuwall_log_warn("wallpapers",
-			"%s holds more than %d images; showing the first %d",
-			dir, MAX_ITEMS, MAX_ITEMS);
+			"wallpaper directory tree exceeds %d images; "
+			"showing the first %d",
+			MAX_ITEMS, MAX_ITEMS);
 	}
 
 	if (scan->count > 0) {
-		qsort((void *)scan->paths, scan->count, sizeof(*scan->paths),
-			compare_paths);
+		qsort((void *)scan->paths, scan->count,
+			sizeof(*scan->paths), compare_paths);
 	}
+
 	return true;
 }
 
@@ -133,6 +204,7 @@ void matuwall_dirscan_finish(struct matuwall_dirscan *scan) {
 	for (size_t i = 0; i < scan->count; i++) {
 		free(scan->paths[i]);
 	}
+
 	free((void *)scan->paths);
 	*scan = (struct matuwall_dirscan){0};
 }
@@ -140,20 +212,23 @@ void matuwall_dirscan_finish(struct matuwall_dirscan *scan) {
 // scan stays stat-free, one selected entry is checked on the way out
 bool matuwall_dirscan_resolve(const char *path, char *resolved) {
 	if (realpath(path, resolved) == NULL) {
-		matuwall_log_error("wallpapers", "cannot resolve %s: %s", path,
-			strerror(errno));
+		matuwall_log_error("wallpapers",
+			"cannot resolve %s: %s", path, strerror(errno));
 		return false;
 	}
+
 	struct stat st;
 	if (stat(resolved, &st) != 0) {
-		matuwall_log_error("wallpapers", "cannot read %s: %s", resolved,
-			strerror(errno));
+		matuwall_log_error("wallpapers",
+			"cannot read %s: %s", resolved, strerror(errno));
 		return false;
 	}
+
 	if (!S_ISREG(st.st_mode)) {
-		matuwall_log_error(
-			"wallpapers", "%s is not a regular file", resolved);
+		matuwall_log_error("wallpapers",
+			"%s is not a regular file", resolved);
 		return false;
 	}
+
 	return true;
 }
