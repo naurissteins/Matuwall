@@ -76,6 +76,7 @@ void matuwall_cli_usage(FILE *out) {
 	      "                     override selection ring width (0..4096)\n"
 	      "  -r, --rows ROWS\n"
 	      "                     override maximum visible rows (1..1024)\n"
+	      "      --sort SORT    override wallpaper order: name or color\n"
 	      "  -s, --spacing SPACING\n"
 	      "                     override grid spacing (0..4096)\n"
 	      "      --spinner COLOR\n"

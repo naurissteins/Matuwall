@@ -348,7 +348,9 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		matuwall_log_warn("logging", "persistent log is unavailable");
 	}
 
-	// Persistent state stays off the first-frame path
+	// persistent state stays off the first-frame path, tiles are still
+	// identical placeholders, so the colour reorder cannot be seen
+	matuwall_app_thumbs_sort(app);
 	restore_selection(app);
 	matuwall_app_thumbs_start(app);
 	matuwall_app_preview_init(app);

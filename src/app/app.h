@@ -13,6 +13,7 @@
 #include "config/config.h"
 #include "grid/navigate.h"
 #include "scan/dirscan.h"
+#include "scan/order.h"
 #include "thumb/worker.h"
 #include "wayland/layer.h"
 #include "wayland/registry.h"
@@ -34,6 +35,8 @@ struct matuwall_app {
 	uint32_t output_width;
 	uint32_t output_height;
 	struct matuwall_dirscan scan;
+	// colour keys aligned with scan, empty unless sorting by colour
+	struct matuwall_order order;
 	struct matuwall_grid grid;
 	struct matuwall_animation animation;
 	// panel geometry inside its surface, normally the whole surface

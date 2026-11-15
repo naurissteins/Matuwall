@@ -8,6 +8,7 @@
 
 #include "thumb/cache.h"
 #include "thumb/decode.h"
+#include "thumb/hue.h"
 
 #define MAX_WORKERS 4
 // transient decode memory shared by all workers, see reserve_decode
@@ -34,10 +35,13 @@ struct matuwall_worker_pool {
 
 	uint32_t target_w;
 	uint32_t target_h;
+	bool hues;
 
 	pthread_mutex_t mutex;
 	pthread_cond_t wakeup;
 	struct job_list jobs;
+	// colour jobs, taken only while jobs is empty
+	struct job_list background;
 	struct job *results;
 	// newest preview a worker has taken, cleared when it publishes
 	struct job *running_preview;
@@ -113,9 +117,9 @@ static bool decode_and_scale(struct matuwall_worker_pool *pool,
 		.user_data = &ticket,
 	};
 	enum matuwall_decode_purpose purpose =
-		job->result.kind == MATUWALL_JOB_THUMB
-			? MATUWALL_DECODE_THUMBNAIL
-			: MATUWALL_DECODE_PREVIEW;
+		job->result.kind == MATUWALL_JOB_PREVIEW
+			? MATUWALL_DECODE_PREVIEW
+			: MATUWALL_DECODE_THUMBNAIL;
 	bool ok = matuwall_image_decode(out, job->path, job->target_w,
 		job->target_h, purpose, stop, &budget);
 	release_decode(&ticket);
@@ -126,7 +130,7 @@ static bool produce(struct matuwall_worker_pool *pool, const struct job *job,
 	struct matuwall_image *out, bool *cache_hit) {
 	*cache_hit = false;
 	// output sized previews would bloat the cache for one keypress of value
-	bool thumbnail = job->result.kind == MATUWALL_JOB_THUMB;
+	bool thumbnail = job->result.kind != MATUWALL_JOB_PREVIEW;
 	// pool stop also cancels the running preview, so one flag covers both
 	const atomic_bool *stop = thumbnail ? &pool->stopping : &job->cancelled;
 	if (flag_set(stop)) {
@@ -161,16 +165,19 @@ static bool produce(struct matuwall_worker_pool *pool, const struct job *job,
 }
 
 static struct job *take_job(struct matuwall_worker_pool *pool) {
-	while (pool->jobs.head == NULL && !flag_set(&pool->stopping)) {
+	while (pool->jobs.head == NULL && pool->background.head == NULL &&
+		!flag_set(&pool->stopping)) {
 		pthread_cond_wait(&pool->wakeup, &pool->mutex);
 	}
 	if (flag_set(&pool->stopping)) {
 		return NULL;
 	}
-	struct job *job = pool->jobs.head;
-	pool->jobs.head = job->next;
-	if (pool->jobs.head == NULL) {
-		pool->jobs.tail = NULL;
+	struct job_list *list =
+		pool->jobs.head != NULL ? &pool->jobs : &pool->background;
+	struct job *job = list->head;
+	list->head = job->next;
+	if (list->head == NULL) {
+		list->tail = NULL;
 	}
 	if (job->result.kind == MATUWALL_JOB_PREVIEW) {
 		pool->running_preview = job;
@@ -203,6 +210,21 @@ static void publish_result(struct matuwall_worker_pool *pool, struct job *job) {
 	(void)written;
 }
 
+// colour jobs keep only the key, their pixels never reach the main thread
+static void attach_image(struct matuwall_worker_pool *pool, struct job *job,
+	struct matuwall_image *img) {
+	enum matuwall_job_kind kind = job->result.kind;
+	if (kind == MATUWALL_JOB_COLOR ||
+		(kind == MATUWALL_JOB_THUMB && pool->hues)) {
+		job->result.hue =
+			matuwall_hue_key(img->pixels, img->width, img->height);
+	}
+	if (kind == MATUWALL_JOB_COLOR) {
+		matuwall_image_free(img);
+	}
+	job->result.image = *img;
+}
+
 static void *worker_main(void *arg) {
 	struct matuwall_worker_pool *pool = arg;
 
@@ -217,7 +239,7 @@ static void *worker_main(void *arg) {
 		struct matuwall_image img;
 		if (produce(pool, job, &img, &job->result.cache_hit)) {
 			job->result.ok = true;
-			job->result.image = img;
+			attach_image(pool, job, &img);
 		}
 
 		job->result.cancelled = flag_set(&job->cancelled);
@@ -229,13 +251,14 @@ static void *worker_main(void *arg) {
 }
 
 struct matuwall_worker_pool *matuwall_worker_pool_start(
-	uint32_t target_w, uint32_t target_h) {
+	uint32_t target_w, uint32_t target_h, bool hues) {
 	struct matuwall_worker_pool *pool = calloc(1, sizeof(*pool));
 	if (pool == NULL) {
 		return NULL;
 	}
 	pool->target_w = target_w;
 	pool->target_h = target_h;
+	pool->hues = hues;
 	atomic_init(&pool->stopping, false);
 	pthread_mutex_init(&pool->mutex, NULL);
 	pthread_cond_init(&pool->wakeup, NULL);
@@ -278,6 +301,7 @@ static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	}
 	job->result.kind = kind;
 	job->result.index = index;
+	job->result.hue = MATUWALL_HUE_UNKNOWN;
 	job->target_w = target_w;
 	job->target_h = target_h;
 	job->path = path;
@@ -337,6 +361,21 @@ bool matuwall_worker_submit(
 
 	pthread_mutex_lock(&pool->mutex);
 	job_list_append(&pool->jobs, job);
+	pthread_cond_signal(&pool->wakeup);
+	pthread_mutex_unlock(&pool->mutex);
+	return true;
+}
+
+bool matuwall_worker_submit_color(
+	struct matuwall_worker_pool *pool, size_t index, const char *path) {
+	struct job *job = make_job(MATUWALL_JOB_COLOR, index, path,
+		pool->target_w, pool->target_h);
+	if (job == NULL) {
+		return false;
+	}
+
+	pthread_mutex_lock(&pool->mutex);
+	job_list_append(&pool->background, job);
 	pthread_cond_signal(&pool->wakeup);
 	pthread_mutex_unlock(&pool->mutex);
 	return true;
@@ -461,11 +500,15 @@ void matuwall_worker_pool_stop(struct matuwall_worker_pool *pool) {
 	}
 
 	// nothing is running now, free the queues without locking
-	struct job *job = pool->jobs.head;
-	while (job != NULL) {
-		struct job *next = job->next;
-		free(job);
-		job = next;
+	struct job *queues[] = {pool->jobs.head, pool->background.head};
+	struct job *job;
+	for (size_t i = 0; i < sizeof(queues) / sizeof(queues[0]); i++) {
+		job = queues[i];
+		while (job != NULL) {
+			struct job *next = job->next;
+			free(job);
+			job = next;
+		}
 	}
 	job = pool->results;
 	while (job != NULL) {

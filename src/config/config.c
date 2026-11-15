@@ -73,6 +73,29 @@ bool matuwall_edge_from_name(const char *name, enum matuwall_edge *out) {
 	return false;
 }
 
+static const char *const sort_names[] = {
+	[MATUWALL_SORT_NAME] = "name",
+	[MATUWALL_SORT_COLOR] = "color",
+};
+
+const char *matuwall_sort_name(enum matuwall_sort sort) {
+	if ((size_t)sort >= sizeof(sort_names) / sizeof(sort_names[0])) {
+		return sort_names[MATUWALL_SORT_NAME];
+	}
+	return sort_names[sort];
+}
+
+bool matuwall_sort_from_name(const char *name, enum matuwall_sort *out) {
+	for (size_t i = 0; i < sizeof(sort_names) / sizeof(sort_names[0]);
+		i++) {
+		if (strcmp(name, sort_names[i]) == 0) {
+			*out = (enum matuwall_sort)i;
+			return true;
+		}
+	}
+	return false;
+}
+
 enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg) {
 	if (cfg->edge != MATUWALL_EDGE_AUTO) {
 		return cfg->edge;
@@ -101,6 +124,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 		.visible_rows = 1,
 		.carousel = true,
 		.edge = MATUWALL_EDGE_AUTO,
+		.sort = MATUWALL_SORT_NAME,
 		.panel_radius = 40,
 		.border_width = 0,
 		.shadow_width = 12,

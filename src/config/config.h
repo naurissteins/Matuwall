@@ -15,6 +15,14 @@ bool matuwall_position_from_name(const char *name, enum matuwall_position *out);
 const char *matuwall_edge_name(enum matuwall_edge edge);
 bool matuwall_edge_from_name(const char *name, enum matuwall_edge *out);
 
+enum matuwall_sort {
+	MATUWALL_SORT_NAME,
+	MATUWALL_SORT_COLOR,
+};
+
+const char *matuwall_sort_name(enum matuwall_sort sort);
+bool matuwall_sort_from_name(const char *name, enum matuwall_sort *out);
+
 #define MATUWALL_MAX_HOOKS 16
 #define MATUWALL_HOOK_MAX 512
 #define MATUWALL_MAX_BACKEND_ARGS 32
@@ -48,6 +56,7 @@ struct matuwall_config {
 	uint32_t visible_rows;
 	bool carousel;
 	enum matuwall_edge edge;
+	enum matuwall_sort sort;
 	uint32_t panel_radius;
 	uint32_t border_width;
 	uint32_t shadow_width;
@@ -92,6 +101,7 @@ enum matuwall_config_type {
 	MATUWALL_CONFIG_COLOR,
 	MATUWALL_CONFIG_POSITION,
 	MATUWALL_CONFIG_EDGE,
+	MATUWALL_CONFIG_SORT,
 	MATUWALL_CONFIG_PATH,
 	MATUWALL_CONFIG_BACKEND,
 	MATUWALL_CONFIG_COMMAND,

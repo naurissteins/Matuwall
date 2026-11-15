@@ -108,6 +108,11 @@ carousel = true
 # The regular grid treats "fade" as "clip"
 edge = "auto"
 
+# Wallpaper order. "name" sorts by path, "color" by dominant hue then
+# lightness, with mostly grey images last. Colors are learned in the
+# background, so new wallpapers stay at the end until the next launch
+sort = "name"
+
 [thumbnail]
 # Thumbnail size in pixels
 width = 300
