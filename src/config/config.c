@@ -110,6 +110,7 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 		.recursive = false,
 		.preview = false,
 		.close_on_focus_loss = false,
+		.close_on_apply = true,
 		.mouse_enabled = false,
 	};
 

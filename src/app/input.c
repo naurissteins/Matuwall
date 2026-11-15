@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "app/app.h"
+#include "app/apply.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "util/clock.h"
@@ -19,7 +20,14 @@ static void selection_changed(struct matuwall_app *app, size_t previous,
 	matuwall_app_preview_select(app, app->grid.selected, now_ms);
 }
 
-static void apply_and_exit(struct matuwall_app *app) {
+// enter or click: apply on the way out, or in the background and stay open
+static void pick(struct matuwall_app *app) {
+	if (!app->config.close_on_apply) {
+		if (app->scan.count > 0) {
+			matuwall_app_apply_queue(app);
+		}
+		return;
+	}
 	if (app->scan.count > 0) {
 		app->apply_requested = true;
 	}
@@ -39,9 +47,7 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 		return;
 	case XKB_KEY_Return:
 	case XKB_KEY_KP_Enter:
-		// Defer the apply off the input path; run() does it on the way
-		// out
-		apply_and_exit(app);
+		pick(app);
 		return;
 	case XKB_KEY_Left:
 	case XKB_KEY_h:
@@ -145,7 +151,7 @@ static void handle_pointer_button(void *user_data, struct wl_surface *surface,
 	}
 	matuwall_grid_select(&app->grid, &app->layout,
 		(uint32_t)app->panel.height, hit, slot);
-	apply_and_exit(app);
+	pick(app);
 }
 
 static void handle_pointer_scroll(void *user_data, int32_t steps) {

@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -50,6 +51,8 @@ static struct logger_state logger = {
 	.dir_fd = -1,
 	.file_fd = -1,
 };
+// the apply thread logs too; activate and finish run while it is down
+static pthread_mutex_t logger_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static const char *level_name(enum log_level level) {
 	switch (level) {
@@ -200,6 +203,7 @@ static void log_message(enum log_level level, const char *component,
 	}
 	message[message_size] = '\0';
 
+	pthread_mutex_lock(&logger_lock);
 	if (level != LOG_INFO) {
 		const char *label = level == LOG_ERROR ? "error" : "warning";
 		fprintf(stderr, "matuwall: %s: %s: %s\n", label, component,
@@ -211,10 +215,7 @@ static void log_message(enum log_level level, const char *component,
 		char line[LOG_LINE_MAX];
 		size_t size = format_line(
 			line, sizeof(line), &at, level, component, message);
-		if (size == 0) {
-			return;
-		}
-		if (!persist(line, size)) {
+		if (size != 0 && !persist(line, size)) {
 			int saved = errno;
 			fprintf(stderr,
 				"matuwall: warning: logging: cannot write "
@@ -226,6 +227,7 @@ static void log_message(enum log_level level, const char *component,
 	} else if (logger.started) {
 		buffer_message(&at, level, component, message);
 	}
+	pthread_mutex_unlock(&logger_lock);
 }
 
 void matuwall_log_start(const char *version) {

@@ -8,10 +8,9 @@
 #include <wayland-client.h>
 
 #include "app/app.h"
+#include "app/apply.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
-#include "backend/backend.h"
-#include "hooks/hooks.h"
 #include "render/frame.h"
 #include "state/selection.h"
 #include "util/clock.h"
@@ -29,6 +28,10 @@ static sigset_t startup_mask;
 static void handle_signal(int signum) {
 	(void)signum;
 	interrupted = 1;
+}
+
+static void reset_child_mask(void) {
+	sigprocmask(SIG_SETMASK, &startup_mask, NULL);
 }
 
 // Until this runs the default dispositions apply, so a signal during startup
@@ -57,12 +60,7 @@ static bool install_signals(void) {
 	wait_mask = startup_mask;
 	sigdelset(&wait_mask, SIGINT);
 	sigdelset(&wait_mask, SIGTERM);
-	return true;
-}
-
-// backend and hook children inherit the mask across fork and exec
-static void restore_signal_mask(void) {
-	pthread_sigmask(SIG_SETMASK, &startup_mask, NULL);
+	return pthread_atfork(NULL, NULL, reset_child_mask) == 0;
 }
 
 // --- frames ---
@@ -325,62 +323,6 @@ static bool pump_events(struct matuwall_app *app) {
 	return true;
 }
 
-// --- apply ---
-
-// Hand the selected wallpaper to the backend; runs off the input path on exit
-static bool apply_selection(struct matuwall_app *app) {
-	// state keeps the scanned path, backend and hooks get the real file
-	const char *path = app->scan.paths[app->grid.selected];
-	char resolved[PATH_MAX];
-	if (!matuwall_dirscan_resolve(path, resolved)) {
-		return false;
-	}
-	const struct matuwall_backend *backend =
-		matuwall_backend_select(app->config.backend);
-	if (backend == NULL) {
-		if (strcmp(app->config.backend, "auto") == 0) {
-			matuwall_log_error("backend",
-				"no running wallpaper backend found");
-		} else {
-			matuwall_log_error("backend", "unknown backend '%s'",
-				app->config.backend);
-		}
-		return false;
-	}
-	if (strcmp(app->config.backend, "auto") != 0) {
-		matuwall_log_info("backend", "selected configured backend %s",
-			backend->name);
-	}
-	// config owns the strings; opts only borrows them for the exec
-	const struct matuwall_backend_args *extra =
-		matuwall_config_backend_args(&app->config, backend->name);
-	const char *args[MATUWALL_MAX_BACKEND_ARGS];
-	struct matuwall_apply_opts opts = {
-		.args = args,
-		.command = app->config.backend_command,
-	};
-	for (size_t i = 0; extra != NULL && i < extra->count; i++) {
-		args[opts.arg_count++] = extra->items[i];
-	}
-	if (opts.arg_count > 0) {
-		matuwall_log_info("backend",
-			"passing %zu configured args to %s", opts.arg_count,
-			backend->name);
-	}
-	if (!backend->apply(resolved, &opts)) {
-		matuwall_log_error("backend",
-			"%s failed to apply the wallpaper", backend->name);
-		return false;
-	}
-	if (!matuwall_selection_save(path)) {
-		matuwall_log_warn("state", "could not remember the selection");
-	}
-	matuwall_log_info(
-		"apply", "applied %s with %s", resolved, backend->name);
-	matuwall_hooks_run(&app->config, resolved);
-	return true;
-}
-
 bool matuwall_app_run(struct matuwall_app *app) {
 	// The configured surface size is only known now, and every later
 	// configure refreshes this again from pump_events
@@ -424,20 +366,21 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		}
 		matuwall_app_preview_render(app, matuwall_now_ms());
 	}
-	restore_signal_mask();
 	if (interrupted != 0) {
 		matuwall_log_info("exit", "stopped by signal");
 	} else if (app->layer.closed) {
 		matuwall_log_warn("exit", "surface closed by compositor");
 	}
 
+	// a failed apply while staying open still fails the run
+	bool applied = matuwall_app_apply_finish(app);
 	// Enter requested an apply: do it now, off the input path, on the way
 	// out
 	if (app->apply_requested) {
 		// free cores and memory for the backend, join at exit
 		matuwall_app_thumbs_quiesce(app);
 		matuwall_app_preview_finish(app);
-		return apply_selection(app);
+		return matuwall_app_apply(app);
 	}
-	return !app->scan.unavailable;
+	return applied && !app->scan.unavailable;
 }

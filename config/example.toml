@@ -44,6 +44,9 @@ preview = false
 # Close when keyboard focus moves away from Matuwall
 close_on_focus_loss = false
 
+# Close after Enter applies a wallpaper. false keeps the picker open
+close_on_apply = true
+
 # Placement on screen: "center", "left", "right", "top" or "bottom"
 position = "bottom"
 
