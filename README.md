@@ -4,7 +4,7 @@
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/naurissteins/Matuwall?style=for-the-badge&labelColor=181825&color=a6e3a1)
 ![GitHub repo size](https://img.shields.io/github/repo-size/naurissteins/Matuwall?style=for-the-badge&labelColor=181825&color=d3bfe6)
-![AUR Version](https://img.shields.io/aur/version/matuwall?style=for-the-badge&labelColor=181825&color=b4befe)
+![AUR Version](https://img.shields.io/aur/version/matuwall-bin?style=for-the-badge&labelColor=181825&color=b4befe)
 ![GitHub Repo stars](https://img.shields.io/github/stars/naurissteins/Matuwall?style=for-the-badge&labelColor=181825&color=f9e2af)
 
 Simple, fast and lightweight wallpaper picker for Wayland
@@ -118,6 +118,7 @@ matuwall -o DP-1                                 // open explicitly on DP-1
 matuwall -p left                                 // move the panel
 matuwall --preview                               // enable the full-screen backdrop
 matuwall --close-on-focus-loss                   // close when focus moves away
+matuwall --no-close-on-apply                     // stay open after Enter applies
 matuwall --no-hooks                              // apply without running hooks
 matuwall --hook 'matugen image {path}'           // replace hooks for one run
 ```

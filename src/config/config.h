@@ -58,6 +58,8 @@ struct matuwall_config {
 	// Fill the output with the selected wallpaper behind the panel
 	bool preview;
 	bool close_on_focus_loss;
+	// false keeps the picker open and applies in the background
+	bool close_on_apply;
 	bool mouse_enabled;
 	// on_apply command templates, run after a successful apply
 	char on_apply[MATUWALL_MAX_HOOKS][MATUWALL_HOOK_MAX];

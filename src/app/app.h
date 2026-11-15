@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #include "app/animation.h"
+#include "app/apply.h"
 #include "app/instance.h"
 #include "app/preview.h"
 #include "app/thumb_store.h"
@@ -38,6 +39,7 @@ struct matuwall_app {
 	// panel geometry inside its surface, normally the whole surface
 	struct matuwall_rect panel;
 	struct matuwall_preview preview;
+	struct matuwall_apply_queue apply;
 
 	struct matuwall_worker_pool *workers;
 	struct matuwall_thumb_store thumbs;

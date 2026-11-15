@@ -59,6 +59,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Set the maximum columns to an integer from 1 to 1024. Fewer may be used to
 	fit the output.
 
+*--close-on-apply*
+	Close after *Enter* applies a wallpaper.
+
 *--close-on-focus-loss*
 	Close when keyboard focus leaves Matuwall.
 
@@ -94,6 +97,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 
 *--no-config*
 	Use built-in defaults without loading the standard configuration file.
+
+*--no-close-on-apply*
+	Stay open after *Enter* applies a wallpaper. *Escape* closes.
 
 *--no-close-on-focus-loss*
 	Keep Matuwall open when keyboard focus leaves.

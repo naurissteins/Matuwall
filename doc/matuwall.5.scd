@@ -75,6 +75,11 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 *close_on_focus_loss*
 	Close when keyboard focus leaves Matuwall. Defaults to _false_.
 
+*close_on_apply*
+	Close after *Enter* applies a wallpaper. Defaults to _true_. With _false_,
+	the apply runs in the background and Matuwall stays open until *Escape*.
+	A failed apply makes the exit status non-zero.
+
 *position*
 	Panel position: _"center"_, _"left"_, _"right"_, _"top"_, or _"bottom"_.
 	Defaults to _"bottom"_.

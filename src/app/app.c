@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <wayland-client.h>
 
+#include "app/apply.h"
 #include "app/input.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
@@ -158,6 +159,8 @@ bool matuwall_app_init(struct matuwall_app *app,
 }
 
 void matuwall_app_finish(struct matuwall_app *app) {
+	// the apply thread borrows config, join it before anything goes
+	matuwall_app_apply_finish(app);
 	matuwall_layer_destroy(&app->layer);
 	matuwall_layer_destroy(&app->backdrop);
 	matuwall_seat_finish(&app->seat);
