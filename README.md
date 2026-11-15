@@ -27,6 +27,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Custom backend command for any other setter (hyprpaper, swaybg, ...)
 - Fast raw thumbnail cache
 - Grid and carousel layouts
+- Sort wallpapers by name or color
 - Fractional scaling and multiple outputs
 - Full-screen wallpaper previews
 - Supports `Matugen` and `Pywal`
@@ -93,6 +94,7 @@ matuwall --backend-command "swww img {path}"     // use your own setter once
 matuwall --carousel                              // enable the centered carousel
 matuwall --no-carousel                           // use the regular grid
 matuwall --edge fade                             // fade tiles at carousel edges
+matuwall --sort color                            // sort wallpapers by color
 matuwall -c 4                                    // use at most four columns
 matuwall -r 3                                    // use at most three visible rows
 matuwall -s 12                                   // set tile spacing to 12
@@ -226,6 +228,6 @@ matuwall --diagnose      # check config, Wayland, backends, hooks and paths
 matuwall --clear-cache   # remove thumbnails only
 ```
 
-Last selection `~/.local/state/matuwall/last-selection`, logs `~/.local/state/matuwall/matuwall.log`, and cached thumbnails `~/.cache/matuwall/thumbs/`
+Last selection `~/.local/state/matuwall/last-selection`, logs `~/.local/state/matuwall/matuwall.log`, cached thumbnails `~/.cache/matuwall/thumbs/`, and learned colors `~/.cache/matuwall/colors`
 
 Logs are limited to 256 KiB each, the current log and two rotations are kept

@@ -58,6 +58,8 @@ const struct matuwall_config_key matuwall_config_keys[] = {
 		"carousel", "no-carousel", 0},
 	{"grid", "edge", MATUWALL_CONFIG_EDGE, FIELD(edge), 0, 0, "edge", NULL,
 		0},
+	{"grid", "sort", MATUWALL_CONFIG_SORT, FIELD(sort), 0, 0, "sort", NULL,
+		0},
 	{"grid", "spacing", MATUWALL_CONFIG_UINT, FIELD(layout.spacing), 0,
 		4096, "spacing", NULL, 's'},
 	{"grid", "radius", MATUWALL_CONFIG_UINT, FIELD(layout.radius), 0, 4096,
@@ -129,6 +131,7 @@ bool matuwall_config_set(struct matuwall_config *cfg,
 		struct matuwall_color color;
 		enum matuwall_position position;
 		enum matuwall_edge edge;
+		enum matuwall_sort sort;
 		char text[PATH_MAX];
 	} value;
 	size_t size;
@@ -168,6 +171,13 @@ bool matuwall_config_set(struct matuwall_config *cfg,
 			return false;
 		}
 		size = sizeof(value.edge);
+		break;
+	case MATUWALL_CONFIG_SORT:
+		if (!string ||
+			!matuwall_sort_from_name(v->string, &value.sort)) {
+			return false;
+		}
+		size = sizeof(value.sort);
 		break;
 	case MATUWALL_CONFIG_PATH:
 	case MATUWALL_CONFIG_BACKEND:
@@ -237,6 +247,8 @@ const char *matuwall_config_expect(
 		       "\"bottom\"";
 	case MATUWALL_CONFIG_EDGE:
 		return "\"auto\", \"clip\", \"peek\", or \"fade\"";
+	case MATUWALL_CONFIG_SORT:
+		return "\"name\" or \"color\"";
 	case MATUWALL_CONFIG_PATH:
 		return "a path that can be resolved";
 	case MATUWALL_CONFIG_BACKEND:
@@ -285,6 +297,12 @@ void matuwall_config_format(const struct matuwall_config *cfg,
 		snprintf(out, size, "%s",
 			matuwall_edge_name(
 				*(const enum matuwall_edge *)(const void *)
+					field));
+		return;
+	case MATUWALL_CONFIG_SORT:
+		snprintf(out, size, "%s",
+			matuwall_sort_name(
+				*(const enum matuwall_sort *)(const void *)
 					field));
 		return;
 	case MATUWALL_CONFIG_PATH:

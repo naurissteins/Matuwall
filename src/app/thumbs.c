@@ -7,6 +7,7 @@
 #include "app/app.h"
 #include "app/preview.h"
 #include "app/thumb_store.h"
+#include "thumb/hue.h"
 #include "thumb/worker.h"
 #include "util/log.h"
 
@@ -23,7 +24,9 @@ static void on_result(
 		matuwall_app_preview_result(app, result);
 		return;
 	}
-	if (result->index >= app->thumbs.count) {
+	matuwall_order_set(&app->order, result->index, result->hue);
+	if (result->kind == MATUWALL_JOB_COLOR ||
+		result->index >= app->thumbs.count) {
 		free(result->image.pixels);
 		return;
 	}
@@ -169,6 +172,25 @@ static void submit_visible_window(
 	}
 }
 
+void matuwall_app_thumbs_sort(struct matuwall_app *app) {
+	if (app->config.sort == MATUWALL_SORT_COLOR &&
+		!matuwall_order_by_color(&app->order, &app->scan)) {
+		matuwall_log_warn("order", "cannot sort by colour");
+		matuwall_order_finish(&app->order, &app->scan);
+	}
+}
+
+// unknown keys fill in behind every thumbnail, for the next launch's order
+static void submit_colors(struct matuwall_app *app) {
+	for (size_t i = 0; i < app->order.count; i++) {
+		if (app->order.keys[i] == MATUWALL_HUE_UNKNOWN &&
+			!matuwall_worker_submit_color(
+				app->workers, i, app->scan.paths[i])) {
+			return;
+		}
+	}
+}
+
 void matuwall_app_thumbs_start(struct matuwall_app *app) {
 	if (app->scan.count == 0) {
 		return;
@@ -190,13 +212,14 @@ void matuwall_app_thumbs_start(struct matuwall_app *app) {
 			"thumbnail", "invalid thumbnail target size");
 		return;
 	}
-	app->workers = matuwall_worker_pool_start(tw, th);
+	app->workers = matuwall_worker_pool_start(tw, th, app->order.count > 0);
 	if (app->workers == NULL) {
 		matuwall_log_error("thumbnail", "failed to start workers");
 		return;
 	}
 
 	matuwall_app_thumbs_prioritize_visible(app);
+	submit_colors(app);
 }
 
 struct thumb_window {
@@ -311,4 +334,5 @@ void matuwall_app_thumbs_finish(struct matuwall_app *app) {
 		app->workers = NULL;
 	}
 	release_thumbs(app);
+	matuwall_order_finish(&app->order, &app->scan);
 }

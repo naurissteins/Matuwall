@@ -14,10 +14,12 @@ enum matuwall_thumb_state {
 	MATUWALL_THUMB_FAILED,
 };
 
-// Previews are output sized and short lived, so they skip the on-disk cache
+// previews are output sized and short lived, so they skip the on-disk cache
+// colour jobs run only when nothing else is queued and return no pixels
 enum matuwall_job_kind {
 	MATUWALL_JOB_THUMB,
 	MATUWALL_JOB_PREVIEW,
+	MATUWALL_JOB_COLOR,
 };
 
 struct matuwall_thumb {
@@ -33,6 +35,8 @@ struct matuwall_thumb_result {
 	bool ok;
 	bool cache_hit;
 	bool cancelled;
+	// thumbnail colour key when the pool computes them, else unknown
+	uint32_t hue;
 	// owned by the drain callback; a preview's is always memfd backed
 	struct matuwall_image image;
 };
@@ -42,13 +46,18 @@ typedef void (*matuwall_result_fn)(
 
 struct matuwall_worker_pool;
 
+// hues adds a colour key to every thumbnail result
 struct matuwall_worker_pool *matuwall_worker_pool_start(
-	uint32_t target_w, uint32_t target_h);
+	uint32_t target_w, uint32_t target_h, bool hues);
 
 int matuwall_worker_pool_fd(const struct matuwall_worker_pool *pool);
 
 // Paths passed to either submit function are borrowed until pool stop
 bool matuwall_worker_submit(
+	struct matuwall_worker_pool *pool, size_t index, const char *path);
+
+// background colour key for one entry; reorders never touch these
+bool matuwall_worker_submit_color(
 	struct matuwall_worker_pool *pool, size_t index, const char *path);
 
 // callbacks for a queue reorder, keep runs under the pool lock

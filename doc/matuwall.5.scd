@@ -154,6 +154,13 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	*background* is _"none"_ or fully transparent and clips otherwise. The
 	regular grid treats _fade_ as _clip_.
 
+*sort*
+	Wallpaper order: _"name"_ or _"color"_. Defaults to _"name"_. _color_ sorts
+	by dominant hue, then lightness, with mostly grey images last. Colors are
+	learned in the background and stored in
+	_$XDG_CACHE_HOME/matuwall/colors_. New wallpapers stay at the end until the
+	next launch.
+
 ## [thumbnail]
 
 *width*, *height*

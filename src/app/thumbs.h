@@ -3,6 +3,9 @@
 
 struct matuwall_app;
 
+// reorders the scan, so it runs before anything holds an index
+void matuwall_app_thumbs_sort(struct matuwall_app *app);
+
 void matuwall_app_thumbs_start(struct matuwall_app *app);
 
 void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app);

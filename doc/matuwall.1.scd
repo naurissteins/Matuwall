@@ -145,6 +145,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Set the maximum visible rows to an integer from 1 to 1024. Fewer may be used
 	to fit the output.
 
+*--sort* _SORT_
+	Set _grid.sort_ to *name* or *color*.
+
 *-s* _SPACING_, *--spacing* _SPACING_
 	Set _grid.spacing_ to an integer from 0 to 4096.
 
@@ -256,6 +259,9 @@ _$XDG_STATE_HOME/matuwall/last-selection_, _~/.local/state/matuwall/last-selecti
 
 _$XDG_STATE_HOME/matuwall/matuwall.log_, _~/.local/state/matuwall/matuwall.log_
 	Diagnostic log.
+
+_$XDG_CACHE_HOME/matuwall/colors_, _~/.cache/matuwall/colors_
+	Learned wallpaper colors for _grid.sort_ = _color_.
 
 # SEE ALSO
 
