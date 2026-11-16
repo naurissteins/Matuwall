@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # Non-Arch-run fallbacks for the image's pkgbuild.com mirrors
+  PACMAN_MIRRORS: |
+    Server = https://mirror.rackspace.com/archlinux/$repo/os/$arch
+    Server = https://mirror.leaseweb.net/archlinux/$repo/os/$arch
+
 jobs:
   release:
     name: Publish Release
@@ -22,6 +28,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           pacman -Syu --noconfirm --needed \
             base-devel git meson ninja pkgconf \
             wayland wayland-protocols libxkbcommon \
