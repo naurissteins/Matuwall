@@ -25,6 +25,9 @@ struct matuwall_apply_queue {
 	bool started;
 };
 
+// backend, remembered selection, then hooks, path as scanned
+bool matuwall_apply_path(
+	const struct matuwall_config *config, const char *path);
 // apply the selection and wait, for the closing path
 bool matuwall_app_apply(struct matuwall_app *app);
 // hand the selection to the apply thread, starting it on first use

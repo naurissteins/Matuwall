@@ -12,7 +12,8 @@
 #include "util/log.h"
 
 // Hand one scanned path to the backend, then remember it and run hooks
-static bool apply_path(const struct matuwall_config *config, const char *path) {
+bool matuwall_apply_path(
+	const struct matuwall_config *config, const char *path) {
 	// state keeps the scanned path, backend and hooks get the real file
 	char resolved[PATH_MAX];
 	if (!matuwall_dirscan_resolve(path, resolved)) {
@@ -65,7 +66,8 @@ static bool apply_path(const struct matuwall_config *config, const char *path) {
 }
 
 bool matuwall_app_apply(struct matuwall_app *app) {
-	return apply_path(&app->config, app->scan.paths[app->grid.selected]);
+	return matuwall_apply_path(
+		&app->config, app->scan.paths[app->grid.selected]);
 }
 
 // --- background queue ---
@@ -89,7 +91,7 @@ static void *apply_thread(void *data) {
 		// hooks are never waited on, reap the ones that already ended
 		while (waitpid(-1, NULL, WNOHANG) > 0) {
 		}
-		bool ok = apply_path(queue->config, path);
+		bool ok = matuwall_apply_path(queue->config, path);
 
 		pthread_mutex_lock(&queue->lock);
 		queue->failed |= !ok;

@@ -184,6 +184,19 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Check the current setup and exit. Blocking problems return status 1; warnings
 	alone return status 0.
 
+*--restore*
+	Apply the remembered wallpaper again and exit, without a window.
+
+*--random*
+	Apply a random wallpaper other than the current one and exit.
+
+*--next*, *--prev*
+	Apply the wallpaper after or before the remembered one, in grid order, and
+	exit. Both wrap around.
+
+These four combine with other options, but not with each other. They run the
+backend and hooks like Enter does. A failed apply exits with status 1.
+
 # KEY BINDINGS
 
 *Arrow keys*, *h* *j* *k* *l*
@@ -225,7 +238,8 @@ for them. See *matuwall*(5).
 # REMEMBERED SELECTION
 
 After a successful apply, Matuwall remembers the path and selects it on the next
-launch if it is still in the wallpaper directory.
+launch if it is still in the wallpaper directory. *--restore*, *--next*, and
+*--prev* start from it.
 
 # DIAGNOSTICS
 

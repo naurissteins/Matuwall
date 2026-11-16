@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "app/pick.h"
 #include "config/config.h"
 
 enum matuwall_cli_action {
@@ -14,10 +15,13 @@ enum matuwall_cli_action {
 	MATUWALL_CLI_CLEAR_CACHE,
 	MATUWALL_CLI_DIAGNOSE,
 	MATUWALL_CLI_PRINT_CONFIG,
+	// apply without a window, which one is in pick
+	MATUWALL_CLI_PICK,
 };
 
 struct matuwall_cli_options {
 	enum matuwall_cli_action action;
+	enum matuwall_pick pick;
 	// every pointer borrows argv storage
 	// by key table row, NULL when not given
 	const char *values[MATUWALL_CONFIG_MAX_KEYS];

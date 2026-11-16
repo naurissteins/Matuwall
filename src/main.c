@@ -6,6 +6,7 @@
 #endif
 
 #include "app/app.h"
+#include "app/pick.h"
 #include "cli/options.h"
 #include "config/config.h"
 #include "diagnose/diagnose.h"
@@ -105,10 +106,15 @@ int main(int argc, char *argv[]) {
 	}
 	matuwall_cli_log_overrides(&options, &config);
 
-	struct matuwall_app app;
-	bool ok = matuwall_app_init(&app, &config, options.output_name) &&
-		  matuwall_app_run(&app);
-	matuwall_app_finish(&app);
+	bool ok;
+	if (options.action == MATUWALL_CLI_PICK) {
+		ok = matuwall_pick_apply(&config, options.pick);
+	} else {
+		struct matuwall_app app;
+		ok = matuwall_app_init(&app, &config, options.output_name) &&
+		     matuwall_app_run(&app);
+		matuwall_app_finish(&app);
+	}
 	matuwall_log_info("exit", "status %s", ok ? "success" : "failure");
 	matuwall_log_finish();
 
