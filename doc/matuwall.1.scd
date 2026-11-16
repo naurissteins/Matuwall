@@ -212,6 +212,9 @@ backend and hooks like Enter does. A failed apply exits with status 1.
 *End*, *G*
 	Jump to the last tile.
 
+*r*
+	Jump to a random tile other than the selected one.
+
 *Enter*
 	Apply the selected wallpaper and exit.
 

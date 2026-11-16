@@ -39,6 +39,15 @@ static size_t random_below(size_t bound) {
 	return (size_t)(value % bound);
 }
 
+size_t matuwall_pick_random(size_t count, size_t current) {
+	if (current >= count || count == 1) {
+		return random_below(count);
+	}
+	// never the wallpaper already showing
+	size_t index = random_below(count - 1);
+	return index >= current ? index + 1 : index;
+}
+
 // current is count when the last wallpaper is not in this scan
 static size_t choose(enum matuwall_pick pick, size_t count, size_t current) {
 	bool found = current < count;
@@ -51,12 +60,7 @@ static size_t choose(enum matuwall_pick pick, size_t count, size_t current) {
 	case MATUWALL_PICK_RESTORE:
 		break;
 	}
-	if (!found || count == 1) {
-		return random_below(count);
-	}
-	// never the wallpaper already showing
-	size_t index = random_below(count - 1);
-	return index >= current ? index + 1 : index;
+	return matuwall_pick_random(count, current);
 }
 
 static size_t find(const struct matuwall_dirscan *scan, const char *path) {

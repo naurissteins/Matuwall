@@ -4,6 +4,7 @@
 
 #include "app/app.h"
 #include "app/apply.h"
+#include "app/pick.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "util/clock.h"
@@ -36,6 +37,21 @@ static void pick(struct matuwall_app *app) {
 
 // --- keyboard ---
 
+// same pick as --random, shown in the grid instead of applied
+static void jump_random(struct matuwall_app *app) {
+	if (app->scan.count < 2) {
+		return;
+	}
+	size_t previous = app->grid.selected;
+	int64_t previous_cursor = app->grid.cursor;
+	size_t index = matuwall_pick_random(app->scan.count, previous);
+	if (matuwall_grid_select(&app->grid, &app->layout,
+		    (uint32_t)app->panel.height, index, (int64_t)index)) {
+		selection_changed(
+			app, previous, previous_cursor, matuwall_now_ms());
+	}
+}
+
 static void handle_key(void *user_data, xkb_keysym_t sym) {
 	struct matuwall_app *app = user_data;
 	enum matuwall_move move;
@@ -48,6 +64,9 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 	case XKB_KEY_Return:
 	case XKB_KEY_KP_Enter:
 		pick(app);
+		return;
+	case XKB_KEY_r:
+		jump_random(app);
 		return;
 	case XKB_KEY_Left:
 	case XKB_KEY_h:
