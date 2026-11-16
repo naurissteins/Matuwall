@@ -2,6 +2,7 @@
 #define MATUWALL_APP_PICK_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "config/config.h"
 
@@ -13,6 +14,9 @@ enum matuwall_pick {
 };
 
 const char *matuwall_pick_flag(enum matuwall_pick pick);
+
+// random index other than current when count > 1, current may be count
+size_t matuwall_pick_random(size_t count, size_t current);
 
 // apply a wallpaper without a window, like Enter in the picker would
 bool matuwall_pick_apply(
