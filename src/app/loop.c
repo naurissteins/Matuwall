@@ -167,14 +167,16 @@ static bool render_if_needed(struct matuwall_app *app) {
 }
 
 static void restore_selection(struct matuwall_app *app) {
-	char path[PATH_MAX];
-	if (!matuwall_selection_load(path, sizeof(path))) {
+	app->initial_index = SIZE_MAX;
+	char *path = app->initial_path;
+	if (!matuwall_selection_load(path, sizeof(app->initial_path))) {
 		return;
 	}
 	for (size_t i = 0; i < app->scan.count; i++) {
 		if (strcmp(path, app->scan.paths[i]) != 0) {
 			continue;
 		}
+		app->initial_index = i;
 		if (matuwall_grid_select(&app->grid, &app->layout,
 			    (uint32_t)app->panel.height, i, (int64_t)i)) {
 			matuwall_animation_snap(&app->animation, &app->layout,

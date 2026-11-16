@@ -120,9 +120,8 @@ static bool start_thread(struct matuwall_apply_queue *queue,
 	return true;
 }
 
-void matuwall_app_apply_queue(struct matuwall_app *app) {
+void matuwall_app_apply_queue(struct matuwall_app *app, const char *path) {
 	struct matuwall_apply_queue *queue = &app->apply;
-	const char *path = app->scan.paths[app->grid.selected];
 	if (!queue->started && !start_thread(queue, &app->config)) {
 		matuwall_log_error("apply", "cannot start the apply thread");
 		return;

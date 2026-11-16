@@ -30,8 +30,8 @@ bool matuwall_apply_path(
 	const struct matuwall_config *config, const char *path);
 // apply the selection and wait, for the closing path
 bool matuwall_app_apply(struct matuwall_app *app);
-// hand the selection to the apply thread, starting it on first use
-void matuwall_app_apply_queue(struct matuwall_app *app);
+// hand a path to the apply thread, starting it on first use
+void matuwall_app_apply_queue(struct matuwall_app *app, const char *path);
 // run what is still queued and join, false when any apply failed
 bool matuwall_app_apply_finish(struct matuwall_app *app);
 
