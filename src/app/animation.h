@@ -52,6 +52,12 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 	size_t previous, int64_t previous_slot, size_t selected,
 	int64_t selected_slot, uint32_t first_row, int64_t now_ms);
 
+// like move, but the scroll slides even across a long jump
+void matuwall_animation_glide(struct matuwall_animation *animation,
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t previous, int64_t previous_slot, size_t selected,
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms);
+
 void matuwall_animation_sample(const struct matuwall_animation *animation,
 	int64_t now_ms, struct matuwall_animation_sample *sample);
 

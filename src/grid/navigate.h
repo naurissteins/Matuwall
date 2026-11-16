@@ -35,6 +35,10 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
 	enum matuwall_move move);
 
+// carousel copy of index nearest the cursor, the plain index in a grid
+int64_t matuwall_grid_nearest_slot(const struct matuwall_grid *grid,
+	const struct matuwall_layout *layout, size_t index);
+
 bool matuwall_grid_select(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
 	size_t index, int64_t slot);

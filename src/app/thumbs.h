@@ -10,6 +10,8 @@ void matuwall_app_thumbs_start(struct matuwall_app *app);
 
 void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app);
 
+void matuwall_app_thumbs_prioritize_spin(struct matuwall_app *app);
+
 void matuwall_app_thumbs_drain(struct matuwall_app *app);
 
 // stop decoding and free thumbnails without waiting for running workers
