@@ -29,6 +29,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Grid and carousel layouts
 - Sort wallpapers by name or color
 - Fractional scaling and multiple outputs
+- Restore, random, next and previous wallpaper without opening the picker
 - Full-screen wallpaper previews
 - Supports `Matugen` and `Pywal`
 
@@ -218,6 +219,23 @@ shell quoting are not supported
 ```sh
 matuwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
+
+---
+
+## Without the picker
+
+These apply a wallpaper and exit, with no window. They use the same backend and
+hooks as Enter
+
+```sh
+matuwall --restore   # apply the last wallpaper again, e.g. at login
+matuwall --random    # a random wallpaper, never the current one
+matuwall --next      # the next wallpaper in grid order
+matuwall --prev      # the previous one
+```
+
+`--next` and `--prev` follow `sort`, so with `--sort color` they step through
+colors. They combine with other options, like `-d ~/Pictures/Photography`
 
 ---
 

@@ -94,6 +94,10 @@ void matuwall_cli_usage(FILE *out) {
 	      "  -h, --help         show this help and exit\n"
 	      "  -V, --version      show version information and exit\n"
 	      "      --clear-cache  remove cached thumbnails and exit\n"
-	      "      --diagnose     check the current setup and exit\n",
+	      "      --diagnose     check the current setup and exit\n"
+	      "      --restore      apply the last wallpaper again and exit\n"
+	      "      --random       apply a random wallpaper and exit\n"
+	      "      --next         apply the next wallpaper and exit\n"
+	      "      --prev         apply the previous wallpaper and exit\n",
 		out);
 }

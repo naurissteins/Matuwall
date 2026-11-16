@@ -57,6 +57,7 @@ executable(
 	'src/app/input.c',
 	'src/app/instance.c',
 	'src/app/loop.c',
+	'src/app/pick.c',
 	'src/app/preview.c',
 	'src/app/thumb_store.c',
 	'src/app/thumbs.c',

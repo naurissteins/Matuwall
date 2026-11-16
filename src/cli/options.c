@@ -18,6 +18,10 @@ enum {
 	OPTION_NO_CONFIG,
 	OPTION_NO_HOOKS,
 	OPTION_PRINT_CONFIG,
+	OPTION_RESTORE,
+	OPTION_RANDOM,
+	OPTION_NEXT,
+	OPTION_PREV,
 	// key table rows from here, two each: the flag and its off flag
 	OPTION_KEY,
 };
@@ -39,6 +43,10 @@ static const struct option fixed_options[] = {
 	{"no-hooks", no_argument, NULL, OPTION_NO_HOOKS},
 	{"output", required_argument, NULL, 'o'},
 	{"print-config", no_argument, NULL, OPTION_PRINT_CONFIG},
+	{"restore", no_argument, NULL, OPTION_RESTORE},
+	{"random", no_argument, NULL, OPTION_RANDOM},
+	{"next", no_argument, NULL, OPTION_NEXT},
+	{"prev", no_argument, NULL, OPTION_PREV},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
 	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
@@ -196,6 +204,37 @@ static enum parse_result parse_backend_command(const char *value,
 	return PARSE_CONTINUE;
 }
 
+// pick actions combine with overrides, but not with each other
+static enum parse_result parse_action(int option,
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	if (options->action != MATUWALL_CLI_RUN) {
+		snprintf(err, err_size,
+			"use only one of --restore, --random, --next, --prev, "
+			"or --print-config");
+		return PARSE_ERROR;
+	}
+	if (option == OPTION_PRINT_CONFIG) {
+		options->action = MATUWALL_CLI_PRINT_CONFIG;
+		return PARSE_CONTINUE;
+	}
+	options->action = MATUWALL_CLI_PICK;
+	switch (option) {
+	case OPTION_RANDOM:
+		options->pick = MATUWALL_PICK_RANDOM;
+		break;
+	case OPTION_NEXT:
+		options->pick = MATUWALL_PICK_NEXT;
+		break;
+	case OPTION_PREV:
+		options->pick = MATUWALL_PICK_PREV;
+		break;
+	default:
+		options->pick = MATUWALL_PICK_RESTORE;
+		break;
+	}
+	return PARSE_CONTINUE;
+}
+
 static enum parse_result parse_override(int option, const char *value,
 	struct matuwall_cli_options *options, char *err, size_t err_size) {
 	size_t row;
@@ -241,8 +280,11 @@ static enum parse_result parse_override(int option, const char *value,
 		options->output_name = value;
 		return PARSE_CONTINUE;
 	case OPTION_PRINT_CONFIG:
-		options->action = MATUWALL_CLI_PRINT_CONFIG;
-		return PARSE_CONTINUE;
+	case OPTION_RESTORE:
+	case OPTION_RANDOM:
+	case OPTION_NEXT:
+	case OPTION_PREV:
+		return parse_action(option, options, err, err_size);
 	default:
 		return PARSE_UNHANDLED;
 	}
