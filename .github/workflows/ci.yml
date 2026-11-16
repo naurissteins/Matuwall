@@ -22,6 +22,10 @@ env:
     libpng libjpeg-turbo libwebp scdoc
   PACMAN_LINT_DEPS: >-
     git actionlint shellcheck
+  # Non-Arch-run fallbacks for the image's pkgbuild.com mirrors
+  PACMAN_MIRRORS: |
+    Server = https://mirror.rackspace.com/archlinux/$repo/os/$arch
+    Server = https://mirror.leaseweb.net/archlinux/$repo/os/$arch
 
 jobs:
   workflow-lint:
@@ -34,6 +38,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_LINT_DEPS
@@ -53,6 +59,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_LINT_DEPS
@@ -80,6 +88,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS
@@ -108,6 +118,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS
@@ -139,6 +151,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS
@@ -169,6 +183,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS
@@ -198,6 +214,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS valgrind
@@ -223,6 +241,8 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          # both stock mirrors are Arch infra and can stall together
+          printf '\n%s' "$PACMAN_MIRRORS" >> /etc/pacman.d/mirrorlist
           # shellcheck disable=SC2086
           pacman -Syu --noconfirm --needed \
             $PACMAN_DEPS
