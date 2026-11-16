@@ -10,15 +10,47 @@
 #include "util/clock.h"
 #include "util/log.h"
 
+// the backdrop and thumbnails follow every selection change
+static void follow_selection(
+	struct matuwall_app *app, int64_t now_ms, bool spin) {
+	app->layer.needs_repaint = true;
+	if (spin) {
+		matuwall_app_thumbs_prioritize_spin(app);
+	} else {
+		matuwall_app_thumbs_prioritize_visible(app);
+	}
+	matuwall_app_preview_select(app, app->grid.selected, now_ms);
+}
+
 // Selection changed: animate presentation and let the backdrop follow later
 static void selection_changed(struct matuwall_app *app, size_t previous,
 	int64_t previous_cursor, int64_t now_ms) {
 	matuwall_animation_move(&app->animation, &app->layout, &app->panel,
 		previous, previous_cursor, app->grid.selected, app->grid.cursor,
 		app->grid.first_row, now_ms);
-	app->layer.needs_repaint = true;
-	matuwall_app_thumbs_prioritize_visible(app);
-	matuwall_app_preview_select(app, app->grid.selected, now_ms);
+	follow_selection(app, now_ms, false);
+}
+
+// r and Backspace: a carousel spins the short way round to the target
+static void jump_to(struct matuwall_app *app, size_t index) {
+	size_t previous = app->grid.selected;
+	int64_t previous_cursor = app->grid.cursor;
+	int64_t slot =
+		matuwall_grid_nearest_slot(&app->grid, &app->layout, index);
+	if (!matuwall_grid_select(&app->grid, &app->layout,
+		    (uint32_t)app->panel.height, index, slot)) {
+		return;
+	}
+	if (app->layout.flow == MATUWALL_FLOW_GRID) {
+		selection_changed(
+			app, previous, previous_cursor, matuwall_now_ms());
+		return;
+	}
+	int64_t now_ms = matuwall_now_ms();
+	matuwall_animation_glide(&app->animation, &app->layout, &app->panel,
+		previous, previous_cursor, app->grid.selected, app->grid.cursor,
+		app->grid.first_row, now_ms);
+	follow_selection(app, now_ms, true);
 }
 
 // enter or click: apply on the way out, or in the background and stay open
@@ -44,14 +76,8 @@ static void revert(struct matuwall_app *app) {
 	if (app->initial_path[0] == '\0') {
 		return;
 	}
-	size_t previous = app->grid.selected;
-	int64_t previous_cursor = app->grid.cursor;
-	size_t index = app->initial_index;
-	if (index < app->scan.count &&
-		matuwall_grid_select(&app->grid, &app->layout,
-			(uint32_t)app->panel.height, index, (int64_t)index)) {
-		selection_changed(
-			app, previous, previous_cursor, matuwall_now_ms());
+	if (app->initial_index < app->scan.count) {
+		jump_to(app, app->initial_index);
 	}
 	if (app->applied_since_open) {
 		matuwall_log_info(
@@ -66,14 +92,7 @@ static void jump_random(struct matuwall_app *app) {
 	if (app->scan.count < 2) {
 		return;
 	}
-	size_t previous = app->grid.selected;
-	int64_t previous_cursor = app->grid.cursor;
-	size_t index = matuwall_pick_random(app->scan.count, previous);
-	if (matuwall_grid_select(&app->grid, &app->layout,
-		    (uint32_t)app->panel.height, index, (int64_t)index)) {
-		selection_changed(
-			app, previous, previous_cursor, matuwall_now_ms());
-	}
+	jump_to(app, matuwall_pick_random(app->scan.count, app->grid.selected));
 }
 
 static void handle_key(void *user_data, xkb_keysym_t sym) {

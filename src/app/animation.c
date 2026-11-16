@@ -167,10 +167,11 @@ void matuwall_animation_sample(const struct matuwall_animation *animation,
 	}
 }
 
-void matuwall_animation_move(struct matuwall_animation *animation,
+// glide slides the scroll however far it goes, else only short moves do
+static void retarget(struct matuwall_animation *animation,
 	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
 	size_t previous, int64_t previous_slot, size_t selected,
-	int64_t selected_slot, uint32_t first_row, int64_t now_ms) {
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms, bool glide) {
 	if (!animation->initialized || animation->duration_ms == 0) {
 		matuwall_animation_snap(animation, layout, panel, selected,
 			selected_slot, first_row);
@@ -196,13 +197,29 @@ void matuwall_animation_move(struct matuwall_animation *animation,
 	animation->to_slot = selected_slot;
 	animation->from_focus_scale = previous_scale;
 	animation->to_focus_scale = selected_scale;
-	if (adjacent(layout, previous_slot, selected_slot) ||
+	if (glide || adjacent(layout, previous_slot, selected_slot) ||
 		neighboring_row(layout, previous_slot, selected_slot)) {
 		animation->from_scroll = current.scroll;
 	} else {
 		animation->from_scroll = target_scroll;
 	}
 	animation->kind = MATUWALL_ANIMATION_FADE_IN;
+}
+
+void matuwall_animation_move(struct matuwall_animation *animation,
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t previous, int64_t previous_slot, size_t selected,
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms) {
+	retarget(animation, layout, panel, previous, previous_slot, selected,
+		selected_slot, first_row, now_ms, false);
+}
+
+void matuwall_animation_glide(struct matuwall_animation *animation,
+	const struct matuwall_layout *layout, const struct matuwall_rect *panel,
+	size_t previous, int64_t previous_slot, size_t selected,
+	int64_t selected_slot, uint32_t first_row, int64_t now_ms) {
+	retarget(animation, layout, panel, previous, previous_slot, selected,
+		selected_slot, first_row, now_ms, true);
 }
 
 double matuwall_animation_scroll(

@@ -248,7 +248,7 @@ static void withdraw_queued(void *user_data, size_t index) {
 	app->thumbs.withdrawn++;
 }
 
-void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
+static void prioritize(struct matuwall_app *app, bool evict) {
 	if (app->workers == NULL) {
 		app->thumbs.visible_pending = 0;
 		return;
@@ -258,7 +258,9 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	size_t end;
 	size_t wrap_end;
 	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
-	matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
+	if (evict) {
+		matuwall_thumb_store_evict_outside(app, first, end, wrap_end);
+	}
 	submit_visible_window(app, first, end, wrap_end);
 	refresh_visible_pending(app);
 	if (app->thumbs.priority_set && first == app->thumbs.priority_first &&
@@ -285,6 +287,14 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 	app->thumbs.priority_end = end;
 	app->thumbs.priority_wrap_end = wrap_end;
 	app->thumbs.priority_set = true;
+}
+
+void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
+	prioritize(app, true);
+}
+
+void matuwall_app_thumbs_prioritize_spin(struct matuwall_app *app) {
+	prioritize(app, false);
 }
 
 void matuwall_app_thumbs_drain(struct matuwall_app *app) {

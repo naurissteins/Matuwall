@@ -175,6 +175,22 @@ bool matuwall_grid_move(struct matuwall_grid *grid,
 	       grid->cursor != previous_cursor || grid->first_row != first_row;
 }
 
+int64_t matuwall_grid_nearest_slot(const struct matuwall_grid *grid,
+	const struct matuwall_layout *layout, size_t index) {
+	int64_t count = (int64_t)grid->count;
+	if (layout->flow == MATUWALL_FLOW_GRID || index >= grid->count ||
+		grid->cursor > INT64_MAX - count ||
+		grid->cursor < INT64_MIN + count) {
+		return (int64_t)index;
+	}
+	size_t current =
+		matuwall_layout_carousel_index(grid->cursor, grid->count);
+	int64_t ahead =
+		(int64_t)((index + grid->count - current) % grid->count);
+	// at most half the strip either way
+	return grid->cursor + (ahead <= count / 2 ? ahead : ahead - count);
+}
+
 bool matuwall_grid_select(struct matuwall_grid *grid,
 	const struct matuwall_layout *layout, uint32_t surface_height,
 	size_t index, int64_t slot) {
