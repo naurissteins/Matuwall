@@ -32,6 +32,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Restore, random, next and previous wallpaper without opening the picker
 - Full-screen wallpaper previews
 - Supports `Matugen` and `Pywal`
+- Runs on Linux and FreeBSD
 
 Btw, Matuwall is just a picker. You need a running `awww` or `sweetbg` wallpaper daemon to apply a wallpaper.
 User [sweetbg](https://github.com/sweetwm/sweetbg) if you want something minimal, use [awww](https://codeberg.org/LGFae/awww)
@@ -67,6 +68,14 @@ pkgs.matuwall
 ```
 
 Or try it without installing: `nix run github:naurissteins/Matuwall`
+
+### FreeBSD
+
+Install the build dependencies, then [build from source](#build-from-source):
+
+```sh
+pkg install meson ninja pkgconf wayland wayland-protocols libxkbcommon png jpeg-turbo webp scdoc
+```
 
 ## Build from source
 ```sh

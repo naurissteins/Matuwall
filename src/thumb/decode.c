@@ -122,8 +122,10 @@ bool matuwall_image_alloc_shared(
 		close(fd);
 		return false;
 	}
+#ifdef MADV_HUGEPAGE
 	// shmem gets huge pages only on request; 4 KiB faults triple the cost
 	madvise(pixels, bytes, MADV_HUGEPAGE);
+#endif
 	*img = (struct matuwall_image){
 		.width = width,
 		.height = height,

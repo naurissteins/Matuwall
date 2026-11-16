@@ -241,6 +241,30 @@ jobs:
       - run: meson setup build-release --werror -Dbuildtype=release
       - run: ninja -C build-release
 
+  freebsd:
+    name: FreeBSD Build
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Format and lint run on Arch; this only proves the build
+      - name: Build in a FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "15"
+          usesh: true
+          prepare: |
+            pkg install -y meson ninja pkgconf wayland wayland-protocols \
+              libxkbcommon png jpeg-turbo webp scdoc
+          run: |
+            meson setup build --werror
+            ninja -C build
+            meson setup build-release --werror -Dbuildtype=release
+            ninja -C build-release
+
   nix:
     name: Nix Build
     if: vars.RUN_CI == 'true'
