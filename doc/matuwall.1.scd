@@ -215,6 +215,11 @@ backend and hooks like Enter does. A failed apply exits with status 1.
 *r*
 	Jump to a random tile other than the selected one.
 
+*Backspace*
+	Select the wallpaper remembered at launch again. With
+	_window.close_on_apply_ = _false_, also apply it if anything was applied
+	since.
+
 *Enter*
 	Apply the selected wallpaper and exit.
 

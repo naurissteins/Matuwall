@@ -55,6 +55,7 @@ bool matuwall_app_init(struct matuwall_app *app,
 				.lock_fd = -1,
 				.socket_fd = -1,
 			},
+		.initial_index = SIZE_MAX,
 		.running = true,
 	};
 	matuwall_animation_init(&app->animation, app->config.navigation_ms,

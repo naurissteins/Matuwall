@@ -25,7 +25,9 @@ static void selection_changed(struct matuwall_app *app, size_t previous,
 static void pick(struct matuwall_app *app) {
 	if (!app->config.close_on_apply) {
 		if (app->scan.count > 0) {
-			matuwall_app_apply_queue(app);
+			matuwall_app_apply_queue(
+				app, app->scan.paths[app->grid.selected]);
+			app->applied_since_open = true;
 		}
 		return;
 	}
@@ -36,6 +38,28 @@ static void pick(struct matuwall_app *app) {
 }
 
 // --- keyboard ---
+
+// back to the wallpaper from before this session, applied again if changed
+static void revert(struct matuwall_app *app) {
+	if (app->initial_path[0] == '\0') {
+		return;
+	}
+	size_t previous = app->grid.selected;
+	int64_t previous_cursor = app->grid.cursor;
+	size_t index = app->initial_index;
+	if (index < app->scan.count &&
+		matuwall_grid_select(&app->grid, &app->layout,
+			(uint32_t)app->panel.height, index, (int64_t)index)) {
+		selection_changed(
+			app, previous, previous_cursor, matuwall_now_ms());
+	}
+	if (app->applied_since_open) {
+		matuwall_log_info(
+			"apply", "reverting to %s", app->initial_path);
+		matuwall_app_apply_queue(app, app->initial_path);
+		app->applied_since_open = false;
+	}
+}
 
 // same pick as --random, shown in the grid instead of applied
 static void jump_random(struct matuwall_app *app) {
@@ -67,6 +91,9 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 		return;
 	case XKB_KEY_r:
 		jump_random(app);
+		return;
+	case XKB_KEY_BackSpace:
+		revert(app);
 		return;
 	case XKB_KEY_Left:
 	case XKB_KEY_h:

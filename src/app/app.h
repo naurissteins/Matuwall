@@ -1,6 +1,7 @@
 #ifndef MATUWALL_APP_APP_H
 #define MATUWALL_APP_APP_H
 
+#include <limits.h>
 #include <stdbool.h>
 
 #include <stddef.h>
@@ -43,6 +44,9 @@ struct matuwall_app {
 	struct matuwall_rect panel;
 	struct matuwall_preview preview;
 	struct matuwall_apply_queue apply;
+	char initial_path[PATH_MAX];
+	size_t initial_index;
+	bool applied_since_open;
 
 	struct matuwall_worker_pool *workers;
 	struct matuwall_thumb_store thumbs;
