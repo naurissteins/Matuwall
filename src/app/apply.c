@@ -125,10 +125,14 @@ void matuwall_app_apply_queue(struct matuwall_app *app, const char *path) {
 	pthread_mutex_lock(&queue->lock);
 	int written =
 		snprintf(queue->pending, sizeof(queue->pending), "%s", path);
-	queue->has_pending =
-		written >= 0 && (size_t)written < sizeof(queue->pending);
+	bool fits = written >= 0 && (size_t)written < sizeof(queue->pending);
+	queue->has_pending = fits;
+	queue->failed |= !fits;
 	pthread_cond_signal(&queue->wake);
 	pthread_mutex_unlock(&queue->lock);
+	if (!fits) {
+		matuwall_log_error("apply", "path too long: %s", path);
+	}
 }
 
 bool matuwall_app_apply_finish(struct matuwall_app *app) {
