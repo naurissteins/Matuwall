@@ -15,18 +15,20 @@
 
 // Probe order for backend = "auto", command never detects itself. Plasma
 // leads: its desktop covers anything another daemon draws
-static const struct matuwall_backend *const backends[] = {
+const struct matuwall_backend *const matuwall_backends[] = {
 	&matuwall_backend_plasma,
 	&matuwall_backend_sweetbg,
 	&matuwall_backend_awww,
 	&matuwall_backend_command,
 };
 
+const size_t matuwall_backend_count =
+	sizeof(matuwall_backends) / sizeof(matuwall_backends[0]);
+
 static const struct matuwall_backend *backend_by_name(const char *name) {
-	size_t count = sizeof(backends) / sizeof(backends[0]);
-	for (size_t i = 0; i < count; i++) {
-		if (strcmp(backends[i]->name, name) == 0) {
-			return backends[i];
+	for (size_t i = 0; i < matuwall_backend_count; i++) {
+		if (strcmp(matuwall_backends[i]->name, name) == 0) {
+			return matuwall_backends[i];
 		}
 	}
 	return NULL;
@@ -43,12 +45,11 @@ const struct matuwall_backend *matuwall_backend_select(const char *name) {
 	}
 
 	// auto: first backend that detects itself
-	size_t count = sizeof(backends) / sizeof(backends[0]);
-	for (size_t i = 0; i < count; i++) {
-		if (backends[i]->detect()) {
+	for (size_t i = 0; i < matuwall_backend_count; i++) {
+		if (matuwall_backends[i]->detect()) {
 			matuwall_log_info("backend", "auto selected %s",
-				backends[i]->name);
-			return backends[i];
+				matuwall_backends[i]->name);
+			return matuwall_backends[i];
 		}
 	}
 	return NULL;

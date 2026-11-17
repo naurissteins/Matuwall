@@ -21,6 +21,10 @@ struct matuwall_backend {
 	bool (*apply)(const char *path, const struct matuwall_apply_opts *opts);
 };
 
+// every row, in auto probe order
+extern const struct matuwall_backend *const matuwall_backends[];
+extern const size_t matuwall_backend_count;
+
 const struct matuwall_backend *matuwall_backend_select(const char *name);
 bool matuwall_backend_name_valid(const char *name);
 
