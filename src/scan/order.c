@@ -108,11 +108,11 @@ static void parse_index(struct matuwall_order *order) {
 		*end = '\0';
 		uint32_t key;
 		if (end - line > 9 && line[8] == ' ' && parse_key(line, &key)) {
-			order->entries[order->entry_count++] =
-				(struct matuwall_order_entry){
-					.path = line + 9,
-					.key = key,
+			struct matuwall_order_entry entry = {
+				.path = line + 9,
+				.key = key,
 			};
+			order->entries[order->entry_count++] = entry;
 		}
 		line = end + 1;
 	}
