@@ -14,7 +14,7 @@
 // A picker, not a file browser; refuse to build an unbounded grid
 #define MAX_ITEMS 4096
 #define INITIAL_CAPACITY 64
-// bound a recursive walk by tree size, not image count, so startup stays flat
+// bound the scan by entries read, not image count, so startup stays flat
 #define MAX_DEPTH 8
 #define MAX_ENTRIES 8192
 #define MAX_DIRS 256
@@ -27,7 +27,6 @@ struct walk {
 	size_t capacity;
 	size_t entries;
 	size_t unreadable;
-	bool budgeted;
 	bool dirs_capped;
 };
 
@@ -111,12 +110,13 @@ static bool scan_dir(struct matuwall_dirscan *scan, struct walk *walk,
 	bool ok = true;
 	struct dirent *entry;
 	while (ok && (entry = readdir(handle)) != NULL) {
-		if (entry->d_name[0] == '.') {
-			continue;
-		}
-		if (walk->budgeted && ++walk->entries > MAX_ENTRIES) {
+		// hidden entries cost a readdir too
+		if (++walk->entries > MAX_ENTRIES) {
 			scan->truncated = true;
 			break;
+		}
+		if (entry->d_name[0] == '.') {
+			continue;
 		}
 		// no stat: symlinked and DT_UNKNOWN directories are not entered
 		if (descend && entry->d_type == DT_DIR) {
@@ -186,10 +186,8 @@ bool matuwall_dirscan_run(
 	}
 
 	struct walk walk = {0};
+	// top level first, so it reads the same with or without recursion
 	bool ok = scan_dir(scan, &walk, handle, dir, recursive);
-	// top level reads as without recursion; subdirectories share a
-	// budget
-	walk.budgeted = true;
 	ok = ok && walk_subdirs(scan, &walk);
 	walk_finish(&walk);
 	scan->truncated = scan->truncated || walk.dirs_capped;

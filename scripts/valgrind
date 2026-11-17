@@ -16,9 +16,16 @@ fi
 
 ninja -C build-valgrind
 
-valgrind \
-	--leak-check=full \
-	--show-leak-kinds=definite,possible \
-	--track-origins=yes \
-	--error-exitcode=125 \
-	./build-valgrind/matuwall -V
+vg='valgrind --leak-check=full --show-leak-kinds=definite,possible
+	--track-origins=yes --error-exitcode=125'
+
+# shellcheck disable=SC2086
+$vg ./build-valgrind/matuwall -V
+
+if meson test -C build-valgrind --list >/dev/null 2>&1; then
+	# draw-test alone runs ~50 s under valgrind
+	meson test -C build-valgrind --print-errorlogs \
+		--timeout-multiplier 10 --wrapper "$vg"
+else
+	printf 'No tests present (tests/ is local-only); skipping.\n'
+fi
