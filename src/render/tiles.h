@@ -1,11 +1,17 @@
 #ifndef MATUWALL_RENDER_TILES_H
 #define MATUWALL_RENDER_TILES_H
 
+#include <math.h>
 #include <stdint.h>
 
 #include "render/draw.h"
 #include "render/frame.h"
 #include "wayland/shm.h"
+
+// one rounding rule, so the ring keeps its gap around the tile
+static inline int32_t scaled(double logical, double scale) {
+	return (int32_t)lround(logical * scale);
+}
 
 struct matuwall_tile_edge {
 	double scale;

@@ -16,10 +16,6 @@ static int32_t to_pixels(int32_t logical, double scale) {
 	return (int32_t)lround((double)logical * scale);
 }
 
-static int32_t scaled(double logical, double scale) {
-	return (int32_t)lround(logical * scale);
-}
-
 static struct matuwall_clip full_damage(const struct matuwall_buffer *buffer) {
 	return (struct matuwall_clip){
 		.x1 = (int32_t)buffer->width,

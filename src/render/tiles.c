@@ -9,10 +9,6 @@
 // size a fading tile reaches one full step past the margin
 #define FADE_MIN_SCALE 0.8
 
-static int32_t scaled(double logical, double scale) {
-	return (int32_t)lround(logical * scale);
-}
-
 enum tile_position {
 	TILE_BEFORE,
 	TILE_VISIBLE,
