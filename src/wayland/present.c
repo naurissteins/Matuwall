@@ -71,8 +71,7 @@ static bool update_opaque_region(struct matuwall_layer *layer, bool opaque) {
 		return true;
 	}
 	if (layer->compositor == NULL || layer->width == 0 ||
-		layer->height == 0 || layer->width > INT32_MAX ||
-		layer->height > INT32_MAX) {
+		layer->height == 0) {
 		return false;
 	}
 
