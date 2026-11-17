@@ -28,7 +28,9 @@ static void handle_configure(void *data,
 		height = layer->requested_height != 0 ? layer->requested_height
 						      : layer->height;
 	}
-	if (width == 0 || height == 0) {
+	// viewport, region and buffer sizes are int32 on the wire
+	if (width == 0 || height == 0 || width > INT32_MAX ||
+		height > INT32_MAX) {
 		layer->configured = false;
 		return;
 	}
@@ -247,8 +249,7 @@ void matuwall_layer_set_panel(struct matuwall_layer *layer,
 
 bool matuwall_layer_map_clear(
 	struct matuwall_layer *layer, struct wl_shm *shm) {
-	if (!layer->configured || layer->width > INT32_MAX ||
-		layer->height > INT32_MAX) {
+	if (!layer->configured) {
 		return false;
 	}
 	// without a viewport the only way to cover the surface is a full buffer
@@ -290,26 +291,23 @@ void matuwall_layer_inherit_scale(
 	}
 }
 
+// rounds halfway away from 0 like fractional-scale-v1, 0 when too large
+static uint32_t scale_size(uint32_t logical, uint64_t num, uint64_t denom) {
+	uint64_t pixels = ((uint64_t)logical * num + denom / 2) / denom;
+	return pixels > INT32_MAX ? 0 : (uint32_t)pixels;
+}
+
 void matuwall_layer_buffer_size(const struct matuwall_layer *layer,
 	uint32_t *pixel_width, uint32_t *pixel_height) {
+	uint64_t num =
+		layer->buffer_scale < 1 ? 1 : (uint64_t)layer->buffer_scale;
+	uint64_t denom = 1;
 	if (layer->fractional_scale > 0) {
-		// fractional-scale-v1 rounds the scaled size halfway away from
-		// 0
-		*pixel_width =
-			(uint32_t)(((uint64_t)layer->width *
-						   layer->fractional_scale +
-					   FRACTIONAL_SCALE_DENOM / 2) /
-				   FRACTIONAL_SCALE_DENOM);
-		*pixel_height =
-			(uint32_t)(((uint64_t)layer->height *
-						   layer->fractional_scale +
-					   FRACTIONAL_SCALE_DENOM / 2) /
-				   FRACTIONAL_SCALE_DENOM);
-		return;
+		num = layer->fractional_scale;
+		denom = FRACTIONAL_SCALE_DENOM;
 	}
-	int32_t scale = layer->buffer_scale < 1 ? 1 : layer->buffer_scale;
-	*pixel_width = layer->width * (uint32_t)scale;
-	*pixel_height = layer->height * (uint32_t)scale;
+	*pixel_width = scale_size(layer->width, num, denom);
+	*pixel_height = scale_size(layer->height, num, denom);
 }
 
 void matuwall_layer_destroy(struct matuwall_layer *layer) {
