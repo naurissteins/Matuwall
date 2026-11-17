@@ -88,12 +88,12 @@ static void add_focus(struct matuwall_animation_sample *sample, size_t index,
 		return;
 	}
 	if (sample->focus_count < 2) {
-		sample->focuses[sample->focus_count++] =
-			(struct matuwall_frame_focus){
-				.index = index,
-				.slot = slot,
-				.scale = scale,
+		struct matuwall_frame_focus focus = {
+			.index = index,
+			.slot = slot,
+			.scale = scale,
 		};
+		sample->focuses[sample->focus_count++] = focus;
 	}
 }
 
