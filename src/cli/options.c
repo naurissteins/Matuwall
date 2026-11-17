@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "backend/backend.h"
-
 enum {
 	OPTION_CLEAR_CACHE = 256,
 	OPTION_DIAGNOSE,
@@ -112,9 +110,7 @@ static enum parse_result parse_key(size_t row, bool off, const char *value,
 	const struct matuwall_config_key *key = &matuwall_config_keys[row];
 	if (key->type == MATUWALL_CONFIG_BOOL) {
 		value = off ? "false" : "true";
-	} else if (!matuwall_config_set_text(NULL, key, value) ||
-		   (key->type == MATUWALL_CONFIG_BACKEND &&
-			   !matuwall_backend_name_valid(value))) {
+	} else if (!matuwall_config_set_text(NULL, key, value)) {
 		char expect[32];
 		snprintf(err, err_size, "invalid --%s '%s': expected %s",
 			key->flag, value,

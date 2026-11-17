@@ -21,14 +21,10 @@ bool matuwall_apply_path(
 	}
 	const struct matuwall_backend *backend =
 		matuwall_backend_select(config->backend);
+	// config only holds known names, so NULL means auto found nothing
 	if (backend == NULL) {
-		if (strcmp(config->backend, "auto") == 0) {
-			matuwall_log_error("backend",
-				"no running wallpaper backend found");
-		} else {
-			matuwall_log_error("backend", "unknown backend '%s'",
-				config->backend);
-		}
+		matuwall_log_error(
+			"backend", "no running wallpaper backend found");
 		return false;
 	}
 	if (strcmp(config->backend, "auto") != 0) {

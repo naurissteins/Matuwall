@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "backend/backend.h"
 #include "config/toml.h"
 
 #define FIELD(member) offsetof(struct matuwall_config, member)
@@ -105,7 +106,7 @@ static bool set_string(char *out, size_t capacity,
 	case MATUWALL_CONFIG_PATH:
 		return matuwall_config_expand_path(value, out, capacity);
 	case MATUWALL_CONFIG_BACKEND:
-		if (len == 0) {
+		if (!matuwall_backend_name_valid(value)) {
 			return false;
 		}
 		break;
