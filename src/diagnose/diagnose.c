@@ -17,6 +17,7 @@
 #include "config/config.h"
 #include "state/selection.h"
 #include "thumb/cache.h"
+#include "util/command.h"
 #include "util/log.h"
 
 enum diagnose_level {
@@ -209,21 +210,9 @@ static void report_configuration(
 	report_directory(report, config->directory);
 }
 
-static bool command_name(const char *command, char *out, size_t out_size) {
-	while (*command == ' ' || *command == '\t') {
-		command++;
-	}
-	size_t length = 0;
-	while (command[length] != '\0' && command[length] != ' ' &&
-		command[length] != '\t') {
-		length++;
-	}
-	if (length == 0 || length >= out_size) {
-		return false;
-	}
-	memcpy(out, command, length);
-	out[length] = '\0';
-	return true;
+// argv[0] as the spawn would split it, false when empty or too long
+static bool command_name(const char *command, struct matuwall_command *cmd) {
+	return matuwall_command_expand(cmd, command, "{path}") && cmd->argc > 0;
 }
 
 static bool command_available(const char *command) {
@@ -236,31 +225,35 @@ static bool command_available(const char *command) {
 // The command row never detects itself, only its executable is checked
 static void report_command(
 	struct diagnose_report *report, const struct matuwall_config *config) {
-	char executable[PATH_MAX];
-	char shown[PATH_MAX];
-	bool set = command_name(
-		config->backend_command, executable, sizeof(executable));
-	bool found = set && command_available(executable);
-	const char *visible =
-		clean(set ? executable : "", shown, sizeof(shown));
-	if (set) {
-		report_line(report, DIAG_INFO, "command", "%s %s", visible,
-			found ? "found" : "not found");
-	} else {
-		report_line(report, DIAG_INFO, "command", "apply not set");
-	}
-
-	if (strcmp(config->backend, "command") != 0) {
+	bool selected = strcmp(config->backend, "command") == 0;
+	struct matuwall_command cmd;
+	if (!command_name(config->backend_command, &cmd)) {
+		// a set apply always holds {path}, so only the arg cap fails it
+		bool unset = config->backend_command[0] == '\0';
+		report_line(report, DIAG_INFO, "command", "%s",
+			unset ? "apply not set"
+			      : "apply has too many arguments");
+		if (selected) {
+			report_line(report, DIAG_ERROR, "configured",
+				"command backend %s",
+				unset ? "needs [backend.command] apply"
+				      : "cannot run apply");
+		}
 		return;
 	}
-	if (!set) {
-		report_line(report, DIAG_ERROR, "configured",
-			"command backend needs [backend.command] apply");
-	} else if (!found) {
-		report_line(report, DIAG_ERROR, "configured", "%s not found",
+	char shown[PATH_MAX];
+	const char *visible = clean(cmd.argv[0], shown, sizeof(shown));
+	bool found = command_available(cmd.argv[0]);
+	report_line(report, DIAG_INFO, "command", "%s %s", visible,
+		found ? "found" : "not found");
+	if (!selected) {
+		return;
+	}
+	if (found) {
+		report_line(report, DIAG_OK, "configured", "command runs %s",
 			visible);
 	} else {
-		report_line(report, DIAG_OK, "configured", "command runs %s",
+		report_line(report, DIAG_ERROR, "configured", "%s not found",
 			visible);
 	}
 }
@@ -268,37 +261,36 @@ static void report_command(
 static void report_backends(
 	struct diagnose_report *report, const struct matuwall_config *config) {
 	puts("\nBackends");
-	struct backend_probe probes[] = {
-		{.backend = &matuwall_backend_plasma},
-		{.backend = &matuwall_backend_sweetbg},
-		{.backend = &matuwall_backend_awww},
-	};
-	const struct backend_probe *configured = NULL;
-	const struct backend_probe *automatic = NULL;
-	for (size_t i = 0; i < sizeof(probes) / sizeof(probes[0]); i++) {
-		probes[i].client =
-			matuwall_backend_available(probes[i].backend->client);
-		probes[i].ready =
-			probes[i].client && probes[i].backend->detect();
-		const char *detail = probes[i].ready ? "client found, running"
-				     : probes[i].client
+	struct backend_probe configured = {0};
+	const struct matuwall_backend *automatic = NULL;
+	for (size_t i = 0; i < matuwall_backend_count; i++) {
+		struct backend_probe probe = {.backend = matuwall_backends[i]};
+		// no fixed client: report_command checks the command row
+		if (probe.backend->client == NULL) {
+			continue;
+		}
+		probe.client =
+			matuwall_backend_available(probe.backend->client);
+		probe.ready = probe.client && probe.backend->detect();
+		const char *detail = probe.ready ? "client found, running"
+				     : probe.client
 					     ? "client found, not running"
 					     : "client not found on PATH";
 		const struct matuwall_backend_args *args =
 			matuwall_config_backend_args(
-				config, probes[i].backend->name);
+				config, probe.backend->name);
 		char extra[48] = "";
 		if (args != NULL && args->count > 0) {
 			snprintf(extra, sizeof(extra), "; %zu extra args",
 				args->count);
 		}
-		report_line(report, DIAG_INFO, probes[i].backend->name, "%s%s",
+		report_line(report, DIAG_INFO, probe.backend->name, "%s%s",
 			detail, extra);
-		if (strcmp(config->backend, probes[i].backend->name) == 0) {
-			configured = &probes[i];
+		if (strcmp(config->backend, probe.backend->name) == 0) {
+			configured = probe;
 		}
-		if (automatic == NULL && probes[i].ready) {
-			automatic = &probes[i];
+		if (automatic == NULL && probe.ready) {
+			automatic = probe.backend;
 		}
 	}
 
@@ -309,27 +301,26 @@ static void report_backends(
 	if (strcmp(config->backend, "auto") == 0) {
 		if (automatic != NULL) {
 			report_line(report, DIAG_OK, "configured",
-				"auto would select %s",
-				automatic->backend->name);
+				"auto would select %s", automatic->name);
 		} else {
 			report_line(report, DIAG_ERROR, "configured",
 				"auto found no running backend");
 		}
-	} else if (configured == NULL) {
+	} else if (configured.backend == NULL) {
 		char shown[sizeof(config->backend)];
 		report_line(report, DIAG_ERROR, "configured",
 			"unknown backend %s",
 			clean(config->backend, shown, sizeof(shown)));
-	} else if (!configured->client) {
+	} else if (!configured.client) {
 		report_line(report, DIAG_ERROR, "configured",
-			"%s is not on PATH", configured->backend->client);
-	} else if (!configured->ready) {
+			"%s is not on PATH", configured.backend->client);
+	} else if (!configured.ready) {
 		report_line(report, DIAG_WARN, "configured",
 			"%s not running; explicit selection still runs",
-			configured->backend->name);
+			configured.backend->name);
 	} else {
 		report_line(report, DIAG_OK, "configured", "%s is ready",
-			configured->backend->name);
+			configured.backend->name);
 	}
 }
 
@@ -341,23 +332,22 @@ static void report_hooks(
 		return;
 	}
 	for (size_t i = 0; i < config->on_apply_count; i++) {
-		char executable[PATH_MAX];
+		struct matuwall_command cmd;
 		char subject[32];
 		int length =
 			snprintf(subject, sizeof(subject), "on_apply[%zu]", i);
 		if (length < 0 || (size_t)length >= sizeof(subject)) {
 			continue;
 		}
-		if (!command_name(config->on_apply[i], executable,
-			    sizeof(executable))) {
+		if (!command_name(config->on_apply[i], &cmd)) {
 			report_line(report, DIAG_WARN, subject,
 				"empty or invalid command");
 			continue;
 		}
 		char shown[PATH_MAX];
-		bool available = command_available(executable);
+		bool available = command_available(cmd.argv[0]);
 		report_line(report, available ? DIAG_OK : DIAG_WARN, subject,
-			"%s %s", clean(executable, shown, sizeof(shown)),
+			"%s %s", clean(cmd.argv[0], shown, sizeof(shown)),
 			available ? "found" : "not found");
 	}
 }
