@@ -223,8 +223,8 @@ backend and hooks like Enter does. A failed apply exits with status 1.
 	Jump to a random tile other than the selected one.
 
 *f*
-	Mark the selected wallpaper as a favorite. Marked ones are added to
-	_general.favorites_ when Matuwall closes.
+	Mark the selected wallpaper as a favorite. A ring flashes out from the
+	tile. Marked ones are added to _general.favorites_ when Matuwall closes.
 
 *Backspace*
 	Select the wallpaper remembered at launch again. With

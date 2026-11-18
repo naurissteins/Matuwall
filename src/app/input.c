@@ -110,6 +110,8 @@ static void mark_favorite(struct matuwall_app *app) {
 		}
 	}
 	app->favorites[app->grid.selected] = true;
+	matuwall_animation_flash(&app->animation, matuwall_now_ms());
+	app->layer.needs_repaint = true;
 	matuwall_log_info(
 		"favorites", "marked %s", app->scan.paths[app->grid.selected]);
 }
