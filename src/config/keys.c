@@ -16,6 +16,8 @@ const struct matuwall_config_key matuwall_config_keys[] = {
 		PATH_MAX, "directory", NULL, 'd'},
 	{"general", "recursive", MATUWALL_CONFIG_BOOL, FIELD(recursive), 0, 0,
 		"recursive", "no-recursive", 0},
+	{"general", "list", MATUWALL_CONFIG_LIST, FIELD(list), 0, PATH_MAX,
+		"list", NULL, 0},
 	{"general", "backend", MATUWALL_CONFIG_BACKEND, FIELD(backend), 0, 32,
 		"backend", NULL, 'b'},
 	{"backend.sweetbg", "args", MATUWALL_CONFIG_ARGS, FIELD(sweetbg_args),
@@ -105,6 +107,11 @@ static bool set_string(char *out, size_t capacity,
 	switch (key->type) {
 	case MATUWALL_CONFIG_PATH:
 		return matuwall_config_expand_path(value, out, capacity);
+	case MATUWALL_CONFIG_LIST:
+		if (len == 0 || strcmp(value, "-") == 0) {
+			break;
+		}
+		return matuwall_config_expand_path(value, out, capacity);
 	case MATUWALL_CONFIG_BACKEND:
 		if (!matuwall_backend_name_valid(value)) {
 			return false;
@@ -181,6 +188,7 @@ bool matuwall_config_set(struct matuwall_config *cfg,
 		size = sizeof(value.sort);
 		break;
 	case MATUWALL_CONFIG_PATH:
+	case MATUWALL_CONFIG_LIST:
 	case MATUWALL_CONFIG_BACKEND:
 	case MATUWALL_CONFIG_COMMAND:
 		if (!string || !set_string(value.text, (size_t)key->max, key,
@@ -252,6 +260,8 @@ const char *matuwall_config_expect(
 		return "\"name\" or \"color\"";
 	case MATUWALL_CONFIG_PATH:
 		return "a path that can be resolved";
+	case MATUWALL_CONFIG_LIST:
+		return "empty, \"-\" for stdin, or a path";
 	case MATUWALL_CONFIG_BACKEND:
 		return "\"sweetbg\", \"awww\", \"plasma\", \"command\", or "
 		       "\"auto\"";
@@ -307,6 +317,7 @@ void matuwall_config_format(const struct matuwall_config *cfg,
 					field));
 		return;
 	case MATUWALL_CONFIG_PATH:
+	case MATUWALL_CONFIG_LIST:
 	case MATUWALL_CONFIG_BACKEND:
 	case MATUWALL_CONFIG_COMMAND:
 		snprintf(out, size, "%s", field);

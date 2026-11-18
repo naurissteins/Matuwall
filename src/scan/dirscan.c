@@ -8,6 +8,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "util/log.h"
 
@@ -211,6 +212,114 @@ bool matuwall_dirscan_run(
 	if (scan->count > 0) {
 		qsort((void *)scan->paths, scan->count, sizeof(*scan->paths),
 			compare_paths);
+	}
+	return true;
+}
+
+// --- list files ---
+
+static char *list_entry(const char *base, const char *entry) {
+	if (entry[0] == '/') {
+		return strdup(entry);
+	}
+	const char *home = getenv("HOME");
+	if (entry[0] == '~' && entry[1] == '/' && home != NULL) {
+		return join_path(home, entry + 2);
+	}
+	while (entry[0] == '.' && entry[1] == '/') {
+		entry += 2;
+	}
+	return join_path(base, entry);
+}
+
+// relative entries name files in the wallpaper directory, stdin's the cwd
+static bool list_base(bool from_stdin, const char *directory, char *base) {
+	if (from_stdin || directory[0] == '\0') {
+		return getcwd(base, PATH_MAX) != NULL;
+	}
+	size_t length = strlen(directory);
+	if (length >= PATH_MAX) {
+		return false;
+	}
+	memcpy(base, directory, length + 1);
+	return true;
+}
+
+static bool read_list(struct matuwall_dirscan *scan, FILE *fp, const char *base,
+	size_t *skipped) {
+	char *line = NULL;
+	size_t capacity = 0;
+	ssize_t length;
+	bool ok = true;
+	while (ok && (length = getline(&line, &capacity, fp)) >= 0) {
+		while (length > 0 && (line[length - 1] == '\n' ||
+					     line[length - 1] == '\r')) {
+			line[--length] = '\0';
+		}
+		if (length == 0 || line[0] == '#') {
+			continue;
+		}
+		// names only, like the directory scan
+		if (!has_supported_extension(line)) {
+			(*skipped)++;
+			continue;
+		}
+		if (scan->count == MAX_ITEMS) {
+			scan->truncated = true;
+			break;
+		}
+		ok = push_owned(&scan->paths, &scan->count, &scan->capacity,
+			list_entry(base, line));
+	}
+	free(line);
+	return ok;
+}
+
+bool matuwall_dirscan_list(struct matuwall_dirscan *scan, const char *list,
+	const char *directory) {
+	*scan = (struct matuwall_dirscan){0};
+	bool from_stdin = strcmp(list, "-") == 0;
+	// a terminal would wait for typed paths with nothing on screen
+	if (from_stdin && isatty(STDIN_FILENO)) {
+		scan->unavailable = true;
+		matuwall_log_error("wallpapers", "list unavailable: stdin is a "
+						 "terminal, pipe paths in");
+		return true;
+	}
+	char base[PATH_MAX];
+	FILE *fp = from_stdin ? stdin : fopen(list, "re");
+	if (fp == NULL || !list_base(from_stdin, directory, base)) {
+		scan->unavailable = true;
+		matuwall_log_error("wallpapers", "list unavailable: %s: %s",
+			list, strerror(errno));
+		if (fp != NULL && !from_stdin) {
+			fclose(fp);
+		}
+		return true;
+	}
+
+	size_t skipped = 0;
+	bool ok = read_list(scan, fp, base, &skipped);
+	if (ferror(fp)) {
+		matuwall_log_warn("wallpapers", "%s: read error", list);
+	}
+	if (!from_stdin) {
+		fclose(fp);
+	}
+	if (!ok) {
+		matuwall_dirscan_finish(scan);
+		return false;
+	}
+	if (skipped > 0) {
+		matuwall_log_warn("wallpapers",
+			"%s: skipped %zu entr%s without a jpg, png or webp "
+			"name",
+			list, skipped, skipped == 1 ? "y" : "ies");
+	}
+	if (scan->truncated) {
+		matuwall_log_warn("wallpapers",
+			"%s: list limit reached; showing %zu images", list,
+			scan->count);
 	}
 	return true;
 }

@@ -30,6 +30,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Sort wallpapers by name or color
 - Fractional scaling and multiple outputs
 - Restore, random, next and previous wallpaper without opening the picker
+- Pick from a list file or stdin, for favorites or filtered sets
 - Full-screen wallpaper previews
 - Supports `Matugen` and `Pywal`
 - Runs on Linux and FreeBSD
@@ -95,6 +96,7 @@ matuwall --no-config -d ~/Pictures/Wallpapers    // defaults plus CLI overrides
 matuwall --print-config                          // show the effective config and exit
 matuwall -d ~/Pictures/Photography               // use another directory
 matuwall --recursive                             // include subdirectories
+matuwall --list ~/favorites.txt                  // pick from a list of paths
 matuwall -b awww                                 // use awww once
 matuwall -b plasma                               // KDE Plasma
 matuwall --backend auto                          // detect a running backend
@@ -228,6 +230,22 @@ shell quoting are not supported
 ```sh
 matuwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
+
+---
+
+## Wallpaper lists
+
+Pick from a file with one path per line instead of a directory. `-` reads
+stdin. Use it for favorites or a filtered set
+
+```sh
+matuwall --list ~/.config/matuwall/favorites.txt
+fd -e jpg sunset ~/Pictures | matuwall --list -
+matuwall --list ~/.config/matuwall/favorites.txt --random
+```
+
+Relative paths are inside `directory`. Blank lines and `#` comments
+are skipped. Set it permanently with `list` under `[general]`
 
 ---
 

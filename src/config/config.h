@@ -38,6 +38,8 @@ struct matuwall_backend_args {
 struct matuwall_config {
 	char directory[PATH_MAX];
 	bool recursive;
+	// wallpaper list file used instead of directory, "-" is stdin
+	char list[PATH_MAX];
 	char backend[32];
 	struct matuwall_backend_args sweetbg_args;
 	struct matuwall_backend_args awww_args;
@@ -103,6 +105,8 @@ enum matuwall_config_type {
 	MATUWALL_CONFIG_EDGE,
 	MATUWALL_CONFIG_SORT,
 	MATUWALL_CONFIG_PATH,
+	// a path, "-" for stdin, or empty for unset
+	MATUWALL_CONFIG_LIST,
 	MATUWALL_CONFIG_BACKEND,
 	MATUWALL_CONFIG_COMMAND,
 	MATUWALL_CONFIG_HOOKS,

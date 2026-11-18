@@ -48,7 +48,13 @@ bool matuwall_app_init(struct matuwall_app *app,
 		return false;
 	}
 
-	if (app->config.directory[0] == '\0') {
+	bool listed = app->config.list[0] != '\0';
+	if (listed) {
+		if (!matuwall_dirscan_list(&app->scan, app->config.list,
+			    app->config.directory)) {
+			return false;
+		}
+	} else if (app->config.directory[0] == '\0') {
 		app->scan.unavailable = true;
 		matuwall_log_error("wallpapers",
 			"directory unavailable: path is "
@@ -61,7 +67,7 @@ bool matuwall_app_init(struct matuwall_app *app,
 	if (!app->scan.unavailable) {
 		matuwall_log_info("wallpapers", "found %zu image%s in %s",
 			app->scan.count, app->scan.count == 1 ? "" : "s",
-			app->config.directory);
+			listed ? app->config.list : app->config.directory);
 	}
 
 	app->display = wl_display_connect(NULL);

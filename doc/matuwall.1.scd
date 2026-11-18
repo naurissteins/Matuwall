@@ -88,6 +88,10 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 *--edge-margin* _MARGIN_
 	Set _window.edge_margin_ to an integer from 0 to 4096.
 
+*--list* _FILE_
+	Read wallpapers from _FILE_ instead of the directory. _-_ reads stdin. See
+	_general.list_ in *matuwall*(5).
+
 *-m* _MARGIN_, *--margin* _MARGIN_
 	Set _window.margin_ to an integer from 0 to 4096.
 
