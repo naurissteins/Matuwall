@@ -11,6 +11,8 @@
 #include "thumb/worker.h"
 #include "util/log.h"
 
+static void submit_index(struct matuwall_app *app, size_t index);
+
 static void on_result(
 	void *user_data, const struct matuwall_thumb_result *result) {
 	struct matuwall_app *app = user_data;
@@ -34,6 +36,15 @@ static void on_result(
 	struct matuwall_thumb *thumb = &app->thumbs.items[result->index];
 	if (thumb->state != MATUWALL_THUMB_PENDING) {
 		free(result->image.pixels);
+		return;
+	}
+	// it was already running when the target changed, ask again
+	if (result->target_w != app->thumbs.target_width ||
+		result->target_h != app->thumbs.target_height) {
+		free(result->image.pixels);
+		thumb->state = thumb->pixels != NULL ? MATUWALL_THUMB_READY
+						     : MATUWALL_THUMB_UNLOADED;
+		submit_index(app, result->index);
 		return;
 	}
 
@@ -92,7 +103,10 @@ static size_t pending_in_range(
 	}
 	size_t pending = 0;
 	for (size_t i = first; i < end; i++) {
-		pending += app->thumbs.items[i].state == MATUWALL_THUMB_PENDING;
+		// a refresh still draws its old pixels, nothing to pulse
+		pending +=
+			app->thumbs.items[i].state == MATUWALL_THUMB_PENDING &&
+			app->thumbs.items[i].pixels == NULL;
 	}
 	return pending;
 }
@@ -112,12 +126,17 @@ static void refresh_visible_pending(struct matuwall_app *app) {
 
 static void submit_index(struct matuwall_app *app, size_t index) {
 	if (index >= app->thumbs.count ||
-		app->thumbs.items[index].state != MATUWALL_THUMB_UNLOADED) {
+		(app->thumbs.items[index].state != MATUWALL_THUMB_UNLOADED &&
+			!matuwall_thumb_store_stale(app, index))) {
 		return;
 	}
 	if (matuwall_worker_submit(
 		    app->workers, index, app->scan.paths[index])) {
 		app->thumbs.items[index].state = MATUWALL_THUMB_PENDING;
+		return;
+	}
+	// a stale thumbnail keeps drawing, only a missing one fails
+	if (matuwall_thumb_store_stale(app, index)) {
 		return;
 	}
 	app->thumbs.items[index].state = MATUWALL_THUMB_FAILED;
@@ -244,7 +263,9 @@ static void withdraw_queued(void *user_data, size_t index) {
 		app->thumbs.items[index].state != MATUWALL_THUMB_PENDING) {
 		return;
 	}
-	app->thumbs.items[index].state = MATUWALL_THUMB_UNLOADED;
+	struct matuwall_thumb *thumb = &app->thumbs.items[index];
+	thumb->state = thumb->pixels != NULL ? MATUWALL_THUMB_READY
+					     : MATUWALL_THUMB_UNLOADED;
 	app->thumbs.withdrawn++;
 }
 
@@ -295,6 +316,21 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app) {
 
 void matuwall_app_thumbs_prioritize_spin(struct matuwall_app *app) {
 	prioritize(app, false);
+}
+
+void matuwall_app_thumbs_retarget(struct matuwall_app *app) {
+	uint32_t tw;
+	uint32_t th;
+	if (app->workers == NULL || !thumbnail_target(app, &tw, &th) ||
+		(tw == app->thumbs.target_width &&
+			th == app->thumbs.target_height) ||
+		!matuwall_thumb_store_set_target(app, tw, th)) {
+		return;
+	}
+	matuwall_log_info("thumbnail", "target now %ux%u", tw, th);
+	matuwall_worker_retarget(app->workers, tw, th);
+	// stale thumbnails in the window queue again, visible ones first
+	matuwall_app_thumbs_prioritize_visible(app);
 }
 
 void matuwall_app_thumbs_drain(struct matuwall_app *app) {

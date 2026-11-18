@@ -263,6 +263,10 @@ static bool pump_events(struct matuwall_app *app) {
 	if (app->layer.layout_dirty) {
 		matuwall_app_fit_refresh(app);
 	}
+	if (app->layer.scale_dirty) {
+		app->layer.scale_dirty = false;
+		matuwall_app_thumbs_retarget(app);
+	}
 
 	if ((pfd[1].revents & POLLIN) != 0) {
 		bool replace_requested;

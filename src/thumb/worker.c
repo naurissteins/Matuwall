@@ -17,8 +17,6 @@
 struct job {
 	struct matuwall_thumb_result result;
 	const char *path;
-	uint32_t target_w;
-	uint32_t target_h;
 	// set by the main thread when a newer preview supersedes this one
 	atomic_bool cancelled;
 	struct job *next;
@@ -120,8 +118,8 @@ static bool decode_and_scale(struct matuwall_worker_pool *pool,
 		job->result.kind == MATUWALL_JOB_PREVIEW
 			? MATUWALL_DECODE_PREVIEW
 			: MATUWALL_DECODE_THUMBNAIL;
-	bool ok = matuwall_image_decode(out, job->path, job->target_w,
-		job->target_h, purpose, stop, &budget);
+	bool ok = matuwall_image_decode(out, job->path, job->result.target_w,
+		job->result.target_h, purpose, stop, &budget);
 	release_decode(&ticket);
 	return ok;
 }
@@ -138,9 +136,10 @@ static bool produce(struct matuwall_worker_pool *pool, const struct job *job,
 	}
 
 	struct matuwall_cache_key key;
-	bool have_key = thumbnail && pool->cache != NULL &&
-			matuwall_cache_key(pool->cache, job->path,
-				job->target_w, job->target_h, &key);
+	bool have_key =
+		thumbnail && pool->cache != NULL &&
+		matuwall_cache_key(pool->cache, job->path, job->result.target_w,
+			job->result.target_h, &key);
 	if (have_key && matuwall_cache_read(&key, out)) {
 		if (flag_set(stop)) {
 			matuwall_image_free(out);
@@ -302,8 +301,8 @@ static struct job *make_job(enum matuwall_job_kind kind, size_t index,
 	job->result.kind = kind;
 	job->result.index = index;
 	job->result.hue = MATUWALL_HUE_UNKNOWN;
-	job->target_w = target_w;
-	job->target_h = target_h;
+	job->result.target_w = target_w;
+	job->result.target_h = target_h;
 	job->path = path;
 	atomic_init(&job->cancelled, false);
 	return job;
@@ -424,6 +423,26 @@ void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 		free(job);
 		job = next;
 	}
+}
+
+static void retarget_list(
+	struct job_list *list, uint32_t target_w, uint32_t target_h) {
+	for (struct job *job = list->head; job != NULL; job = job->next) {
+		if (job->result.kind != MATUWALL_JOB_PREVIEW) {
+			job->result.target_w = target_w;
+			job->result.target_h = target_h;
+		}
+	}
+}
+
+void matuwall_worker_retarget(struct matuwall_worker_pool *pool,
+	uint32_t target_w, uint32_t target_h) {
+	pthread_mutex_lock(&pool->mutex);
+	pool->target_w = target_w;
+	pool->target_h = target_h;
+	retarget_list(&pool->jobs, target_w, target_h);
+	retarget_list(&pool->background, target_w, target_h);
+	pthread_mutex_unlock(&pool->mutex);
 }
 
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,

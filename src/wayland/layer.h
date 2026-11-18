@@ -56,6 +56,8 @@ struct matuwall_layer {
 	bool configured;
 	bool needs_repaint;
 	bool layout_dirty;
+	// preferred scale changed, physical sizes follow
+	bool scale_dirty;
 	bool opaque;
 	bool closed;
 	// frequent repaints make one released buffer worth keeping at idle

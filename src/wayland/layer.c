@@ -66,6 +66,7 @@ static void handle_preferred_scale(
 	if (scale != layer->fractional_scale) {
 		layer->fractional_scale = scale;
 		layer->needs_repaint = true;
+		layer->scale_dirty = true;
 	}
 }
 
@@ -97,6 +98,7 @@ static void handle_preferred_buffer_scale(
 	if (factor >= 1 && factor != layer->buffer_scale) {
 		layer->buffer_scale = factor;
 		layer->needs_repaint = true;
+		layer->scale_dirty = true;
 	}
 }
 

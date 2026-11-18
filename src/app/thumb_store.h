@@ -14,6 +14,9 @@ struct matuwall_thumb_store {
 	struct matuwall_thumb *items;
 	size_t count;
 	size_t visible_pending;
+	// current thumbnail size, a ready one of another size is stale
+	uint32_t target_width;
+	uint32_t target_height;
 	size_t target_bytes;
 	size_t resident_bytes;
 	size_t resident_peak_bytes;
@@ -33,6 +36,9 @@ struct matuwall_thumb_store {
 
 bool matuwall_thumb_store_set_target(
 	struct matuwall_app *app, uint32_t width, uint32_t height);
+
+// ready but made for an older target, its pixels draw until replaced
+bool matuwall_thumb_store_stale(const struct matuwall_app *app, size_t index);
 
 // visible items as [first, end) plus a carousel wrap of [0, wrap_end)
 void matuwall_thumb_store_visible_ranges(const struct matuwall_app *app,

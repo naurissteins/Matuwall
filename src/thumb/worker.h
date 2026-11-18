@@ -35,6 +35,9 @@ struct matuwall_thumb_result {
 	bool ok;
 	bool cache_hit;
 	bool cancelled;
+	// size the job was asked for, a retarget can make it stale
+	uint32_t target_w;
+	uint32_t target_h;
 	// thumbnail colour key when the pool computes them, else unknown
 	uint32_t hue;
 	// owned by the drain callback; a preview's is always memfd backed
@@ -72,6 +75,10 @@ struct matuwall_thumb_filter {
 void matuwall_worker_prioritize_thumbs(struct matuwall_worker_pool *pool,
 	size_t first, size_t end, size_t wrap_end,
 	const struct matuwall_thumb_filter *filter);
+
+// queued thumbnail and colour jobs take the new size, running ones keep theirs
+void matuwall_worker_retarget(struct matuwall_worker_pool *pool,
+	uint32_t target_w, uint32_t target_h);
 
 // jumps the queue, drops queued previews and cancels a running one
 bool matuwall_worker_submit_preview(struct matuwall_worker_pool *pool,

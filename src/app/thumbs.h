@@ -12,6 +12,9 @@ void matuwall_app_thumbs_prioritize_visible(struct matuwall_app *app);
 
 void matuwall_app_thumbs_prioritize_spin(struct matuwall_app *app);
 
+// follow a scale change, old pixels draw until their replacements land
+void matuwall_app_thumbs_retarget(struct matuwall_app *app);
+
 void matuwall_app_thumbs_drain(struct matuwall_app *app);
 
 // stop decoding and free thumbnails without waiting for running workers
