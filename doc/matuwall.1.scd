@@ -71,8 +71,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	parse successfully.
 
 *-d* _DIRECTORY_, *--directory* _DIRECTORY_
-	Scan _DIRECTORY_ for wallpapers. _~_ expands to _$HOME_; relative paths use
-	the current directory.
+	Scan _DIRECTORY_ for wallpapers. The first *-d* replaces the configured
+	directories, later ones add more, up to 8. _~_ expands to _$HOME_; relative
+	paths use the current directory.
 
 *--favorites* _FILE_
 	Set _general.favorites_, the file *f* adds to.
@@ -266,7 +267,7 @@ launch if it is still in the wallpaper directory. *--restore*, *--next*, and
 backends, hooks, remembered selection, and data paths without opening the picker
 or changing state. Invalid command-line usage exits with status 2.
 
-If the wallpaper directory cannot be opened, the picker shows a warning glyph
+If no wallpaper directory can be opened, the picker shows a warning glyph
 and exits with status 1 when dismissed. The error is also written to standard
 error and the log.
 

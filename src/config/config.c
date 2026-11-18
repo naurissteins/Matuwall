@@ -140,8 +140,10 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 
 	const char *home = getenv("HOME");
 	if (home != NULL) {
-		snprintf(cfg->directory, sizeof(cfg->directory), "%s/%s", home,
+		snprintf(cfg->directories.items[0],
+			sizeof(cfg->directories.items[0]), "%s/%s", home,
 			DEFAULT_DIRECTORY);
+		cfg->directories.count = 1;
 	}
 	if (!matuwall_fs_xdg_path("XDG_CONFIG_HOME", "/.config",
 		    "/favorites.txt", cfg->favorites, sizeof(cfg->favorites))) {
@@ -176,6 +178,34 @@ static void apply_hooks(struct matuwall_config *cfg,
 		memcpy(cfg->on_apply[cfg->on_apply_count], cmd,
 			strlen(cmd) + 1);
 		cfg->on_apply_count++;
+	}
+}
+
+// an invalid entry is skipped, a list with none left keeps the default
+static void apply_directories(struct matuwall_config *cfg,
+	const struct matuwall_toml_value *v, int line) {
+	struct matuwall_directories dirs = {0};
+	if (v->type == MATUWALL_TOML_STRING) {
+		if (!matuwall_config_add_directory(&dirs, v->string)) {
+			warn(line, "directory must be a path that can be "
+				   "resolved");
+		}
+	} else if (v->type == MATUWALL_TOML_ARRAY) {
+		for (size_t i = 0; i < v->item_count; i++) {
+			if (!matuwall_config_add_directory(
+				    &dirs, v->items[i])) {
+				warn(line, "directory entry unresolved or past "
+					   "8; skipped");
+			}
+		}
+		if (v->item_count == 0) {
+			warn(line, "directory array is empty");
+		}
+	} else {
+		warn(line, "directory must be a path or an array of paths");
+	}
+	if (dirs.count > 0) {
+		cfg->directories = dirs;
 	}
 }
 
@@ -223,6 +253,10 @@ static void apply_key(struct matuwall_config *cfg,
 	const struct matuwall_toml_value *v, int line) {
 	if (key->type == MATUWALL_CONFIG_HOOKS) {
 		apply_hooks(cfg, v, line);
+		return;
+	}
+	if (key->type == MATUWALL_CONFIG_DIRS) {
+		apply_directories(cfg, v, line);
 		return;
 	}
 	if (key->type == MATUWALL_CONFIG_ARGS) {

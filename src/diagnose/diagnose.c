@@ -150,6 +150,16 @@ static void report_directory(
 		clean(directory, shown, sizeof(shown)));
 }
 
+static void report_directories(struct diagnose_report *report,
+	const struct matuwall_directories *dirs) {
+	if (dirs->count == 0) {
+		report_directory(report, "");
+	}
+	for (size_t i = 0; i < dirs->count; i++) {
+		report_directory(report, dirs->items[i]);
+	}
+}
+
 static void report_list(struct diagnose_report *report, const char *list) {
 	char shown[PATH_MAX];
 	if (strcmp(list, "-") == 0) {
@@ -225,7 +235,7 @@ static void report_configuration(
 	if (config->list[0] != '\0') {
 		report_list(report, config->list);
 	} else {
-		report_directory(report, config->directory);
+		report_directories(report, &config->directories);
 	}
 }
 

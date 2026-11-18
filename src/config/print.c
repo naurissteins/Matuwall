@@ -60,12 +60,30 @@ static void print_args(FILE *out, const struct matuwall_backend_args *args) {
 	fputc(']', out);
 }
 
+// one directory prints as before, the string form loads back the same
+static void print_directories(
+	FILE *out, const struct matuwall_directories *dirs) {
+	if (dirs->count == 1) {
+		print_quoted(out, dirs->items[0]);
+		return;
+	}
+	fputc('[', out);
+	for (size_t i = 0; i < dirs->count; i++) {
+		fputs(i == 0 ? "" : ", ", out);
+		print_quoted(out, dirs->items[i]);
+	}
+	fputc(']', out);
+}
+
 static void print_value(FILE *out, const struct matuwall_config *config,
 	const struct matuwall_config_key *key) {
 	char text[PATH_MAX];
 	switch (key->type) {
 	case MATUWALL_CONFIG_HOOKS:
 		print_hooks(out, config);
+		return;
+	case MATUWALL_CONFIG_DIRS:
+		print_directories(out, &config->directories);
 		return;
 	case MATUWALL_CONFIG_ARGS:
 		print_args(out,

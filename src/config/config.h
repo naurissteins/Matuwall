@@ -28,6 +28,13 @@ bool matuwall_sort_from_name(const char *name, enum matuwall_sort *out);
 #define MATUWALL_MAX_BACKEND_ARGS 32
 #define MATUWALL_BACKEND_ARG_MAX 256
 #define MATUWALL_BACKEND_COMMAND_MAX 512
+#define MATUWALL_MAX_DIRECTORIES 8
+
+// expanded wallpaper directories, scanned in this order
+struct matuwall_directories {
+	char items[MATUWALL_MAX_DIRECTORIES][PATH_MAX];
+	size_t count;
+};
 
 // extra flags from [backend.<name>] args, passed before the wallpaper path
 struct matuwall_backend_args {
@@ -36,7 +43,7 @@ struct matuwall_backend_args {
 };
 
 struct matuwall_config {
-	char directory[PATH_MAX];
+	struct matuwall_directories directories;
 	bool recursive;
 	// wallpaper list file used instead of directory, "-" is stdin
 	char list[PATH_MAX];
@@ -83,6 +90,14 @@ void matuwall_config_defaults(struct matuwall_config *cfg);
 // edge style to render, with "auto" settled by the background alpha
 enum matuwall_edge matuwall_config_edge(const struct matuwall_config *cfg);
 bool matuwall_config_expand_path(const char *in, char *out, size_t out_size);
+// expands path, a repeat is accepted and kept once; false when invalid or full
+bool matuwall_config_add_directory(
+	struct matuwall_directories *dirs, const char *path);
+// where relative list entries live, "" when no directory resolved
+const char *matuwall_config_directory(const struct matuwall_config *cfg);
+// where wallpapers come from, for messages; buf holds a directory count
+const char *matuwall_config_source(
+	const struct matuwall_config *cfg, char *buf, size_t size);
 // args for a backend name, NULL for "auto" or an unknown name
 const struct matuwall_backend_args *matuwall_config_backend_args(
 	const struct matuwall_config *cfg, const char *backend);
@@ -113,6 +128,8 @@ enum matuwall_config_type {
 	MATUWALL_CONFIG_COMMAND,
 	MATUWALL_CONFIG_HOOKS,
 	MATUWALL_CONFIG_ARGS,
+	// one path or an array of them
+	MATUWALL_CONFIG_DIRS,
 };
 
 // one config key: where TOML puts it, its field, and its command-line flags

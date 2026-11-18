@@ -32,6 +32,9 @@ struct matuwall_cli_options {
 	bool config_path_set;
 	char config_path[PATH_MAX];
 	bool no_config;
+	bool directories_set;
+	const char *directories[MATUWALL_MAX_DIRECTORIES];
+	size_t directory_count;
 	bool hooks_set;
 	const char *hooks[MATUWALL_MAX_HOOKS];
 	size_t hook_count;

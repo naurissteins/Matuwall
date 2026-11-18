@@ -35,6 +35,7 @@ static const struct option fixed_options[] = {
 	{"backend-arg", required_argument, NULL, OPTION_BACKEND_ARG},
 	{"backend-command", required_argument, NULL, OPTION_BACKEND_COMMAND},
 	{"config", required_argument, NULL, OPTION_CONFIG},
+	{"directory", required_argument, NULL, 'd'},
 	{"hook", required_argument, NULL, OPTION_HOOK},
 	{"no-backend-args", no_argument, NULL, OPTION_NO_BACKEND_ARGS},
 	{"no-config", no_argument, NULL, OPTION_NO_CONFIG},
@@ -53,7 +54,7 @@ static const struct option fixed_options[] = {
 
 #define FIXED_OPTIONS (sizeof(fixed_options) / sizeof(fixed_options[0]))
 #define MAX_OPTIONS (FIXED_OPTIONS + 2 * (size_t)MATUWALL_CONFIG_MAX_KEYS + 1)
-#define MAX_SHORTS (2 * (size_t)MATUWALL_CONFIG_MAX_KEYS + 6)
+#define MAX_SHORTS (2 * (size_t)MATUWALL_CONFIG_MAX_KEYS + 8)
 
 // a key's long and short flag return the short letter, like getopt itself
 static void build_options(struct option *options, char *shorts) {
@@ -83,7 +84,7 @@ static void build_options(struct option *options, char *shorts) {
 				no_argument, NULL, OPTION_KEY + (int)i * 2 + 1};
 		}
 	}
-	memcpy(shorts, "o:hV", sizeof("o:hV"));
+	memcpy(shorts, "d:o:hV", sizeof("d:o:hV"));
 	options[n] = (struct option){0};
 }
 
@@ -132,6 +133,31 @@ static bool parse_path_override(const char *name, const char *value, char *out,
 	}
 	*is_set = true;
 	return true;
+}
+
+// first one replaces the configured directories, later ones add
+static enum parse_result parse_directory(const char *value,
+	struct matuwall_cli_options *options, char *err, size_t err_size) {
+	char expanded[PATH_MAX];
+	if (!matuwall_config_expand_path(value, expanded, sizeof(expanded))) {
+		snprintf(err, err_size,
+			"invalid --directory '%s': expected a path that can be "
+			"resolved",
+			value);
+		return PARSE_ERROR;
+	}
+	if (!options->directories_set) {
+		options->directories_set = true;
+		options->directory_count = 0;
+	}
+	if (options->directory_count >= MATUWALL_MAX_DIRECTORIES) {
+		snprintf(err, err_size,
+			"too many --directory options: maximum is %d",
+			MATUWALL_MAX_DIRECTORIES);
+		return PARSE_ERROR;
+	}
+	options->directories[options->directory_count++] = value;
+	return PARSE_CONTINUE;
 }
 
 static enum parse_result parse_hook(const char *value,
@@ -266,6 +292,8 @@ static enum parse_result parse_override(int option, const char *value,
 		options->no_config = true;
 		options->config_path_set = false;
 		return PARSE_CONTINUE;
+	case 'd':
+		return parse_directory(value, options, err, err_size);
 	case 'o':
 		if (value[0] == '\0') {
 			snprintf(err, err_size,

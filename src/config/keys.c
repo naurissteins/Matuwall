@@ -12,8 +12,9 @@
 
 // rows run in --print-config order, string rows keep their capacity in max
 const struct matuwall_config_key matuwall_config_keys[] = {
-	{"general", "directory", MATUWALL_CONFIG_PATH, FIELD(directory), 0,
-		PATH_MAX, "directory", NULL, 'd'},
+	// -d is special-cased in cli/, the first replaces and later ones add
+	{"general", "directory", MATUWALL_CONFIG_DIRS, FIELD(directories), 0, 0,
+		NULL, NULL, 0},
 	{"general", "recursive", MATUWALL_CONFIG_BOOL, FIELD(recursive), 0, 0,
 		"recursive", "no-recursive", 0},
 	{"general", "list", MATUWALL_CONFIG_LIST, FIELD(list), 0, PATH_MAX,
@@ -273,6 +274,8 @@ const char *matuwall_config_expect(
 		return "an array of command strings";
 	case MATUWALL_CONFIG_ARGS:
 		return "an array of strings";
+	case MATUWALL_CONFIG_DIRS:
+		return "a path or an array of up to 8 paths";
 	}
 	return "a valid value";
 }
@@ -326,6 +329,7 @@ void matuwall_config_format(const struct matuwall_config *cfg,
 		return;
 	case MATUWALL_CONFIG_HOOKS:
 	case MATUWALL_CONFIG_ARGS:
+	case MATUWALL_CONFIG_DIRS:
 		break;
 	}
 	snprintf(out, size, "%s", "");
