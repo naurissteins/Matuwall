@@ -203,8 +203,8 @@ static void draw_tile(struct matuwall_buffer *buffer,
 		frame->thumbs != NULL ? &frame->thumbs[index] : NULL;
 	int32_t border = draw_border(buffer, frame, clip, geometry, opacity);
 
-	if (thumb != NULL && thumb->state == MATUWALL_THUMB_READY &&
-		thumb->pixels != NULL) {
+	// a pending refresh after a scale change still has its old pixels
+	if (thumb != NULL && thumb->pixels != NULL) {
 		matuwall_draw_image_rounded(buffer, clip, geometry->left,
 			geometry->top, geometry->width, geometry->height,
 			geometry->radius, border, thumb->pixels, thumb->width,

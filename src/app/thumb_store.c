@@ -20,7 +20,19 @@ static bool thumbnail_bytes(uint32_t width, uint32_t height, size_t *bytes) {
 
 bool matuwall_thumb_store_set_target(
 	struct matuwall_app *app, uint32_t width, uint32_t height) {
-	return thumbnail_bytes(width, height, &app->thumbs.target_bytes);
+	if (!thumbnail_bytes(width, height, &app->thumbs.target_bytes)) {
+		return false;
+	}
+	app->thumbs.target_width = width;
+	app->thumbs.target_height = height;
+	return true;
+}
+
+bool matuwall_thumb_store_stale(const struct matuwall_app *app, size_t index) {
+	const struct matuwall_thumb *thumb = &app->thumbs.items[index];
+	return thumb->state == MATUWALL_THUMB_READY &&
+	       (thumb->width != app->thumbs.target_width ||
+		       thumb->height != app->thumbs.target_height);
 }
 
 size_t matuwall_thumb_store_lookahead(
@@ -142,12 +154,12 @@ bool matuwall_thumb_store_in_window(const struct matuwall_app *app,
 	return offset < span;
 }
 
-static void unload_thumbnail(struct matuwall_app *app, size_t index) {
-	struct matuwall_thumb *thumb = &app->thumbs.items[index];
-	if (thumb->state != MATUWALL_THUMB_READY) {
+// keeps the state, a pending refresh still has its job queued
+static void drop_pixels(
+	struct matuwall_app *app, struct matuwall_thumb *thumb) {
+	if (thumb->pixels == NULL) {
 		return;
 	}
-
 	size_t bytes = 0;
 	if (thumbnail_bytes(thumb->width, thumb->height, &bytes) &&
 		bytes <= app->thumbs.resident_bytes) {
@@ -156,7 +168,20 @@ static void unload_thumbnail(struct matuwall_app *app, size_t index) {
 		app->thumbs.resident_bytes = 0;
 	}
 	free(thumb->pixels);
-	*thumb = (struct matuwall_thumb){0};
+	thumb->pixels = NULL;
+	thumb->width = 0;
+	thumb->height = 0;
+}
+
+static void unload_thumbnail(struct matuwall_app *app, size_t index) {
+	struct matuwall_thumb *thumb = &app->thumbs.items[index];
+	if (thumb->pixels == NULL) {
+		return;
+	}
+	drop_pixels(app, thumb);
+	if (thumb->state == MATUWALL_THUMB_READY) {
+		thumb->state = MATUWALL_THUMB_UNLOADED;
+	}
 	app->thumbs.evicted++;
 }
 
@@ -174,7 +199,7 @@ static bool evict_one(struct matuwall_app *app, size_t preserve, size_t first,
 	size_t end, size_t wrap_end, bool visible) {
 	for (size_t i = 0; i < app->thumbs.count; i++) {
 		if (i == preserve || i == app->grid.selected ||
-			app->thumbs.items[i].state != MATUWALL_THUMB_READY ||
+			app->thumbs.items[i].pixels == NULL ||
 			in_visible_range(i, first, end, wrap_end) != visible) {
 			continue;
 		}
@@ -203,6 +228,8 @@ void matuwall_thumb_store_accept(
 	size_t wrap_end;
 	matuwall_thumb_store_visible_ranges(app, &first, &end, &wrap_end);
 	struct matuwall_thumb *thumb = &app->thumbs.items[result->index];
+	// the replacement is here, the old size goes first
+	drop_pixels(app, thumb);
 	if (!matuwall_thumb_store_in_window(
 		    app, result->index, first, end, wrap_end)) {
 		free(result->image.pixels);
@@ -211,14 +238,17 @@ void matuwall_thumb_store_accept(
 		return;
 	}
 
+	// staleness compares sizes, so a thumbnail must be exactly its target
 	size_t bytes;
-	if (!thumbnail_bytes(
-		    result->image.width, result->image.height, &bytes) ||
+	if (result->image.width != result->target_w ||
+		result->image.height != result->target_h ||
+		!thumbnail_bytes(
+			result->image.width, result->image.height, &bytes) ||
 		bytes > MAX_RESIDENT_BYTES) {
 		free(result->image.pixels);
 		thumb->state = MATUWALL_THUMB_FAILED;
 		matuwall_log_warn("thumbnail",
-			"thumbnail exceeds the resident memory limit: %s",
+			"thumbnail has an unusable size: %s",
 			app->scan.paths[result->index]);
 		return;
 	}
