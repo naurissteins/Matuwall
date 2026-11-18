@@ -75,17 +75,21 @@ static size_t find(const struct matuwall_dirscan *scan, const char *path) {
 // same order as the grid, so --next steps through what the picker shows
 static bool scan_wallpapers(
 	const struct matuwall_config *config, struct matuwall_dirscan *scan) {
-	if (!matuwall_dirscan_run(scan, config->directory, config->recursive)) {
-		matuwall_log_error(
-			"wallpapers", "cannot scan %s", config->directory);
+	bool listed = config->list[0] != '\0';
+	const char *source = listed ? config->list : config->directory;
+	bool scanned = listed ? matuwall_dirscan_list(
+					scan, config->list, config->directory)
+			      : matuwall_dirscan_run(scan, config->directory,
+					config->recursive);
+	if (!scanned) {
+		matuwall_log_error("wallpapers", "cannot scan %s", source);
 		return false;
 	}
 	if (scan->unavailable) {
 		return false;
 	}
 	if (scan->count == 0) {
-		matuwall_log_error(
-			"wallpapers", "no wallpapers in %s", config->directory);
+		matuwall_log_error("wallpapers", "no wallpapers in %s", source);
 		return false;
 	}
 	if (config->sort == MATUWALL_SORT_COLOR) {

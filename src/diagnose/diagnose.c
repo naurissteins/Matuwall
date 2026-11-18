@@ -150,6 +150,21 @@ static void report_directory(
 		clean(directory, shown, sizeof(shown)));
 }
 
+static void report_list(struct diagnose_report *report, const char *list) {
+	char shown[PATH_MAX];
+	if (strcmp(list, "-") == 0) {
+		report_line(report, DIAG_INFO, "wallpapers", "list from stdin");
+	} else if (access(list, R_OK) != 0) {
+		report_line(report, DIAG_ERROR, "wallpapers",
+			"list unavailable: %s: %s",
+			clean(list, shown, sizeof(shown)), strerror(errno));
+	} else {
+		report_line(report, DIAG_OK, "wallpapers",
+			"list %s is readable",
+			clean(list, shown, sizeof(shown)));
+	}
+}
+
 static void report_configuration(
 	struct diagnose_report *report, struct matuwall_config *config) {
 	puts("\nConfiguration");
@@ -207,7 +222,11 @@ static void report_configuration(
 	}
 	report_line(report, DIAG_INFO, "preview", "%s",
 		config->preview ? "enabled" : "disabled");
-	report_directory(report, config->directory);
+	if (config->list[0] != '\0') {
+		report_list(report, config->list);
+	} else {
+		report_directory(report, config->directory);
+	}
 }
 
 // argv[0] as the spawn would split it, false when empty or too long

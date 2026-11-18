@@ -44,6 +44,8 @@ void matuwall_cli_usage(FILE *out) {
 	      "      --height HEIGHT\n"
 	      "                     override thumbnail height (1..16384)\n"
 	      "      --hook COMMAND replace/append a temporary on-apply hook\n"
+	      "      --list FILE    read wallpapers from FILE instead, - is "
+	      "stdin\n"
 	      "  -m, --margin MARGIN\n"
 	      "                     override panel padding (0..4096)\n"
 	      "      --navigation-ms MS\n"

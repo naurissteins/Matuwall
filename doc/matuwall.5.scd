@@ -32,6 +32,13 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	directories are skipped. The walk stops at 8 levels or 256 subdirectories.
 	Its entries count toward the same 8192 limit.
 
+*list*
+	File with one wallpaper path per line, used instead of _directory_. _"-"_
+	reads stdin. Defaults to empty, meaning unset. Relative paths are inside
+	_directory_, or the current directory for stdin. A leading _~/_ expands to
+	_$HOME_. Blank lines and lines starting with _#_ are skipped. Order is kept,
+	except with _sort = "color"_.
+
 *backend*
 	Wallpaper backend: _"awww"_, _"sweetbg"_, _"plasma"_, _"command"_, or
 	_"auto"_. Defaults to _"awww"_.

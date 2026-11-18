@@ -10,6 +10,10 @@ directory = "~/Pictures/Wallpapers"
 # Scan subdirectories. Hidden and symlinked directories are skipped!
 recursive = false
 
+# Read wallpapers from a file, one path per line, instead of directory.
+# "-" reads stdin. Empty means unset
+list = ""
+
 # Wallpaper daemon used to apply the selection: "sweetbg", "awww", "plasma",
 # "command", or "auto". "auto" picks the first one running: plasma, sweetbg,
 # then awww
