@@ -13,6 +13,8 @@ struct matuwall_output_entry {
 	struct wl_output *proxy;
 	uint32_t global_name;
 	char *name;
+	// the picker's surfaces are on this output
+	bool entered;
 	struct matuwall_output_entry *next;
 };
 
@@ -43,8 +45,9 @@ static void handle_mode(void *data, struct wl_output *output, uint32_t flags,
 }
 
 static void handle_done(void *data, struct wl_output *output) {
-	(void)data;
 	(void)output;
+	struct matuwall_output_entry *entry = data;
+	entry->owner->changed = true;
 }
 
 static void handle_scale(void *data, struct wl_output *output, int32_t factor) {
@@ -200,6 +203,24 @@ bool matuwall_outputs_select(struct matuwall_outputs *outputs, const char *name,
 	}
 	report_missing(outputs, name);
 	return false;
+}
+
+void matuwall_output_enter(struct wl_output *output, bool entered) {
+	struct matuwall_output_entry *entry = wl_output_get_user_data(output);
+	if (entry != NULL) {
+		entry->entered = entered;
+	}
+}
+
+struct wl_output *matuwall_outputs_entered(
+	const struct matuwall_outputs *outputs) {
+	for (const struct matuwall_output_entry *entry = outputs->head;
+		entry != NULL; entry = entry->next) {
+		if (entry->entered) {
+			return entry->proxy;
+		}
+	}
+	return NULL;
 }
 
 void matuwall_outputs_finish(struct matuwall_outputs *outputs) {

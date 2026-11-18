@@ -158,7 +158,6 @@ void matuwall_app_preview_render(struct matuwall_app *app, int64_t now_ms) {
 	if (!layer->needs_repaint || !layer->configured) {
 		return;
 	}
-	layer->layout_dirty = false;
 	uint32_t width;
 	uint32_t height;
 	if (!preview_target(app, &width, &height)) {

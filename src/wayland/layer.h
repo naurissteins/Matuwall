@@ -79,6 +79,10 @@ bool matuwall_layer_create(struct matuwall_layer *layer,
 void matuwall_layer_set_panel(
 	struct matuwall_layer *layer, const struct matuwall_layer_panel *panel);
 
+// a mapped panel keeps its old size until the configure lands
+void matuwall_layer_resize_panel(
+	struct matuwall_layer *layer, const struct matuwall_layer_panel *panel);
+
 // map a configured surface fully transparent, ahead of its first frame
 bool matuwall_layer_map_clear(struct matuwall_layer *layer, struct wl_shm *shm);
 
