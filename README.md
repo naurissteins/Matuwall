@@ -9,7 +9,7 @@
 
 Simple, fast and lightweight wallpaper picker for Wayland
 
-[< Wiki >](https://github.com/naurissteins/Matuwall/wiki)
+[< Wiki >](https://naurissteins.com/matuwall/docs/installation)
 
 
 </div>
@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Supports `Matugen` and `Pywal`
 - Runs on Linux and FreeBSD
 
-Btw, Matuwall is just a picker. You need a running `awww` or `sweetbg` wallpaper daemon to apply a wallpaper.
+Matuwall is just a picker. You need a running `awww` or `sweetbg` wallpaper daemon to apply a wallpaper.
 User [sweetbg](https://github.com/sweetwm/sweetbg) if you want something minimal, use [awww](https://codeberg.org/LGFae/awww)
 to have transition animation
 
@@ -85,7 +85,7 @@ ninja -C build
 sudo ninja -C build install
 ```
 
-Check the [installation wiki](https://github.com/naurissteins/Matuwall/wiki/Installation) for more information
+Check the [installation wiki](https://naurissteins.com/matuwall/docs/installation) for more information
 
 ## CLI Commands
 
@@ -152,7 +152,7 @@ matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 2 -w 980 --
 matuwall -d ~/Pictures/Wallpapers --preview --carousel -b sweetbg -c 4 -w 380 --height 520 -p center --background none --radius 0 --shadow-width 0 --border "#ffffff" --border-width 4 --panel-radius 0
 ```
 
-See full [CLI reference](https://github.com/naurissteins/Matuwall/wiki/CLI-Reference)
+See full [CLI reference](https://naurissteins.com/matuwall/docs/cli-reference)
 
 Run `matuwall --help` for every option
 
@@ -211,7 +211,7 @@ For one run, use `--backend-command "swww img {path}"`. It selects the command
 backend unless `-b` names another one
 
 Tools that keep running, like `swaybg` need a small wrapper script. See the
-[wiki](https://github.com/naurissteins/Matuwall/wiki/Backends#custom-command)
+[wiki](https://naurissteins.com/matuwall/docs/backends#custom-command)
 
 ---
 
@@ -231,26 +231,6 @@ shell quoting are not supported
 ```sh
 matuwall --hook 'matugen image {path} --source-color-index 1' --hook 'wal -i {path} -n'
 ```
-
----
-
-## Wallpaper lists
-
-Pick from a file with one path per line instead of a directory. `-` reads
-stdin. Use it for favorites or a filtered set
-
-```sh
-matuwall --list ~/.config/matuwall/favorites.txt
-fd -e jpg sunset ~/Pictures | matuwall --list -
-matuwall --list ~/.config/matuwall/favorites.txt --random
-```
-
-Relative paths are inside the first `directory`. Blank lines and `#` comments
-are skipped. Set it permanently with `list` under `[general]`
-
-Press `f` in the picker to add the selected wallpaper to
-`~/.config/matuwall/favorites.txt`. It is written when the picker closes.
-Change the file with `favorites` under `[general]` or `--favorites FILE`
 
 ---
 
@@ -279,5 +259,3 @@ matuwall --clear-cache   # remove thumbnails only
 ```
 
 Last selection `~/.local/state/matuwall/last-selection`, logs `~/.local/state/matuwall/matuwall.log`, cached thumbnails `~/.cache/matuwall/thumbs/`, and learned colors `~/.cache/matuwall/colors`
-
-Logs are limited to 256 KiB each, the current log and two rotations are kept
