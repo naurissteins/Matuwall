@@ -143,6 +143,10 @@ void matuwall_config_defaults(struct matuwall_config *cfg) {
 		snprintf(cfg->directory, sizeof(cfg->directory), "%s/%s", home,
 			DEFAULT_DIRECTORY);
 	}
+	if (!matuwall_fs_xdg_path("XDG_CONFIG_HOME", "/.config",
+		    "/favorites.txt", cfg->favorites, sizeof(cfg->favorites))) {
+		cfg->favorites[0] = '\0';
+	}
 }
 
 // --- schema application ---

@@ -74,6 +74,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Scan _DIRECTORY_ for wallpapers. _~_ expands to _$HOME_; relative paths use
 	the current directory.
 
+*--favorites* _FILE_
+	Set _general.favorites_, the file *f* adds to.
+
 *--height* _HEIGHT_
 	Set _thumbnail.height_ to an integer from 1 to 16384.
 
@@ -218,6 +221,10 @@ backend and hooks like Enter does. A failed apply exits with status 1.
 
 *r*
 	Jump to a random tile other than the selected one.
+
+*f*
+	Mark the selected wallpaper as a favorite. Marked ones are added to
+	_general.favorites_ when Matuwall closes.
 
 *Backspace*
 	Select the wallpaper remembered at launch again. With

@@ -88,6 +88,7 @@ executable(
 	'src/render/tiles.c',
 	'src/scan/dirscan.c',
 	'src/scan/order.c',
+	'src/state/favorites.c',
 	'src/state/selection.c',
 	'src/thumb/cache.c',
 	'src/thumb/decode.c',

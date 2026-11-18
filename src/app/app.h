@@ -49,6 +49,8 @@ struct matuwall_app {
 	char initial_path[PATH_MAX];
 	size_t initial_index;
 	bool applied_since_open;
+	// tiles marked with f, written to the favorites file on exit
+	bool *favorites;
 
 	struct matuwall_worker_pool *workers;
 	struct matuwall_thumb_store thumbs;

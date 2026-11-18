@@ -1,6 +1,7 @@
 #include "app/input.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "app/app.h"
 #include "app/apply.h"
@@ -95,6 +96,24 @@ static void jump_random(struct matuwall_app *app) {
 	jump_to(app, matuwall_pick_random(app->scan.count, app->grid.selected));
 }
 
+// remembered until exit, the input path never touches the disk
+static void mark_favorite(struct matuwall_app *app) {
+	if (app->scan.count == 0) {
+		return;
+	}
+	if (app->favorites == NULL) {
+		app->favorites =
+			calloc(app->scan.count, sizeof(*app->favorites));
+		if (app->favorites == NULL) {
+			matuwall_log_warn("favorites", "cannot allocate marks");
+			return;
+		}
+	}
+	app->favorites[app->grid.selected] = true;
+	matuwall_log_info(
+		"favorites", "marked %s", app->scan.paths[app->grid.selected]);
+}
+
 static void handle_key(void *user_data, xkb_keysym_t sym) {
 	struct matuwall_app *app = user_data;
 	enum matuwall_move move;
@@ -113,6 +132,9 @@ static void handle_key(void *user_data, xkb_keysym_t sym) {
 		return;
 	case XKB_KEY_BackSpace:
 		revert(app);
+		return;
+	case XKB_KEY_f:
+		mark_favorite(app);
 		return;
 	case XKB_KEY_Left:
 	case XKB_KEY_h:

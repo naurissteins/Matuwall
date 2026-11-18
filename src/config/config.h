@@ -40,6 +40,8 @@ struct matuwall_config {
 	bool recursive;
 	// wallpaper list file used instead of directory, "-" is stdin
 	char list[PATH_MAX];
+	// list file the f key appends to
+	char favorites[PATH_MAX];
 	char backend[32];
 	struct matuwall_backend_args sweetbg_args;
 	struct matuwall_backend_args awww_args;
