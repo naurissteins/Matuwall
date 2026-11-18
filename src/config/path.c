@@ -68,3 +68,37 @@ bool matuwall_config_expand_path(const char *in, char *out, size_t out_size) {
 	}
 	return true;
 }
+
+bool matuwall_config_add_directory(
+	struct matuwall_directories *dirs, const char *path) {
+	char expanded[PATH_MAX];
+	if (!matuwall_config_expand_path(path, expanded, sizeof(expanded))) {
+		return false;
+	}
+	for (size_t i = 0; i < dirs->count; i++) {
+		if (strcmp(dirs->items[i], expanded) == 0) {
+			return true;
+		}
+	}
+	if (dirs->count == MATUWALL_MAX_DIRECTORIES) {
+		return false;
+	}
+	memcpy(dirs->items[dirs->count++], expanded, strlen(expanded) + 1);
+	return true;
+}
+
+const char *matuwall_config_directory(const struct matuwall_config *cfg) {
+	return cfg->directories.count > 0 ? cfg->directories.items[0] : "";
+}
+
+const char *matuwall_config_source(
+	const struct matuwall_config *cfg, char *buf, size_t size) {
+	if (cfg->list[0] != '\0') {
+		return cfg->list;
+	}
+	if (cfg->directories.count == 1) {
+		return cfg->directories.items[0];
+	}
+	snprintf(buf, size, "%zu directories", cfg->directories.count);
+	return buf;
+}

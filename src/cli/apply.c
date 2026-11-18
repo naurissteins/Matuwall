@@ -47,6 +47,14 @@ void matuwall_cli_apply(const struct matuwall_cli_options *options,
 			memcpy(config->backend, "command", sizeof("command"));
 		}
 	}
+	if (options->directories_set) {
+		config->directories.count = 0;
+		for (size_t i = 0; i < options->directory_count; i++) {
+			// parsing already resolved each one
+			(void)matuwall_config_add_directory(
+				&config->directories, options->directories[i]);
+		}
+	}
 	if (options->hooks_set) {
 		config->on_apply_count = options->hook_count;
 		for (size_t i = 0; i < options->hook_count; i++) {
@@ -80,6 +88,12 @@ void matuwall_cli_log_overrides(const struct matuwall_cli_options *options,
 		matuwall_log_info("config", "backend command overridden%s",
 			backend_given(options) ? ""
 					       : ", backend set to command");
+	}
+	if (options->directories_set) {
+		matuwall_log_info("config",
+			"directories overridden with %zu director%s",
+			config->directories.count,
+			config->directories.count == 1 ? "y" : "ies");
 	}
 	if (options->hooks_set) {
 		matuwall_log_info("config",

@@ -22,10 +22,11 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 ## [general]
 
 *directory*
-	Wallpaper directory. _~_ expands to _$HOME_; relative paths use the current
-	directory. Defaults to _"~/Pictures/Wallpapers"_. The scan reads at most
-	8192 entries and keeps at most 4096 images, so a huge directory cannot slow
-	startup.
+	Wallpaper directory, or an array of up to 8. They are shown in this order,
+	each sorted by name. _~_ expands to _$HOME_; relative paths use the current
+	directory. Defaults to _"~/Pictures/Wallpapers"_. A missing one is reported
+	and skipped. The scan reads at most 8192 entries and keeps at most 4096
+	images in total, so huge directories cannot slow startup.
 
 *recursive*
 	Also scan subdirectories. Defaults to _false_. Hidden and symlinked
@@ -35,15 +36,15 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 *list*
 	File with one wallpaper path per line, used instead of _directory_. _"-"_
 	reads stdin. Defaults to empty, meaning unset. Relative paths are inside
-	_directory_, or the current directory for stdin. A leading _~/_ expands to
-	_$HOME_. Blank lines and lines starting with _#_ are skipped. Order is kept,
-	except with _sort = "color"_.
+	the first _directory_, or the current directory for stdin. A leading _~/_
+	expands to _$HOME_. Blank lines and lines starting with _#_ are skipped.
+	Order is kept, except with _sort = "color"_.
 
 *favorites*
 	List file that *f* adds wallpapers to. Defaults to
-	_$XDG_CONFIG_HOME/matuwall/favorites.txt_. Entries inside _directory_ are
-	written as bare names, entries already listed are skipped. Open it with
-	*--list*.
+	_$XDG_CONFIG_HOME/matuwall/favorites.txt_. Entries inside the first
+	_directory_ are written as bare names, entries already listed are skipped.
+	Open it with *--list*.
 
 *backend*
 	Wallpaper backend: _"awww"_, _"sweetbg"_, _"plasma"_, _"command"_, or

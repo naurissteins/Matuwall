@@ -36,7 +36,7 @@ void matuwall_cli_usage(FILE *out) {
 	      "                     override maximum grid columns (1..1024)\n"
 	      "      --config PATH  load an alternate configuration file\n"
 	      "  -d, --directory DIRECTORY\n"
-	      "                     override the wallpaper directory\n"
+	      "                     replace/append a wallpaper directory\n"
 	      "      --edge EDGE    override carousel edge: auto, clip, peek, "
 	      "or fade\n"
 	      "      --edge-margin MARGIN\n"

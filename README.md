@@ -95,6 +95,7 @@ matuwall --config ~/.config/matuwall/work.toml   // use another config once
 matuwall --no-config -d ~/Pictures/Wallpapers    // defaults plus CLI overrides
 matuwall --print-config                          // show the effective config and exit
 matuwall -d ~/Pictures/Photography               // use another directory
+matuwall -d ~/Pictures/Wallpapers -d ~/Photos    // use several directories
 matuwall --recursive                             // include subdirectories
 matuwall --list ~/favorites.txt                  // pick from a list of paths
 matuwall -b awww                                 // use awww once
@@ -244,7 +245,7 @@ fd -e jpg sunset ~/Pictures | matuwall --list -
 matuwall --list ~/.config/matuwall/favorites.txt --random
 ```
 
-Relative paths are inside `directory`. Blank lines and `#` comments
+Relative paths are inside the first `directory`. Blank lines and `#` comments
 are skipped. Set it permanently with `list` under `[general]`
 
 Press `f` in the picker to add the selected wallpaper to

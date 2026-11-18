@@ -5,6 +5,8 @@
 
 [general]
 # Directory scanned for wallpapers. A leading ~ expands to $HOME.
+# An array scans several in order, up to 8:
+# directory = ["~/Pictures/Wallpapers", "~/Pictures/Photography"]
 directory = "~/Pictures/Wallpapers"
 
 # Scan subdirectories. Hidden and symlinked directories are skipped!

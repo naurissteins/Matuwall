@@ -348,8 +348,8 @@ bool matuwall_app_run(struct matuwall_app *app) {
 
 	if (app->favorites != NULL) {
 		matuwall_favorites_add(app->config.favorites,
-			app->config.directory, app->scan.paths, app->favorites,
-			app->scan.count);
+			matuwall_config_directory(&app->config),
+			app->scan.paths, app->favorites, app->scan.count);
 	}
 	// a failed apply while staying open still fails the run
 	bool applied = matuwall_app_apply_finish(app);

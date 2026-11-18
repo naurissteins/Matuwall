@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "config/config.h"
+
 struct matuwall_dirscan {
 	char **paths;
 	size_t count;
@@ -14,8 +16,9 @@ struct matuwall_dirscan {
 };
 
 // recursive walks subdirectories breadth-first, bounded in depth and entries
-bool matuwall_dirscan_run(
-	struct matuwall_dirscan *scan, const char *dir, bool recursive);
+// unavailable only when no directory opens
+bool matuwall_dirscan_run(struct matuwall_dirscan *scan,
+	const struct matuwall_directories *dirs, bool recursive);
 
 // one path per line in file order, "-" reads stdin, blank and # lines skip
 // relative entries resolve against directory, or the cwd for stdin

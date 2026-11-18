@@ -174,44 +174,62 @@ static void walk_finish(struct walk *walk) {
 	free((void *)walk->dirs);
 }
 
-bool matuwall_dirscan_run(
-	struct matuwall_dirscan *scan, const char *dir, bool recursive) {
-	*scan = (struct matuwall_dirscan){0};
-
+// one directory, then its subdirectories; false only on allocation failure
+static bool scan_root(struct matuwall_dirscan *scan, struct walk *walk,
+	const char *dir, bool recursive, size_t *opened) {
 	DIR *handle = opendir(dir);
 	if (handle == NULL) {
-		scan->unavailable = true;
 		matuwall_log_error("wallpapers",
 			"directory unavailable: %s: %s", dir, strerror(errno));
 		return true;
 	}
-
-	struct walk walk = {0};
+	(*opened)++;
+	size_t first = scan->count;
 	// top level first, so it reads the same with or without recursion
-	bool ok = scan_dir(scan, &walk, handle, dir, recursive);
-	ok = ok && walk_subdirs(scan, &walk);
+	bool ok = scan_dir(scan, walk, handle, dir, recursive) &&
+		  walk_subdirs(scan, walk);
+	// name order within each directory, directories in configured order
+	if (ok && scan->count - first > 1) {
+		qsort((void *)(scan->paths + first), scan->count - first,
+			sizeof(*scan->paths), compare_paths);
+	}
+	return ok;
+}
+
+bool matuwall_dirscan_run(struct matuwall_dirscan *scan,
+	const struct matuwall_directories *dirs, bool recursive) {
+	*scan = (struct matuwall_dirscan){0};
+	if (dirs->count == 0) {
+		scan->unavailable = true;
+		matuwall_log_error("wallpapers",
+			"directory unavailable: path "
+			"is unresolved (is HOME set?)");
+		return true;
+	}
+
+	// one entry budget for all directories keeps startup flat
+	struct walk walk = {0};
+	size_t opened = 0;
+	bool ok = true;
+	for (size_t i = 0; ok && !scan->truncated && i < dirs->count; i++) {
+		ok = scan_root(scan, &walk, dirs->items[i], recursive, &opened);
+	}
 	walk_finish(&walk);
 	scan->truncated = scan->truncated || walk.dirs_capped;
 	if (!ok) {
 		matuwall_dirscan_finish(scan);
 		return false;
 	}
+	scan->unavailable = opened == 0;
 
 	if (walk.unreadable > 0) {
 		matuwall_log_warn("wallpapers",
-			"skipped %zu unreadable subdirector%s under %s",
-			walk.unreadable, walk.unreadable == 1 ? "y" : "ies",
-			dir);
+			"skipped %zu unreadable subdirector%s", walk.unreadable,
+			walk.unreadable == 1 ? "y" : "ies");
 	}
 	if (scan->truncated) {
 		matuwall_log_warn("wallpapers",
-			"%s: scan limit reached; showing %zu images", dir,
-			scan->count);
-	}
-
-	if (scan->count > 0) {
-		qsort((void *)scan->paths, scan->count, sizeof(*scan->paths),
-			compare_paths);
+			"scan limit reached; showing %zu images", scan->count);
 	}
 	return true;
 }

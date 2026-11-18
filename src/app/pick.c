@@ -76,10 +76,12 @@ static size_t find(const struct matuwall_dirscan *scan, const char *path) {
 static bool scan_wallpapers(
 	const struct matuwall_config *config, struct matuwall_dirscan *scan) {
 	bool listed = config->list[0] != '\0';
-	const char *source = listed ? config->list : config->directory;
-	bool scanned = listed ? matuwall_dirscan_list(
-					scan, config->list, config->directory)
-			      : matuwall_dirscan_run(scan, config->directory,
+	char count[32];
+	const char *source =
+		matuwall_config_source(config, count, sizeof(count));
+	bool scanned = listed ? matuwall_dirscan_list(scan, config->list,
+					matuwall_config_directory(config))
+			      : matuwall_dirscan_run(scan, &config->directories,
 					config->recursive);
 	if (!scanned) {
 		matuwall_log_error("wallpapers", "cannot scan %s", source);
