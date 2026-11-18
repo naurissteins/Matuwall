@@ -247,6 +247,10 @@ matuwall --list ~/.config/matuwall/favorites.txt --random
 Relative paths are inside `directory`. Blank lines and `#` comments
 are skipped. Set it permanently with `list` under `[general]`
 
+Press `f` in the picker to add the selected wallpaper to
+`~/.config/matuwall/favorites.txt`. It is written when the picker closes.
+Change the file with `favorites` under `[general]` or `--favorites FILE`
+
 ---
 
 ## Without the picker

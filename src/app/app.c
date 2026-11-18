@@ -1,6 +1,7 @@
 #include "app/app.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <wayland-client.h>
 
 #include "app/apply.h"
@@ -151,6 +152,8 @@ void matuwall_app_finish(struct matuwall_app *app) {
 
 	matuwall_app_thumbs_finish(app);
 	matuwall_app_preview_finish(app);
+	free(app->favorites);
+	app->favorites = NULL;
 	matuwall_dirscan_finish(&app->scan);
 	app->running = false;
 }

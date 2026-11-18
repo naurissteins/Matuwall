@@ -41,6 +41,8 @@ void matuwall_cli_usage(FILE *out) {
 	      "or fade\n"
 	      "      --edge-margin MARGIN\n"
 	      "                     override monitor edge gap (0..4096)\n"
+	      "      --favorites FILE\n"
+	      "                     list file the f key adds wallpapers to\n"
 	      "      --height HEIGHT\n"
 	      "                     override thumbnail height (1..16384)\n"
 	      "      --hook COMMAND replace/append a temporary on-apply hook\n"

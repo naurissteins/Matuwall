@@ -39,6 +39,12 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	_$HOME_. Blank lines and lines starting with _#_ are skipped. Order is kept,
 	except with _sort = "color"_.
 
+*favorites*
+	List file that *f* adds wallpapers to. Defaults to
+	_$XDG_CONFIG_HOME/matuwall/favorites.txt_. Entries inside _directory_ are
+	written as bare names, entries already listed are skipped. Open it with
+	*--list*.
+
 *backend*
 	Wallpaper backend: _"awww"_, _"sweetbg"_, _"plasma"_, _"command"_, or
 	_"auto"_. Defaults to _"awww"_.

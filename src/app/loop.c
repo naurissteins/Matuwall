@@ -13,6 +13,7 @@
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "render/frame.h"
+#include "state/favorites.h"
 #include "state/selection.h"
 #include "util/clock.h"
 #include "util/log.h"
@@ -343,6 +344,11 @@ bool matuwall_app_run(struct matuwall_app *app) {
 		matuwall_log_warn("exit", "surface closed by compositor");
 	}
 
+	if (app->favorites != NULL) {
+		matuwall_favorites_add(app->config.favorites,
+			app->config.directory, app->scan.paths, app->favorites,
+			app->scan.count);
+	}
 	// a failed apply while staying open still fails the run
 	bool applied = matuwall_app_apply_finish(app);
 	// Enter requested an apply: do it now, off the input path, on the way

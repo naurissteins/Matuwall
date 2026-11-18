@@ -14,6 +14,9 @@ recursive = false
 # "-" reads stdin. Empty means unset
 list = ""
 
+# List file the f key adds wallpapers to. Open it with --list
+favorites = "~/.config/matuwall/favorites.txt"
+
 # Wallpaper daemon used to apply the selection: "sweetbg", "awww", "plasma",
 # "command", or "auto". "auto" picks the first one running: plasma, sweetbg,
 # then awww
