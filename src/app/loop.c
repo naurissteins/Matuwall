@@ -9,6 +9,7 @@
 
 #include "app/app.h"
 #include "app/apply.h"
+#include "app/fit.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
 #include "render/frame.h"
@@ -64,45 +65,6 @@ static bool install_signals(void) {
 }
 
 // --- frames ---
-
-static bool same_layout(
-	const struct matuwall_layout *a, const struct matuwall_layout *b) {
-	return a->columns == b->columns && a->spacing == b->spacing &&
-	       a->margin == b->margin && a->tile_width == b->tile_width &&
-	       a->tile_height == b->tile_height && a->radius == b->radius &&
-	       a->flow == b->flow;
-}
-
-static bool same_rect(
-	const struct matuwall_rect *a, const struct matuwall_rect *b) {
-	return a->x == b->x && a->y == b->y && a->width == b->width &&
-	       a->height == b->height;
-}
-
-// fit the grid to the output and place the panel in its configured surface
-static void refresh_panel(struct matuwall_app *app) {
-	struct matuwall_layout old_layout = app->layout;
-	struct matuwall_rect old_panel = app->panel;
-	uint32_t old_first_row = app->grid.first_row;
-	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
-		app->output_width, app->output_height, app->config.carousel,
-		app->config.position, app->config.edge_margin, &app->layout,
-		&app->visible_rows);
-	app->panel = matuwall_layout_panel(&app->layout, app->scan.count,
-		app->visible_rows, app->config.position,
-		app->config.edge_margin, app->layer.width, app->layer.height);
-	matuwall_grid_reveal(
-		&app->grid, &app->layout, (uint32_t)app->panel.height);
-	if (!same_layout(&old_layout, &app->layout) ||
-		!same_rect(&old_panel, &app->panel) ||
-		old_first_row != app->grid.first_row) {
-		matuwall_animation_snap(&app->animation, &app->layout,
-			&app->panel, app->grid.selected, app->grid.cursor,
-			app->grid.first_row);
-	}
-	matuwall_app_thumbs_prioritize_visible(app);
-	app->layer.layout_dirty = false;
-}
 
 // Draw only when something actually changed
 static bool render_if_needed(struct matuwall_app *app) {
@@ -297,8 +259,9 @@ static bool pump_events(struct matuwall_app *app) {
 	if (wl_display_dispatch_pending(app->display) < 0) {
 		return false;
 	}
+	matuwall_app_fit_follow(app);
 	if (app->layer.layout_dirty) {
-		refresh_panel(app);
+		matuwall_app_fit_refresh(app);
 	}
 
 	if ((pfd[1].revents & POLLIN) != 0) {
@@ -328,7 +291,7 @@ static bool pump_events(struct matuwall_app *app) {
 bool matuwall_app_run(struct matuwall_app *app) {
 	// The configured surface size is only known now, and every later
 	// configure refreshes this again from pump_events
-	refresh_panel(app);
+	matuwall_app_fit_refresh(app);
 
 	// First frame before any decoding: placeholders only
 	app->layer.needs_repaint = true;

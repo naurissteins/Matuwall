@@ -26,6 +26,8 @@ struct matuwall_app {
 	// the grid panel with preview the backdrop sits under it
 	struct matuwall_layer layer;
 	struct matuwall_layer backdrop;
+	// re-measures the output after a change, never mapped
+	struct matuwall_layer probe;
 	struct matuwall_seat seat;
 	struct matuwall_instance instance;
 

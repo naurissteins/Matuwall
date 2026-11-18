@@ -4,6 +4,7 @@
 #include <wayland-client.h>
 
 #include "app/apply.h"
+#include "app/fit.h"
 #include "app/input.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
@@ -24,24 +25,6 @@ static bool wait_for_configure(
 		return false;
 	}
 	return true;
-}
-
-// layer margin that places panel against its anchored edge
-static uint32_t edge_offset(const struct matuwall_rect *panel,
-	enum matuwall_position position, uint32_t width, uint32_t height) {
-	switch (position) {
-	case MATUWALL_POSITION_LEFT:
-		return (uint32_t)panel->x;
-	case MATUWALL_POSITION_RIGHT:
-		return width - (uint32_t)(panel->x + panel->width);
-	case MATUWALL_POSITION_TOP:
-		return (uint32_t)panel->y;
-	case MATUWALL_POSITION_BOTTOM:
-		return height - (uint32_t)(panel->y + panel->height);
-	case MATUWALL_POSITION_CENTER:
-		break;
-	}
-	return 0;
 }
 
 bool matuwall_app_init(struct matuwall_app *app,
@@ -121,6 +104,8 @@ bool matuwall_app_init(struct matuwall_app *app,
 	}
 	app->output_width = probe->width;
 	app->output_height = probe->height;
+	// the probe saw every initial output event, later ones are changes
+	app->registry.outputs.changed = false;
 	// mapped before the panel, since compositors stack layers by map order
 	if (preview &&
 		!matuwall_layer_map_clear(&app->backdrop, app->registry.shm)) {
@@ -128,25 +113,10 @@ bool matuwall_app_init(struct matuwall_app *app,
 			"preview", "cannot map the backdrop, preview disabled");
 		matuwall_layer_destroy(&app->backdrop);
 	}
-	matuwall_layout_adapt(&app->config.layout, app->config.visible_rows,
-		app->output_width, app->output_height, app->config.carousel,
-		app->config.position, app->config.edge_margin, &app->layout,
-		&app->visible_rows);
+	struct matuwall_layer_panel panel = matuwall_app_fit_panel(app);
 	matuwall_log_info("output", "%ux%u, grid %ux%u, preview %s",
 		app->output_width, app->output_height, app->layout.columns,
 		app->visible_rows, preview ? "on" : "off");
-
-	// off-screen rows cost buffer, so the panel surface fits the output
-	struct matuwall_rect rect = matuwall_layout_panel(&app->layout,
-		app->scan.count, app->visible_rows, app->config.position,
-		app->config.edge_margin, app->output_width, app->output_height);
-	struct matuwall_layer_panel panel = {
-		.width = (uint32_t)rect.width,
-		.height = (uint32_t)rect.height,
-		.position = app->config.position,
-		.margin = edge_offset(&rect, app->config.position,
-			app->output_width, app->output_height),
-	};
 	if (!preview) {
 		matuwall_layer_set_panel(&app->layer, &panel);
 	} else if (!matuwall_layer_create(&app->layer, &app->registry,
@@ -164,6 +134,7 @@ void matuwall_app_finish(struct matuwall_app *app) {
 	matuwall_app_apply_finish(app);
 	matuwall_layer_destroy(&app->layer);
 	matuwall_layer_destroy(&app->backdrop);
+	matuwall_layer_destroy(&app->probe);
 	matuwall_seat_finish(&app->seat);
 	matuwall_registry_finish(&app->registry);
 	if (app->display != NULL) {

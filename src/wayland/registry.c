@@ -41,8 +41,8 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_seat_interface,
 				min_u32(version, SEAT_MAX_VERSION));
 		}
-	} else if (reg->requested_output_name != NULL &&
-		   strcmp(interface, wl_output_interface.name) == 0) {
+	} else if (strcmp(interface, wl_output_interface.name) == 0) {
+		// also how a mode or scale change reaches an open picker
 		matuwall_outputs_bind(&reg->outputs, registry, name, version);
 	} else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
 		if (reg->layer_shell == NULL) {

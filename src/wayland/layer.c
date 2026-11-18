@@ -4,6 +4,7 @@
 
 #include "fractional-scale-v1-client-protocol.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/output.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 #define PANEL_NAMESPACE "matuwall"
@@ -77,14 +78,14 @@ static void handle_surface_enter(
 	void *data, struct wl_surface *surface, struct wl_output *output) {
 	(void)data;
 	(void)surface;
-	(void)output;
+	matuwall_output_enter(output, true);
 }
 
 static void handle_surface_leave(
 	void *data, struct wl_surface *surface, struct wl_output *output) {
 	(void)data;
 	(void)surface;
-	(void)output;
+	matuwall_output_enter(output, false);
 }
 
 // Integer-scale fallback for compositors without fractional-scale-v1
@@ -244,6 +245,12 @@ void matuwall_layer_set_panel(struct matuwall_layer *layer,
 	const struct matuwall_layer_panel *panel) {
 	place_panel(layer, panel);
 	layer->configured = false;
+	wl_surface_commit(layer->wl_surface);
+}
+
+void matuwall_layer_resize_panel(struct matuwall_layer *layer,
+	const struct matuwall_layer_panel *panel) {
+	place_panel(layer, panel);
 	wl_surface_commit(layer->wl_surface);
 }
 
