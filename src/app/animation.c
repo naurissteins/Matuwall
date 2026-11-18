@@ -32,6 +32,10 @@ static double progress_at(
 	return progress < 1.0 ? progress : 1.0;
 }
 
+#define FLASH_MS 450
+// logical pixels the flash travels outward
+#define FLASH_SPREAD 8.0
+
 static double ease_out_cubic(double progress) {
 	double left = 1.0 - progress;
 	return 1.0 - left * left * left;
@@ -165,6 +169,24 @@ void matuwall_animation_sample(const struct matuwall_animation *animation,
 		add_focus(sample, animation->to_focus, animation->to_slot,
 			animation->focus_scale);
 	}
+
+	double flash =
+		animation->flash_ms == 0
+			? 1.0
+			: (double)(now_ms - animation->flash_ms) / FLASH_MS;
+	if (flash >= 0.0 && flash < 1.0) {
+		sample->flash = (struct matuwall_frame_ring){
+			.rect = animation->to_ring,
+			.alpha = (uint8_t)lround((1.0 - flash) * 255.0),
+		};
+		sample->flash_spread = ease_out_cubic(flash) * FLASH_SPREAD;
+		sample->active = true;
+	}
+}
+
+void matuwall_animation_flash(
+	struct matuwall_animation *animation, int64_t now_ms) {
+	animation->flash_ms = now_ms;
 }
 
 // glide slides the scroll however far it goes, else only short moves do
@@ -189,6 +211,8 @@ static void retarget(struct matuwall_animation *animation,
 	double selected_scale = focus_at(&current, selected_slot);
 
 	animation->started_ms = now_ms;
+	// the flash belongs to the tile it was pressed on
+	animation->flash_ms = 0;
 	animation->to_ring = target;
 	animation->to_scroll = target_scroll;
 	animation->from_focus = previous;

@@ -8,6 +8,8 @@
 #include "render/tiles.h"
 
 #define RING_GAP 3
+// flash width while the selection ring is off
+#define FLASH_WIDTH 3
 #define PULSE_PERIOD_MS 1400
 #define PULSE_ALPHA_MIN 60
 #define PULSE_ALPHA_MAX 220
@@ -58,6 +60,14 @@ static int32_t content_overflow(const struct matuwall_frame *frame) {
 		double ring = RING_GAP + frame->ring_width;
 		if (ring > edge) {
 			edge = ring;
+		}
+	}
+	if (frame->flash.alpha > 0) {
+		uint32_t width =
+			frame->ring_width > 0 ? frame->ring_width : FLASH_WIDTH;
+		double flash = RING_GAP + frame->flash_spread + width;
+		if (flash > edge) {
+			edge = flash;
 		}
 	}
 	return (int32_t)ceil(overflow + edge);
@@ -183,7 +193,8 @@ static struct matuwall_frame_ring edge_ring(const struct matuwall_frame *frame,
 
 static void draw_ring(struct matuwall_buffer *buffer,
 	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
-	const struct matuwall_frame_ring *ring, int32_t gap, int32_t width) {
+	const struct matuwall_frame_ring *ring, int32_t gap, int32_t width,
+	struct matuwall_color color) {
 	if (ring->alpha == 0) {
 		return;
 	}
@@ -209,11 +220,23 @@ static void draw_ring(struct matuwall_buffer *buffer,
 			       : 1.0;
 	int32_t radius = scaled(frame->layout->radius * focus, frame->scale);
 	int32_t ring_radius = radius == 0 ? 0 : radius + inset;
-	struct matuwall_color color = frame->ring;
 	color.a = matuwall_alpha_mul(color.a, ring->alpha);
 	matuwall_draw_rounded_ring(buffer, clip, left - inset, top - inset,
 		(right - left) + inset * 2, (bottom - top) + inset * 2,
 		ring_radius, width, matuwall_color_argb(color));
+}
+
+// a ring set to none still needs a colour that shows
+static void draw_flash(struct matuwall_buffer *buffer,
+	const struct matuwall_frame *frame, const struct matuwall_clip *clip,
+	int32_t ring_width) {
+	int32_t width = ring_width > 0 ? ring_width
+				       : to_pixels(FLASH_WIDTH, frame->scale);
+	int32_t gap = (int32_t)lround(
+		(RING_GAP + frame->flash_spread) * frame->scale);
+	struct matuwall_frame_ring flash = edge_ring(frame, &frame->flash);
+	draw_ring(buffer, frame, clip, &flash, gap, width > 0 ? width : 1,
+		frame->ring.a > 0 ? frame->ring : frame->spinner);
 }
 
 struct matuwall_clip matuwall_frame_draw(
@@ -253,7 +276,11 @@ struct matuwall_clip matuwall_frame_draw(
 	if (ring_width > 0 && frame->ring.a > 0) {
 		struct matuwall_frame_ring ring =
 			edge_ring(frame, &frame->focus_ring);
-		draw_ring(buffer, frame, &clip, &ring, ring_gap, ring_width);
+		draw_ring(buffer, frame, &clip, &ring, ring_gap, ring_width,
+			frame->ring);
+	}
+	if (frame->flash.alpha > 0) {
+		draw_flash(buffer, frame, &clip, ring_width);
 	}
 	return damage;
 }

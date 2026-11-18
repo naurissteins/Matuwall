@@ -31,6 +31,9 @@ struct matuwall_frame {
 	struct matuwall_frame_ring focus_ring;
 	struct matuwall_frame_focus focuses[2];
 	size_t focus_count;
+	// favorite feedback, alpha 0 draws none
+	struct matuwall_frame_ring flash;
+	double flash_spread;
 	// Panel geometry in logical, surface-local units
 	struct matuwall_rect panel;
 	bool directory_unavailable;

@@ -117,6 +117,8 @@ static bool render_if_needed(struct matuwall_app *app) {
 	};
 	if (app->scan.count > 0) {
 		frame.focus_ring = visual.ring;
+		frame.flash = visual.flash;
+		frame.flash_spread = visual.flash_spread;
 		frame.focus_count = visual.focus_count;
 		memcpy(frame.focuses, visual.focuses, sizeof(frame.focuses));
 	}
