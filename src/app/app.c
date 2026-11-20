@@ -1,5 +1,7 @@
 #include "app/app.h"
 
+#include <errno.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wayland-client.h>
@@ -9,16 +11,37 @@
 #include "app/input.h"
 #include "app/preview.h"
 #include "app/thumbs.h"
+#include "util/clock.h"
 #include "util/log.h"
 
 // Lifecycle only: build every subsystem, tear every one back down. The run
 // phase lives in loop.c
+
+// layer-shell promises a configure, not that it beats the roundtrip
+#define CONFIGURE_TIMEOUT_MS 1000
 
 static bool wait_for_configure(
 	struct matuwall_app *app, const struct matuwall_layer *layer) {
 	if (wl_display_roundtrip(app->display) < 0) {
 		matuwall_log_error("wayland", "roundtrip failed");
 		return false;
+	}
+	int64_t deadline = matuwall_now_ms() + CONFIGURE_TIMEOUT_MS;
+	struct pollfd pfd = {
+		.fd = wl_display_get_fd(app->display),
+		.events = POLLIN,
+	};
+	while (!layer->configured && !layer->closed) {
+		int64_t left = deadline - matuwall_now_ms();
+		if (left <= 0) {
+			break;
+		}
+		int ready = poll(&pfd, 1, (int)left);
+		if ((ready < 0 && errno != EINTR) ||
+			(ready > 0 && wl_display_dispatch(app->display) < 0)) {
+			matuwall_log_error("wayland", "dispatch failed");
+			return false;
+		}
 	}
 	if (!layer->configured) {
 		matuwall_log_error("wayland",
