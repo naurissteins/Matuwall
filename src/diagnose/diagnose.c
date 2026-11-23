@@ -219,16 +219,21 @@ static void report_configuration(
 	char backend[sizeof(config->backend)];
 	report_line(report, DIAG_INFO, "backend", "%s",
 		clean(config->backend, backend, sizeof(backend)));
+	char height[16] = "auto";
+	if (config->layout.tile_height != 0) {
+		snprintf(height, sizeof(height), "%u",
+			config->layout.tile_height);
+	}
 	if (config->carousel) {
 		report_line(report, DIAG_INFO, "grid",
-			"carousel, maximum %u tiles, tile %ux%u",
+			"carousel, maximum %u tiles, tile %ux%s",
 			config->layout.columns, config->layout.tile_width,
-			config->layout.tile_height);
+			height);
 	} else {
 		report_line(report, DIAG_INFO, "grid",
-			"maximum %ux%u, tile %ux%u", config->layout.columns,
+			"maximum %ux%u, tile %ux%s", config->layout.columns,
 			config->visible_rows, config->layout.tile_width,
-			config->layout.tile_height);
+			height);
 	}
 	report_line(report, DIAG_INFO, "preview", "%s",
 		config->preview ? "enabled" : "disabled");

@@ -79,7 +79,8 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	Set _general.favorites_, the file *f* adds to.
 
 *--height* _HEIGHT_
-	Set _thumbnail.height_ to an integer from 1 to 16384.
+	Set _thumbnail.height_ to an integer from 1 to 16384, or _auto_ to follow
+	the output's aspect.
 
 *--hook* _COMMAND_
 	Replace the configured _hooks.on_apply_ list. Later occurrences append in

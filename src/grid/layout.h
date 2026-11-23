@@ -43,7 +43,10 @@ struct matuwall_layout_rect {
 	double height;
 };
 
-// Grid metrics in logical (surface-local) units
+#define MATUWALL_LAYOUT_TILE_MAX 16384
+
+// grid metrics in logical (surface-local) units, a configured tile_height of 0
+// follows the output's aspect
 struct matuwall_layout {
 	uint32_t columns;
 	uint32_t spacing;

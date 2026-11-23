@@ -78,8 +78,8 @@ const struct matuwall_config_key matuwall_config_keys[] = {
 		"ring-width", NULL, 0},
 	{"thumbnail", "width", MATUWALL_CONFIG_UINT, FIELD(layout.tile_width),
 		1, 16384, "width", NULL, 'w'},
-	{"thumbnail", "height", MATUWALL_CONFIG_UINT, FIELD(layout.tile_height),
-		1, 16384, "height", NULL, 0},
+	{"thumbnail", "height", MATUWALL_CONFIG_UINT_AUTO,
+		FIELD(layout.tile_height), 1, 16384, "height", NULL, 0},
 	{"colors", "tile", MATUWALL_CONFIG_COLOR, FIELD(tile), 0, 0, "tile",
 		NULL, 0},
 	{"colors", "border", MATUWALL_CONFIG_COLOR, FIELD(border), 0, 0,
@@ -148,6 +148,13 @@ bool matuwall_config_set(struct matuwall_config *cfg,
 	size_t size;
 	bool string = v->type == MATUWALL_TOML_STRING;
 	switch (key->type) {
+	case MATUWALL_CONFIG_UINT_AUTO:
+		if (string && strcmp(v->string, "auto") == 0) {
+			value.number = 0;
+			size = sizeof(value.number);
+			break;
+		}
+		// fall through
 	case MATUWALL_CONFIG_UINT:
 		if (v->type != MATUWALL_TOML_INTEGER || v->integer < key->min ||
 			v->integer > key->max) {
@@ -215,7 +222,10 @@ bool matuwall_config_set_text(struct matuwall_config *cfg,
 		.type = MATUWALL_TOML_STRING,
 		.string = text,
 	};
-	if (key->type == MATUWALL_CONFIG_UINT) {
+	bool number = key->type == MATUWALL_CONFIG_UINT ||
+		      (key->type == MATUWALL_CONFIG_UINT_AUTO &&
+			      strcmp(text, "auto") != 0);
+	if (number) {
 		// digits only: no sign, space, or base prefix
 		if (text[0] < '0' || text[0] > '9') {
 			return false;
@@ -249,6 +259,10 @@ const char *matuwall_config_expect(
 	case MATUWALL_CONFIG_UINT:
 		snprintf(buf, size, "%lld..%lld", (long long)key->min,
 			(long long)key->max);
+		return buf;
+	case MATUWALL_CONFIG_UINT_AUTO:
+		snprintf(buf, size, "%lld..%lld or \"auto\"",
+			(long long)key->min, (long long)key->max);
 		return buf;
 	case MATUWALL_CONFIG_BOOL:
 		return "true or false";
@@ -288,6 +302,15 @@ void matuwall_config_format(const struct matuwall_config *cfg,
 		snprintf(out, size, "%u",
 			*(const uint32_t *)(const void *)field);
 		return;
+	case MATUWALL_CONFIG_UINT_AUTO: {
+		uint32_t n = *(const uint32_t *)(const void *)field;
+		if (n == 0) {
+			snprintf(out, size, "auto");
+		} else {
+			snprintf(out, size, "%u", n);
+		}
+		return;
+	}
 	case MATUWALL_CONFIG_BOOL:
 		snprintf(out, size, "%s",
 			*(const bool *)field ? "true" : "false");
