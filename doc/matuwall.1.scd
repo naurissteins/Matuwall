@@ -194,7 +194,9 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 	alone return status 0.
 
 *--restore*
-	Apply the remembered wallpaper again and exit, without a window.
+	Apply the remembered wallpaper again and exit, without a window. After
+	applies that used _{output}_, each output gets its own back; hooks run once.
+	With *--output*, only that one.
 
 *--random*
 	Apply a random wallpaper other than the current one and exit.
@@ -260,7 +262,8 @@ for them. See *matuwall*(5).
 
 After a successful apply, Matuwall remembers the path and selects it on the next
 launch if it is still in the wallpaper directory. *--restore*, *--next*, and
-*--prev* start from it.
+*--prev* start from it. An apply that used _{output}_ is also remembered for
+that output; an apply to every output forgets those.
 
 # DIAGNOSTICS
 

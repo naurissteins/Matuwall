@@ -32,7 +32,9 @@ struct matuwall_apply_queue {
 // backend, remembered selection, then hooks, path as scanned. output fills
 // {output}, NULL when unknown
 bool matuwall_apply_path(const struct matuwall_config *config, const char *path,
-	const char *output);
+	const char *output, bool hooks);
+// the output the picker is on, NULL when unknown
+const char *matuwall_app_output(const struct matuwall_app *app);
 // apply the selection and wait, for the closing path
 bool matuwall_app_apply(struct matuwall_app *app);
 // hand a path to the apply thread, starting it on first use
