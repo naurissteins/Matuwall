@@ -127,7 +127,7 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 *-o* _NAME_, *--output* _NAME_
 	Open on the named Wayland output. An unknown name is an error; available
 	outputs are reported. Also fills _{output}_ for *--restore*, *--random*,
-	*--next* and *--prev*.
+	*--next* and *--prev*, and picks the output for *--current*.
 
 *-p* _POSITION_, *--position* _POSITION_
 	Use _center_, _left_, _right_, _top_, or _bottom_.
@@ -204,6 +204,11 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 *--next*, *--prev*
 	Apply the wallpaper after or before the remembered one, in grid order, and
 	exit. Both wrap around.
+
+*--current*
+	Print the remembered wallpaper path and exit. With *--output*, print that
+	output's, falling back to the last one applied anywhere. Exits 1 when
+	nothing is remembered.
 
 These four combine with other options, but not with each other. They run the
 backend and hooks like Enter does. A failed apply exits with status 1.

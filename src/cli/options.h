@@ -15,6 +15,8 @@ enum matuwall_cli_action {
 	MATUWALL_CLI_CLEAR_CACHE,
 	MATUWALL_CLI_DIAGNOSE,
 	MATUWALL_CLI_PRINT_CONFIG,
+	// print the remembered wallpaper, for output_name when given
+	MATUWALL_CLI_CURRENT,
 	// apply without a window, which one is in pick
 	MATUWALL_CLI_PICK,
 };

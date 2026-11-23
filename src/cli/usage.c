@@ -102,6 +102,7 @@ void matuwall_cli_usage(FILE *out) {
 	      "      --restore      apply the last wallpaper again and exit\n"
 	      "      --random       apply a random wallpaper and exit\n"
 	      "      --next         apply the next wallpaper and exit\n"
-	      "      --prev         apply the previous wallpaper and exit\n",
+	      "      --prev         apply the previous wallpaper and exit\n"
+	      "      --current      print the remembered wallpaper and exit\n",
 		out);
 }

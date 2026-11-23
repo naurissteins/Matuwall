@@ -253,6 +253,7 @@ matuwall --random           # a random wallpaper, never the current one
 matuwall --next             # the next wallpaper in grid order
 matuwall --prev             # the previous one
 matuwall --random -o DP-1   # only on DP-1 when args use {output}
+matuwall --current -o DP-1  # print DP-1's wallpaper path, e.g. for a lock screen
 ```
 
 `--next` and `--prev` follow `sort`, so with `--sort color` they step through

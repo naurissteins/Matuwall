@@ -20,6 +20,7 @@ enum {
 	OPTION_RANDOM,
 	OPTION_NEXT,
 	OPTION_PREV,
+	OPTION_CURRENT,
 	// key table rows from here, two each: the flag and its off flag
 	OPTION_KEY,
 };
@@ -46,6 +47,7 @@ static const struct option fixed_options[] = {
 	{"random", no_argument, NULL, OPTION_RANDOM},
 	{"next", no_argument, NULL, OPTION_NEXT},
 	{"prev", no_argument, NULL, OPTION_PREV},
+	{"current", no_argument, NULL, OPTION_CURRENT},
 	{"help", no_argument, NULL, 'h'},
 	{"version", no_argument, NULL, 'V'},
 	{"clear-cache", no_argument, NULL, OPTION_CLEAR_CACHE},
@@ -232,11 +234,15 @@ static enum parse_result parse_action(int option,
 	if (options->action != MATUWALL_CLI_RUN) {
 		snprintf(err, err_size,
 			"use only one of --restore, --random, --next, --prev, "
-			"or --print-config");
+			"--current, or --print-config");
 		return PARSE_ERROR;
 	}
 	if (option == OPTION_PRINT_CONFIG) {
 		options->action = MATUWALL_CLI_PRINT_CONFIG;
+		return PARSE_CONTINUE;
+	}
+	if (option == OPTION_CURRENT) {
+		options->action = MATUWALL_CLI_CURRENT;
 		return PARSE_CONTINUE;
 	}
 	options->action = MATUWALL_CLI_PICK;
@@ -308,6 +314,7 @@ static enum parse_result parse_override(int option, const char *value,
 	case OPTION_RANDOM:
 	case OPTION_NEXT:
 	case OPTION_PREV:
+	case OPTION_CURRENT:
 		return parse_action(option, options, err, err_size);
 	default:
 		return PARSE_UNHANDLED;

@@ -10,6 +10,7 @@
 #include "cli/options.h"
 #include "config/config.h"
 #include "diagnose/diagnose.h"
+#include "state/selection.h"
 #include "thumb/cache.h"
 #include "util/log.h"
 
@@ -25,6 +26,21 @@ static int clear_cache(void) {
 	} else {
 		printf("matuwall: removed %zu cached thumbnail%s\n", removed,
 			removed == 1 ? "" : "s");
+	}
+	return 0;
+}
+
+// the remembered path on stdout, for lock screens and scripts
+static int print_current(const char *output) {
+	char path[PATH_MAX];
+	if (!matuwall_selection_load_for(output, path, sizeof(path))) {
+		fprintf(stderr, "matuwall: no remembered wallpaper\n");
+		return 1;
+	}
+	if (puts(path) < 0 || fflush(stdout) != 0) {
+		fprintf(stderr, "matuwall: cannot write stdout: %s\n",
+			strerror(errno));
+		return 1;
 	}
 	return 0;
 }
@@ -84,6 +100,9 @@ int main(int argc, char *argv[]) {
 	}
 	if (options.action == MATUWALL_CLI_DIAGNOSE) {
 		return matuwall_diagnose_run();
+	}
+	if (options.action == MATUWALL_CLI_CURRENT) {
+		return print_current(options.output_name);
 	}
 
 	matuwall_log_start(MATUWALL_VERSION);
