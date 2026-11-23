@@ -133,8 +133,15 @@ static bool render_if_needed(struct matuwall_app *app) {
 
 static void restore_selection(struct matuwall_app *app) {
 	app->initial_index = SIZE_MAX;
+	const char *output = matuwall_app_output(app);
+	// a compositor-chosen output is named by enter, after the first frame
+	if (output == NULL && matuwall_selection_has_outputs() &&
+		wl_display_roundtrip(app->display) >= 0) {
+		output = matuwall_app_output(app);
+	}
 	char *path = app->initial_path;
-	if (!matuwall_selection_load(path, sizeof(app->initial_path))) {
+	if (!matuwall_selection_load_for(
+		    output, path, sizeof(app->initial_path))) {
 		return;
 	}
 	for (size_t i = 0; i < app->scan.count; i++) {

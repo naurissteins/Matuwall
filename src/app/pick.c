@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/random.h>
 #include <time.h>
@@ -107,7 +108,7 @@ static bool scan_wallpapers(
 static bool apply_step(const struct matuwall_config *config,
 	enum matuwall_pick pick, const char *output) {
 	char last[PATH_MAX];
-	if (!matuwall_selection_load(last, sizeof(last))) {
+	if (!matuwall_selection_load_for(output, last, sizeof(last))) {
 		last[0] = '\0';
 	}
 	struct matuwall_dirscan scan;
@@ -118,8 +119,20 @@ static bool apply_step(const struct matuwall_config *config,
 	size_t index = choose(pick, scan.count, find(&scan, last));
 	matuwall_log_info("pick", "%s chose %zu of %zu",
 		matuwall_pick_flag(pick), index + 1, scan.count);
-	bool ok = matuwall_apply_path(config, scan.paths[index], output);
+	bool ok = matuwall_apply_path(config, scan.paths[index], output, true);
 	matuwall_dirscan_finish(&scan);
+	return ok;
+}
+
+// every remembered output in turn, hooks once for the newest
+static bool restore_outputs(const struct matuwall_config *config,
+	const struct matuwall_selection_outputs *outputs) {
+	bool ok = true;
+	for (size_t i = 0; i < outputs->count; i++) {
+		bool newest = i + 1 == outputs->count;
+		ok &= matuwall_apply_path(config, outputs->items[i].path,
+			outputs->items[i].name, newest);
+	}
 	return ok;
 }
 
@@ -128,12 +141,27 @@ bool matuwall_pick_apply(const struct matuwall_config *config,
 	if (pick != MATUWALL_PICK_RESTORE) {
 		return apply_step(config, pick, output);
 	}
+	if (output == NULL) {
+		struct matuwall_selection_outputs *outputs =
+			malloc(sizeof(*outputs));
+		if (outputs == NULL) {
+			matuwall_log_error("pick", "out of memory");
+			return false;
+		}
+		matuwall_selection_load_outputs(outputs);
+		bool tried = outputs->count > 0;
+		bool ok = tried && restore_outputs(config, outputs);
+		free(outputs);
+		if (tried) {
+			return ok;
+		}
+	}
 	// the remembered path may sit outside today's directory
 	char last[PATH_MAX];
-	if (!matuwall_selection_load(last, sizeof(last))) {
+	if (!matuwall_selection_load_for(output, last, sizeof(last))) {
 		matuwall_log_error(
 			"pick", "no remembered wallpaper to restore");
 		return false;
 	}
-	return matuwall_apply_path(config, last, output);
+	return matuwall_apply_path(config, last, output, true);
 }

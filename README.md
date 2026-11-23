@@ -248,7 +248,7 @@ These apply a wallpaper and exit, with no window. They use the same backend and
 hooks as Enter
 
 ```sh
-matuwall --restore          # apply the last wallpaper again, e.g. at login
+matuwall --restore          # apply the last wallpaper again, per monitor with {output}
 matuwall --random           # a random wallpaper, never the current one
 matuwall --next             # the next wallpaper in grid order
 matuwall --prev             # the previous one
@@ -267,4 +267,4 @@ matuwall --diagnose      # check config, Wayland, backends, hooks and paths
 matuwall --clear-cache   # remove thumbnails only
 ```
 
-Last selection `~/.local/state/matuwall/last-selection`, logs `~/.local/state/matuwall/matuwall.log`, cached thumbnails `~/.cache/matuwall/thumbs/`, and learned colors `~/.cache/matuwall/colors`
+Last selection `~/.local/state/matuwall/last-selection` (per monitor in `last-selection-outputs`), logs `~/.local/state/matuwall/matuwall.log`, cached thumbnails `~/.cache/matuwall/thumbs/`, and learned colors `~/.cache/matuwall/colors`
