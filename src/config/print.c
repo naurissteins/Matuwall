@@ -95,6 +95,14 @@ static void print_value(FILE *out, const struct matuwall_config *config,
 		matuwall_config_format(config, key, text, sizeof(text));
 		fputs(text, out);
 		return;
+	case MATUWALL_CONFIG_UINT_AUTO:
+		matuwall_config_format(config, key, text, sizeof(text));
+		if (strcmp(text, "auto") == 0) {
+			print_quoted(out, text);
+		} else {
+			fputs(text, out);
+		}
+		return;
 	default:
 		matuwall_config_format(config, key, text, sizeof(text));
 		print_quoted(out, text);

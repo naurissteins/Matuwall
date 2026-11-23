@@ -21,11 +21,31 @@ static uint32_t fit_cells(uint32_t available, uint32_t margin, uint32_t tile,
 	return count < maximum ? (uint32_t)count : maximum;
 }
 
+// height for a 0 tile height, the output's aspect at the tile's width
+static uint32_t auto_height(
+	uint32_t tile_width, uint32_t output_width, uint32_t output_height) {
+	uint64_t height = output_width == 0 || output_height == 0
+				  ? (uint64_t)tile_width * 9 / 16
+				  : ((uint64_t)tile_width * output_height +
+					    output_width / 2) /
+					    output_width;
+	if (height < 1) {
+		return 1;
+	}
+	return height > MATUWALL_LAYOUT_TILE_MAX ? MATUWALL_LAYOUT_TILE_MAX
+						 : (uint32_t)height;
+}
+
 void matuwall_layout_adapt(const struct matuwall_layout *configured,
 	uint32_t configured_rows, uint32_t available_width,
 	uint32_t available_height, bool carousel,
 	enum matuwall_position position, uint32_t edge_margin,
 	struct matuwall_layout *layout, uint32_t *visible_rows) {
+	*layout = *configured;
+	if (layout->tile_height == 0) {
+		layout->tile_height = auto_height(
+			layout->tile_width, available_width, available_height);
+	}
 	if (position == MATUWALL_POSITION_LEFT ||
 		position == MATUWALL_POSITION_RIGHT) {
 		available_width = available_width > edge_margin
@@ -38,13 +58,12 @@ void matuwall_layout_adapt(const struct matuwall_layout *configured,
 					   : 0;
 	}
 
-	*layout = *configured;
 	if (carousel && (position == MATUWALL_POSITION_LEFT ||
 				position == MATUWALL_POSITION_RIGHT)) {
 		layout->flow = MATUWALL_FLOW_VERTICAL;
 		layout->columns = 1;
 		*visible_rows = fit_cells(available_height, configured->margin,
-			configured->tile_height, configured->spacing,
+			layout->tile_height, configured->spacing,
 			configured->columns);
 		return;
 	}
@@ -60,7 +79,7 @@ void matuwall_layout_adapt(const struct matuwall_layout *configured,
 
 	layout->flow = MATUWALL_FLOW_GRID;
 	*visible_rows = fit_cells(available_height, configured->margin,
-		configured->tile_height, configured->spacing, configured_rows);
+		layout->tile_height, configured->spacing, configured_rows);
 }
 
 uint32_t matuwall_layout_rows(

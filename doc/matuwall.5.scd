@@ -188,6 +188,10 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	value regenerates thumbnails at the new size. A tile larger than the
 	output is clipped; the panel never grows past it.
 
+	*height* may be _"auto"_: the tile takes the output's aspect at the given
+	width, so a portrait monitor gets portrait tiles. It follows rotation and
+	mode changes while open.
+
 ## [colors]
 
 All colors use _"#rrggbb"_ or _"#rrggbbaa"_. _"none"_ hides that element.

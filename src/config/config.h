@@ -116,6 +116,8 @@ bool matuwall_config_print(FILE *out, const struct matuwall_config *config);
 
 enum matuwall_config_type {
 	MATUWALL_CONFIG_UINT,
+	// a UINT, or "auto" stored as 0
+	MATUWALL_CONFIG_UINT_AUTO,
 	MATUWALL_CONFIG_BOOL,
 	MATUWALL_CONFIG_COLOR,
 	MATUWALL_CONFIG_POSITION,

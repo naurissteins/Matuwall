@@ -73,6 +73,11 @@ static bool thumbnail_target(
 
 	double scale =
 		app->layer.width > 0 ? (double)pw / app->layer.width : 1.0;
+	// the output, not the panel, which lags a mode change until configure
+	if (app->output_width > 0 && app->output_height > 0) {
+		pw = (uint32_t)(app->output_width * scale + 0.5);
+		ph = (uint32_t)(app->output_height * scale + 0.5);
+	}
 	double width = app->layout.tile_width * scale;
 	double height = app->layout.tile_height * scale;
 	double fit = 1.0;

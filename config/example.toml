@@ -126,7 +126,8 @@ edge = "auto"
 sort = "name"
 
 [thumbnail]
-# Thumbnail size in pixels
+# Thumbnail size in pixels. height = "auto" takes the output's aspect at this
+# width, so a portrait monitor gets portrait tiles
 width = 300
 height = 169
 

@@ -117,6 +117,7 @@ matuwall --radius 10                             // set the tile corner radius t
 matuwall --panel-radius 16                       // set the panel corner radius to 16
 matuwall -w 320                                  // set thumbnail width to 320
 matuwall --height 480                            // set thumbnail height to 480
+matuwall --height auto                           // match the monitor's aspect
 matuwall --background "#181825cc"                // set the panel background color
 matuwall --background none                       // draw no panel background
 matuwall --tile "#313244"                        // set the tile color

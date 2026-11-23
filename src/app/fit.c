@@ -76,6 +76,8 @@ void matuwall_app_fit_refresh(struct matuwall_app *app) {
 			&app->panel, app->grid.selected, app->grid.cursor,
 			app->grid.first_row);
 	}
+	// an auto tile height follows the output, a no-op when unchanged
+	matuwall_app_thumbs_retarget(app);
 	matuwall_app_thumbs_prioritize_visible(app);
 	app->layer.layout_dirty = false;
 }
