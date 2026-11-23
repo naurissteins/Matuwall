@@ -14,9 +14,11 @@ struct matuwall_command {
 	size_t argc;
 };
 
-// split tmpl on whitespace, then put path in place of each {path}. False on
-// overflow, argc 0 for an empty template
-bool matuwall_command_expand(
-	struct matuwall_command *cmd, const char *tmpl, const char *path);
+bool matuwall_command_expand(struct matuwall_command *cmd, const char *tmpl,
+	const char *path, const char *output);
+bool matuwall_command_expand_args(struct matuwall_command *cmd,
+	const char *const *args, size_t count, const char *path,
+	const char *output);
+bool matuwall_command_needs_output(const char *tmpl);
 
 #endif

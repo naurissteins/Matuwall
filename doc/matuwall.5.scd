@@ -66,14 +66,18 @@ strings. _#_ starts a comment. Comments are not allowed inside arrays.
 	Each item is one argument, placed before the wallpaper path. For awww they
 	come before _--_. Only the selected backend's args are used.
 
-	Arguments are passed as-is, without a shell. The daemon rejects flags it
-	does not know. At most 32 arguments of up to 255 bytes each are accepted.
+	Arguments are passed without a shell. _{output}_ becomes the name of the
+	output the picker is on, so _["-o", "{output}"]_ sets only that monitor.
+	Without a window it comes from *--output*; with neither, the apply fails.
+	The daemon rejects flags it does not know. At most 32 arguments of up to
+	255 bytes each are accepted.
 
 ## [backend.command]
 
 *apply*
 	Command run by the _"command"_ backend. Defaults to empty. It must contain
-	_{path}_, which becomes the absolute wallpaper path.
+	_{path}_, which becomes the absolute wallpaper path. _{output}_ becomes
+	the picker's output name.
 
 	Split on spaces and tabs, then run without a shell. Quoting is not
 	supported. Matuwall waits for it; a non-zero exit fails the apply. Up to
@@ -208,6 +212,8 @@ All colors use _"#rrggbb"_ or _"#rrggbbaa"_. _"none"_ hides that element.
 *on_apply*
 	Commands run after a successful apply. Defaults to an empty array. _{path}_
 	is replaced with the absolute wallpaper path, with symlinks resolved.
+	_{output}_ is replaced with the picker's output name. A hook using it is
+	skipped when no output is known.
 
 	Commands are split on whitespace and run directly, without a shell. Pipes,
 	globs, variables, and shell quoting are not supported. Hooks run detached and

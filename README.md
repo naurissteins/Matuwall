@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/be785321-e27e-48fd-b33d-14a18dd0fb1f
 - Fast raw thumbnail cache
 - Grid and carousel layouts
 - Sort wallpapers by name or color
-- Fractional scaling and multiple outputs
+- Fractional scaling and multiple outputs, with a wallpaper per monitor
 - Restore, random, next and previous wallpaper without opening the picker
 - Pick from a list file or stdin, for favorites or filtered sets
 - Full-screen wallpaper previews
@@ -187,6 +187,14 @@ args = ["--transition-type", "grow", "--transition-duration", "1.5"]
 args = ["--fill-mode", "preserveAspectCrop"]
 ```
 
+To set only the monitor the picker is on, use `{output}`. It becomes the
+output name, such as `DP-1`, and also works in `apply` and hooks
+
+```toml
+[backend.awww]
+args = ["-o", "{output}"]
+```
+
 CLI override example using `--backend-arg` flags
 
 ```sh
@@ -218,7 +226,7 @@ Tools that keep running, like `swaybg` need a small wrapper script. See the
 ## Hooks
 
 Hooks run after a successful apply. `{path}` becomes the absolute wallpaper
-path, with symlinks resolved
+path, with symlinks resolved. `{output}` becomes the picker's output name
 
 ```toml
 [hooks]
@@ -240,10 +248,11 @@ These apply a wallpaper and exit, with no window. They use the same backend and
 hooks as Enter
 
 ```sh
-matuwall --restore   # apply the last wallpaper again, e.g. at login
-matuwall --random    # a random wallpaper, never the current one
-matuwall --next      # the next wallpaper in grid order
-matuwall --prev      # the previous one
+matuwall --restore          # apply the last wallpaper again, e.g. at login
+matuwall --random           # a random wallpaper, never the current one
+matuwall --next             # the next wallpaper in grid order
+matuwall --prev             # the previous one
+matuwall --random -o DP-1   # only on DP-1 when args use {output}
 ```
 
 `--next` and `--prev` follow `sort`, so with `--sort color` they step through

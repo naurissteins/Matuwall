@@ -3,6 +3,8 @@
 
 #include "config/config.h"
 
-void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path);
+// output fills {output}, NULL skips the hooks that use it
+void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path,
+	const char *output);
 
 #endif

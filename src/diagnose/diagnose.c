@@ -241,7 +241,8 @@ static void report_configuration(
 
 // argv[0] as the spawn would split it, false when empty or too long
 static bool command_name(const char *command, struct matuwall_command *cmd) {
-	return matuwall_command_expand(cmd, command, "{path}") && cmd->argc > 0;
+	return matuwall_command_expand(cmd, command, "{path}", "{output}") &&
+	       cmd->argc > 0;
 }
 
 static bool command_available(const char *command) {

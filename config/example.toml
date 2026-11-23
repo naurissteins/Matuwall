@@ -24,7 +24,8 @@ favorites = "~/.config/matuwall/favorites.txt"
 # then awww
 backend = "awww"
 
-# Extra flags for each backend's img command, one argument per item
+# Extra flags for each backend's img command, one argument per item.
+# {output} becomes the picker's output name, to set only that monitor
 # https://github.com/naurissteins/Matuwall/wiki/Backends-and-Hooks#backend-flags
 [backend.sweetbg]
 # --persist (-p) keeps the wallpaper after a sweetbg restart
@@ -34,12 +35,14 @@ args = []
 [backend.awww]
 args = []
 # args = ["--transition-type", "grow", "--transition-duration", "1.5"]
+# args = ["-o", "{output}"]
 
 [backend.plasma]
 args = []
 # args = ["--fill-mode", "preserveAspectCrop"]
 
-# Any other setter, used with backend = "command". {path} is the wallpaper
+# Any other setter, used with backend = "command". {path} is the wallpaper,
+# {output} the picker's output name
 # Runs without a shell; Matuwall waits for it and reports a non-zero exit
 [backend.command]
 apply = ""

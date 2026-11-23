@@ -126,7 +126,8 @@ Colors use _"#rrggbb"_, _"#rrggbbaa"_, or _none_; quote hex colors in the shell.
 
 *-o* _NAME_, *--output* _NAME_
 	Open on the named Wayland output. An unknown name is an error; available
-	outputs are reported.
+	outputs are reported. Also fills _{output}_ for *--restore*, *--random*,
+	*--next* and *--prev*.
 
 *-p* _POSITION_, *--position* _POSITION_
 	Use _center_, _left_, _right_, _top_, or _bottom_.
