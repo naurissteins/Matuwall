@@ -223,6 +223,17 @@ struct wl_output *matuwall_outputs_entered(
 	return NULL;
 }
 
+const char *matuwall_outputs_entered_name(
+	const struct matuwall_outputs *outputs) {
+	for (const struct matuwall_output_entry *entry = outputs->head;
+		entry != NULL; entry = entry->next) {
+		if (entry->entered) {
+			return entry->name;
+		}
+	}
+	return NULL;
+}
+
 void matuwall_outputs_finish(struct matuwall_outputs *outputs) {
 	while (outputs->head != NULL) {
 		struct matuwall_output_entry *entry = outputs->head;

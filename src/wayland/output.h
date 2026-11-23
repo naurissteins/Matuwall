@@ -32,6 +32,9 @@ void matuwall_output_enter(struct wl_output *output, bool entered);
 struct wl_output *matuwall_outputs_entered(
 	const struct matuwall_outputs *outputs);
 
+const char *matuwall_outputs_entered_name(
+	const struct matuwall_outputs *outputs);
+
 void matuwall_outputs_finish(struct matuwall_outputs *outputs);
 
 #endif

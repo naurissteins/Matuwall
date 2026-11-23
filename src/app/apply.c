@@ -9,11 +9,36 @@
 #include "hooks/hooks.h"
 #include "scan/dirscan.h"
 #include "state/selection.h"
+#include "util/command.h"
 #include "util/log.h"
 
+// configured backend flags with {path} and {output} filled in
+static bool expand_args(struct matuwall_command *cmd,
+	const struct matuwall_backend_args *extra, const char *path,
+	const char *output) {
+	const char *args[MATUWALL_MAX_BACKEND_ARGS];
+	size_t count = extra != NULL ? extra->count : 0;
+	bool needs_output = false;
+	for (size_t i = 0; i < count; i++) {
+		args[i] = extra->items[i];
+		needs_output |= matuwall_command_needs_output(args[i]);
+	}
+	if (output == NULL && needs_output) {
+		matuwall_log_error("backend",
+			"backend args use {output}, but no output is known; "
+			"pass --output");
+		return false;
+	}
+	if (!matuwall_command_expand_args(cmd, args, count, path, output)) {
+		matuwall_log_error("backend", "backend args are too long");
+		return false;
+	}
+	return true;
+}
+
 // Hand one scanned path to the backend, then remember it and run hooks
-bool matuwall_apply_path(
-	const struct matuwall_config *config, const char *path) {
+bool matuwall_apply_path(const struct matuwall_config *config, const char *path,
+	const char *output) {
 	// state keeps the scanned path, backend and hooks get the real file
 	char resolved[PATH_MAX];
 	if (!matuwall_dirscan_resolve(path, resolved)) {
@@ -31,17 +56,19 @@ bool matuwall_apply_path(
 		matuwall_log_info("backend", "selected configured backend %s",
 			backend->name);
 	}
-	// config owns the strings, opts only borrows them for the exec
-	const struct matuwall_backend_args *extra =
-		matuwall_config_backend_args(config, backend->name);
-	const char *args[MATUWALL_MAX_BACKEND_ARGS];
-	struct matuwall_apply_opts opts = {
-		.args = args,
-		.command = config->backend_command,
-	};
-	for (size_t i = 0; extra != NULL && i < extra->count; i++) {
-		args[opts.arg_count++] = extra->items[i];
+	struct matuwall_command args;
+	if (!expand_args(&args,
+		    matuwall_config_backend_args(config, backend->name),
+		    resolved, output)) {
+		return false;
 	}
+	// opts borrows args and config strings for the exec
+	struct matuwall_apply_opts opts = {
+		.args = (const char *const *)args.argv,
+		.arg_count = args.argc,
+		.command = config->backend_command,
+		.output = output,
+	};
 	if (opts.arg_count > 0) {
 		matuwall_log_info("backend",
 			"passing %zu configured args to %s", opts.arg_count,
@@ -57,13 +84,20 @@ bool matuwall_apply_path(
 	}
 	matuwall_log_info(
 		"apply", "applied %s with %s", resolved, backend->name);
-	matuwall_hooks_run(config, resolved);
+	matuwall_hooks_run(config, resolved, output);
 	return true;
 }
 
+// the output the picker is on, for {output}
+static const char *picker_output(const struct matuwall_app *app) {
+	const char *name =
+		matuwall_outputs_entered_name(&app->registry.outputs);
+	return name != NULL ? name : app->registry.requested_output_name;
+}
+
 bool matuwall_app_apply(struct matuwall_app *app) {
-	return matuwall_apply_path(
-		&app->config, app->scan.paths[app->grid.selected]);
+	return matuwall_apply_path(&app->config,
+		app->scan.paths[app->grid.selected], picker_output(app));
 }
 
 // --- background queue ---
@@ -72,6 +106,7 @@ bool matuwall_app_apply(struct matuwall_app *app) {
 static void *apply_thread(void *data) {
 	struct matuwall_apply_queue *queue = data;
 	char path[PATH_MAX];
+	char output[MATUWALL_APPLY_OUTPUT_MAX];
 	pthread_mutex_lock(&queue->lock);
 	for (;;) {
 		while (!queue->has_pending && !queue->stopping) {
@@ -81,13 +116,15 @@ static void *apply_thread(void *data) {
 			break;
 		}
 		memcpy(path, queue->pending, sizeof(path));
+		memcpy(output, queue->pending_output, sizeof(output));
 		queue->has_pending = false;
 		pthread_mutex_unlock(&queue->lock);
 
 		// hooks are never waited on, reap the ones that already ended
 		while (waitpid(-1, NULL, WNOHANG) > 0) {
 		}
-		bool ok = matuwall_apply_path(queue->config, path);
+		bool ok = matuwall_apply_path(
+			queue->config, path, output[0] != '\0' ? output : NULL);
 
 		pthread_mutex_lock(&queue->lock);
 		queue->failed |= !ok;
@@ -122,16 +159,23 @@ void matuwall_app_apply_queue(struct matuwall_app *app, const char *path) {
 		matuwall_log_error("apply", "cannot start the apply thread");
 		return;
 	}
+	const char *output = picker_output(app);
 	pthread_mutex_lock(&queue->lock);
 	int written =
 		snprintf(queue->pending, sizeof(queue->pending), "%s", path);
-	bool fits = written >= 0 && (size_t)written < sizeof(queue->pending);
+	int written_output =
+		snprintf(queue->pending_output, sizeof(queue->pending_output),
+			"%s", output != NULL ? output : "");
+	bool fits = written >= 0 && (size_t)written < sizeof(queue->pending) &&
+		    written_output >= 0 &&
+		    (size_t)written_output < sizeof(queue->pending_output);
 	queue->has_pending = fits;
 	queue->failed |= !fits;
 	pthread_cond_signal(&queue->wake);
 	pthread_mutex_unlock(&queue->lock);
 	if (!fits) {
-		matuwall_log_error("apply", "path too long: %s", path);
+		matuwall_log_error(
+			"apply", "path or output name too long: %s", path);
 	}
 }
 

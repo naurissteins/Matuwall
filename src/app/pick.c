@@ -104,8 +104,8 @@ static bool scan_wallpapers(
 	return true;
 }
 
-static bool apply_step(
-	const struct matuwall_config *config, enum matuwall_pick pick) {
+static bool apply_step(const struct matuwall_config *config,
+	enum matuwall_pick pick, const char *output) {
 	char last[PATH_MAX];
 	if (!matuwall_selection_load(last, sizeof(last))) {
 		last[0] = '\0';
@@ -118,15 +118,15 @@ static bool apply_step(
 	size_t index = choose(pick, scan.count, find(&scan, last));
 	matuwall_log_info("pick", "%s chose %zu of %zu",
 		matuwall_pick_flag(pick), index + 1, scan.count);
-	bool ok = matuwall_apply_path(config, scan.paths[index]);
+	bool ok = matuwall_apply_path(config, scan.paths[index], output);
 	matuwall_dirscan_finish(&scan);
 	return ok;
 }
 
-bool matuwall_pick_apply(
-	const struct matuwall_config *config, enum matuwall_pick pick) {
+bool matuwall_pick_apply(const struct matuwall_config *config,
+	enum matuwall_pick pick, const char *output) {
 	if (pick != MATUWALL_PICK_RESTORE) {
-		return apply_step(config, pick);
+		return apply_step(config, pick, output);
 	}
 	// the remembered path may sit outside today's directory
 	char last[PATH_MAX];
@@ -135,5 +135,5 @@ bool matuwall_pick_apply(
 			"pick", "no remembered wallpaper to restore");
 		return false;
 	}
-	return matuwall_apply_path(config, last);
+	return matuwall_apply_path(config, last, output);
 }

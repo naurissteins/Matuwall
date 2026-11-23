@@ -57,15 +57,20 @@ static void spawn_detached(char *const argv[]) {
 	}
 }
 
-static void run_one(const char *command, const char *path) {
+static void run_one(const char *command, const char *path, const char *output) {
 	// Config and CLI bound templates, this guards a slot with no terminator
 	if (strnlen(command, MATUWALL_HOOK_MAX) == MATUWALL_HOOK_MAX) {
 		matuwall_log_warn(
 			"hook", "command template is too long; skipped");
 		return;
 	}
+	if (output == NULL && matuwall_command_needs_output(command)) {
+		matuwall_log_warn("hook", "command uses {output}, but no "
+					  "output is known; skipped");
+		return;
+	}
 	struct matuwall_command cmd;
-	if (!matuwall_command_expand(&cmd, command, path)) {
+	if (!matuwall_command_expand(&cmd, command, path, output)) {
 		matuwall_log_warn("hook", "command is too long; skipped");
 		return;
 	}
@@ -74,8 +79,9 @@ static void run_one(const char *command, const char *path) {
 	}
 }
 
-void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path) {
+void matuwall_hooks_run(const struct matuwall_config *cfg, const char *path,
+	const char *output) {
 	for (size_t i = 0; i < cfg->on_apply_count; i++) {
-		run_one(cfg->on_apply[i], path);
+		run_one(cfg->on_apply[i], path, output);
 	}
 }

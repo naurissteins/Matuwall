@@ -108,7 +108,8 @@ int main(int argc, char *argv[]) {
 
 	bool ok;
 	if (options.action == MATUWALL_CLI_PICK) {
-		ok = matuwall_pick_apply(&config, options.pick);
+		ok = matuwall_pick_apply(
+			&config, options.pick, options.output_name);
 	} else {
 		struct matuwall_app app;
 		ok = matuwall_app_init(&app, &config, options.output_name) &&

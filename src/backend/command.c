@@ -17,8 +17,16 @@ static bool command_apply(
 		return false;
 	}
 	struct matuwall_command cmd;
-	if (!matuwall_command_expand(&cmd, opts->command, path)) {
-		matuwall_log_error("backend", "apply command is too long");
+	if (!matuwall_command_expand(&cmd, opts->command, path, opts->output)) {
+		if (opts->output == NULL &&
+			matuwall_command_needs_output(opts->command)) {
+			matuwall_log_error("backend",
+				"apply command uses {output}, but no output is "
+				"known; pass --output");
+		} else {
+			matuwall_log_error(
+				"backend", "apply command is too long");
+		}
 		return false;
 	}
 	if (cmd.argc == 0) {

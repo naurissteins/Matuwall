@@ -10,6 +10,8 @@ struct matuwall_apply_opts {
 	size_t arg_count;
 	// [backend.command] apply template, the command row's whole argv
 	const char *command;
+	// fills {output}, NULL when the output is unknown
+	const char *output;
 };
 
 struct matuwall_backend {
